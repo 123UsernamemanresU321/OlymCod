@@ -40,7 +40,7 @@ export default async function PublicNotePage({ params }: { params: Promise<{ slu
           <div className="mt-5 flex flex-wrap gap-2">
             <Badge tone="blue">{note.topic}</Badge>
             <Badge>{note.note_type}</Badge>
-            <DifficultyBadge value={note.difficulty} />
+            <DifficultyBadge value={note.difficulty} noteType={note.note_type} />
           </div>
           <h1 className="mt-5 text-4xl font-semibold leading-tight">{note.title}</h1>
           {note.description ? <p className="mt-4 text-lg leading-8 text-[#43474f]">{note.description}</p> : null}

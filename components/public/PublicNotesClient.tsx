@@ -82,7 +82,7 @@ export function PublicNotesClient({ notes }: { notes: Note[] }) {
                   </p>
                 ) : null}
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <DifficultyBadge value={note.difficulty} />
+                  <DifficultyBadge value={note.difficulty} noteType={note.note_type} />
                   {note.tags.slice(0, 3).map((tag) => (
                     <Badge key={tag}>{tag}</Badge>
                   ))}

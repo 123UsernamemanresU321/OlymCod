@@ -17,7 +17,7 @@ export default async function FormulaBankPage() {
     .from("notes")
     .select("*")
     .eq("is_archived", false)
-    .or("note_type.eq.Formula,topic.eq.Formula Bank")
+    .or("note_type.eq.Formula,note_type.eq.Formula Log,topic.eq.Formula Bank")
     .order("updated_at", { ascending: false });
 
   return <FormulaBankClient notes={(data ?? []) as Note[]} />;

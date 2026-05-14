@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils/cn";
 import { DIFFICULTY_LABELS } from "@/lib/constants/notes";
+import { noteTypeUsesDifficulty } from "@/lib/constants/note-formats";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -24,7 +25,8 @@ export function Badge({ children, tone = "default", className }: BadgeProps) {
   );
 }
 
-export function DifficultyBadge({ value }: { value: number | null }) {
+export function DifficultyBadge({ value, noteType }: { value: number | null; noteType?: string | null }) {
+  if (noteType && !noteTypeUsesDifficulty(noteType)) return null;
   if (!value) return <Badge>Difficulty unset</Badge>;
 
   return (

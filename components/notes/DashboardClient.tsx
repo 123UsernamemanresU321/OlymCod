@@ -8,12 +8,13 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TOPICS } from "@/lib/constants/notes";
-import type { Note, SiteSettings, Suggestion } from "@/lib/types";
+import type { Note, NoteReview, SiteSettings, Suggestion } from "@/lib/types";
 import { matchesNoteSearch } from "@/lib/utils/notes";
 
 interface DashboardClientProps {
   notes: Note[];
   suggestions: Suggestion[];
+  reviews: NoteReview[];
   settings: SiteSettings;
 }
 
@@ -28,12 +29,20 @@ const topicIcons = {
   Inbox
 };
 
-export function DashboardClient({ notes, suggestions, settings }: DashboardClientProps) {
+export function DashboardClient({ notes, suggestions, reviews, settings }: DashboardClientProps) {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => notes.filter((note) => matchesNoteSearch(note, query)), [notes, query]);
   const recent = [...filtered].sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at)).slice(0, 3);
   const favorites = filtered.filter((note) => note.is_favorite).slice(0, 5);
   const techniques = notes.filter((note) => note.note_type === "Technique");
+  const today = new Date().toISOString().slice(0, 10);
+  const reviewByNote = new Map(reviews.map((review) => [review.note_id, review]));
+  const dueNotes = notes
+    .filter((note) => {
+      const review = reviewByNote.get(note.id);
+      return !review || !review.next_review_at || review.next_review_at <= today;
+    })
+    .slice(0, 5);
 
   const stats = [
     { label: "Total notes", value: notes.length, tone: "bg-[#a5c8ff]" },
@@ -64,7 +73,7 @@ export function DashboardClient({ notes, suggestions, settings }: DashboardClien
             <Plus className="h-4 w-4" aria-hidden="true" />
             New Note
           </Button>
-          <Button type="button" variant="secondary" onClick={() => location.assign("/app/inbox")}>
+          <Button type="button" variant="secondary" onClick={() => location.assign("/app/capture")}>
             <Inbox className="h-4 w-4" aria-hidden="true" />
             Quick Capture
           </Button>
@@ -182,6 +191,26 @@ export function DashboardClient({ notes, suggestions, settings }: DashboardClien
 
         <div>
           <div className="border-b border-[#c3c6d0] pb-2">
+            <h2 className="text-xl font-medium text-[#1a1c1c]">Review Today</h2>
+          </div>
+          <div className="mt-5 grid gap-2">
+            {dueNotes.length ? (
+              dueNotes.map((note) => (
+                <Link
+                  key={note.id}
+                  href={`/app/notes/${note.id}`}
+                  className="flex items-center justify-between gap-3 p-2 text-sm font-medium text-[#1a1c1c] hover:bg-white"
+                >
+                  <span className="truncate">{note.title}</span>
+                  <Badge>{note.topic}</Badge>
+                </Link>
+              ))
+            ) : (
+              <p className="text-sm leading-6 text-[#43474f]">No notes are due today.</p>
+            )}
+          </div>
+
+          <div className="mt-8 border-b border-[#c3c6d0] pb-2">
             <h2 className="text-xl font-medium text-[#1a1c1c]">Favorite Notes</h2>
           </div>
           <div className="mt-5 grid gap-2">

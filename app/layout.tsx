@@ -3,7 +3,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Olympiad Codex",
-  description: "Your private Olympiad maths handbook."
+  description: "Your private Olympiad maths handbook.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Olympiad Codex",
+    statusBarStyle: "default"
+  }
 };
 
 export default function RootLayout({

@@ -19,6 +19,27 @@ const tools = [
   { label: "LaTeX block", icon: Sigma, before: "\n$$\n", after: "\n$$\n" }
 ];
 
+const latexCommands = [
+  { label: "Inline math: $...$", before: "$", after: "$" },
+  { label: "Block math: $$...$$", before: "\n$$\n", after: "\n$$\n" },
+  { label: "Fraction: \\frac{a}{b}", before: "\\frac{", after: "}{}" },
+  { label: "Power: x^{2}", before: "^{", after: "}" },
+  { label: "Subscript: x_{n}", before: "_{", after: "}" },
+  { label: "Square root: \\sqrt{x}", before: "\\sqrt{", after: "}" },
+  { label: "Aligned block", before: "\n$$\n\\begin{aligned}\n", after: "\n\\end{aligned}\n$$\n" },
+  { label: "Congruence: \\equiv \\pmod n", before: "\\equiv ", after: " \\pmod{}" },
+  { label: "GCD: \\gcd(a,b)", before: "\\gcd(", after: "," },
+  { label: "Totient: \\varphi(n)", before: "\\varphi(", after: ")" },
+  { label: "Binomial: \\binom{n}{k}", before: "\\binom{", after: "}{}" },
+  { label: "Sum: \\sum_{i=1}^{n}", before: "\\sum_{", after: "}^{ }" },
+  { label: "Product: \\prod_{i=1}^{n}", before: "\\prod_{", after: "}^{ }" },
+  { label: "Set: \\mathbb{Z}", before: "\\mathbb{", after: "}" },
+  { label: "Angle: \\angle ABC", before: "\\angle ", after: "" },
+  { label: "Triangle: \\triangle ABC", before: "\\triangle ", after: "" },
+  { label: "Parallel: \\parallel", before: "\\parallel ", after: "" },
+  { label: "Perpendicular: \\perp", before: "\\perp ", after: "" }
+];
+
 export function EditorToolbar({ onInsert, className }: EditorToolbarProps) {
   return (
     <div
@@ -46,6 +67,25 @@ export function EditorToolbar({ onInsert, className }: EditorToolbarProps) {
           </button>
         );
       })}
+      <select
+        aria-label="LaTeX commands"
+        title="LaTeX commands"
+        className="ml-2 h-8 shrink-0 rounded border border-[#c3c6d0] bg-white px-2 text-[12px] font-medium text-[#0e3b69] outline-none focus:ring-2 focus:ring-[#a5c8ff]"
+        value=""
+        onChange={(event) => {
+          if (event.target.value === "") return;
+          const command = latexCommands[Number(event.target.value)];
+          if (command?.before || command?.after) onInsert(command.before, command.after);
+          event.currentTarget.value = "";
+        }}
+      >
+        <option value="">LaTeX commands</option>
+        {latexCommands.map((command, index) => (
+          <option key={command.label} value={index}>
+            {command.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

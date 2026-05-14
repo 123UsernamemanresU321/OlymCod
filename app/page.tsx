@@ -55,6 +55,12 @@ export default async function PublicHomePage() {
             >
               Contribution Guidelines
             </Link>
+            <Link
+              href="/login"
+              className="inline-flex min-h-10 items-center justify-center gap-2 rounded border border-[#c3c6d0] bg-white px-4 py-2 text-[13px] font-medium tracking-[0.04em] text-[#0e3b69] hover:bg-[#eef4ff]"
+            >
+              Owner Login
+            </Link>
           </div>
         </div>
 

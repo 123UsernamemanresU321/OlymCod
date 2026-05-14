@@ -6,6 +6,7 @@ import type {
   Topic,
   UserRole
 } from "@/lib/types";
+import { buildNoteTemplate } from "@/lib/constants/note-formats";
 
 export const TOPICS: Topic[] = [
   "Number Theory",
@@ -23,9 +24,11 @@ export const NOTE_TYPES: NoteType[] = [
   "Lemma",
   "Technique",
   "Formula",
+  "Formula Log",
   "Trick",
   "Common Mistake",
   "Problem Pattern",
+  "Past Problem",
   "Definition",
   "Example",
   "Inbox"
@@ -79,38 +82,7 @@ export const DIFFICULTY_LABELS: Record<number, string> = {
   12: "Extreme"
 };
 
-export const DEFAULT_NOTE_TEMPLATE = `# [Title]
-
-## Statement
-
-Write the theorem, lemma, formula, or technique.
-
-## When to use it
-
-Use this when:
-
-- ...
-
-## Intuition
-
-Explain the idea behind it.
-
-## Mini example
-
-Write a short example.
-
-## Common mistakes
-
-- ...
-
-## Related techniques
-
-- ...
-
-## Problems where this appears
-
-- ...
-`;
+export const DEFAULT_NOTE_TEMPLATE = buildNoteTemplate("Theorem", "[Title]");
 
 export const STARTER_NOTES: Array<NoteDraft & { seed_slug: string }> = [
   {

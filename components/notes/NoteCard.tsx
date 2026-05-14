@@ -73,7 +73,7 @@ export function NoteCard({ note, compact = false }: NoteCardProps) {
       ) : null}
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <DifficultyBadge value={note.difficulty} />
+        <DifficultyBadge value={note.difficulty} noteType={note.note_type} />
         {note.tags.slice(0, compact ? 2 : 4).map((tag) => (
           <Badge key={tag}>{tag}</Badge>
         ))}

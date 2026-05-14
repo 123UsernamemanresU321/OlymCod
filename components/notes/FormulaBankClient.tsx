@@ -78,7 +78,7 @@ export function FormulaBankClient({ notes }: FormulaBankClientProps) {
               <p className="mt-4 text-sm leading-6 text-[#43474f]">{note.description}</p>
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
-              <DifficultyBadge value={note.difficulty} />
+              <DifficultyBadge value={note.difficulty} noteType={note.note_type} />
               {note.tags.slice(0, 3).map((tag) => (
                 <Badge key={tag}>{tag}</Badge>
               ))}

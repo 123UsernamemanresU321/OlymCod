@@ -6,6 +6,7 @@ import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
+import { getNoteFormat } from "@/lib/constants/note-formats";
 import { NOTE_TYPES, TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, Profile, Suggestion, SuggestionStatus } from "@/lib/types";
@@ -38,6 +39,14 @@ export function SuggestionReviewClient({
   const [internalNote, setInternalNote] = useState(suggestion.owner_internal_note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const format = getNoteFormat(noteType);
+
+  function handleNoteTypeChange(value: string) {
+    const nextFormat = getNoteFormat(value);
+    setNoteType(value);
+    setDifficulty(nextFormat.usesDifficulty ? difficulty ?? nextFormat.defaultDifficulty ?? 3 : null);
+    if (!targetNote) setTopic(nextFormat.defaultTopic);
+  }
 
   async function writeAudit(action: string, targetType: string, targetId: string | null, metadata = {}) {
     const supabase = createClient();
@@ -123,7 +132,7 @@ export function SuggestionReviewClient({
           slug,
           topic,
           note_type: noteType,
-          difficulty,
+          difficulty: format.usesDifficulty ? difficulty : null,
           description: suggestion.reason,
           tags: tagsText.split(",").map((tag) => tag.trim()).filter(Boolean),
           body_markdown: body.trim(),
@@ -239,13 +248,19 @@ export function SuggestionReviewClient({
                 </select>
               </Field>
               <Field label="Note type">
-                <select className={inputClassName()} value={noteType} onChange={(event) => setNoteType(event.target.value)}>
+                <select className={inputClassName()} value={noteType} onChange={(event) => handleNoteTypeChange(event.target.value)}>
                   {NOTE_TYPES.filter((item) => item !== "Inbox").map((item) => <option key={item}>{item}</option>)}
                 </select>
               </Field>
-              <Field label="Difficulty">
-                <input className={inputClassName()} type="number" min={1} max={12} value={difficulty ?? ""} onChange={(event) => setDifficulty(event.target.value ? Number(event.target.value) : null)} />
-              </Field>
+              {format.usesDifficulty ? (
+                <Field label="Difficulty">
+                  <input className={inputClassName()} type="number" min={1} max={12} value={difficulty ?? ""} onChange={(event) => setDifficulty(event.target.value ? Number(event.target.value) : null)} />
+                </Field>
+              ) : (
+                <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] px-3 py-2 text-sm leading-6 text-[#43474f]">
+                  Difficulty is not used for {format.label.toLowerCase()} notes.
+                </div>
+              )}
               <Field label="Tags">
                 <input className={inputClassName()} value={tagsText} onChange={(event) => setTagsText(event.target.value)} />
               </Field>

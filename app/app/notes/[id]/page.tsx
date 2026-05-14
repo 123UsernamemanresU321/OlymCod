@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DiagramGallery } from "@/components/diagrams/DiagramGallery";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
+import { NoteReviewActions } from "@/components/notes/NoteReviewActions";
 import { NoteViewActions } from "@/components/notes/NoteViewActions";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { createClient } from "@/lib/supabase/server";
-import type { Note } from "@/lib/types";
+import type { MistakeLog, Note, NoteLink, NoteReview, ProblemLog } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/utils/notes";
 
 export const dynamic = "force-dynamic";
@@ -29,13 +31,23 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
   if (!noteData) notFound();
 
   const note = noteData as Note;
-  const { data: relatedData } = await supabase
-    .from("notes")
-    .select("*")
-    .eq("is_archived", false)
-    .eq("topic", note.topic)
-    .neq("id", note.id)
-    .limit(3);
+  const [
+    { data: relatedData },
+    { data: allNotesData },
+    { data: sourceLinksData },
+    { data: backlinksData },
+    { data: problemsData },
+    { data: mistakesData },
+    { data: reviewData }
+  ] = await Promise.all([
+    supabase.from("notes").select("*").eq("is_archived", false).eq("topic", note.topic).neq("id", note.id).limit(3),
+    supabase.from("notes").select("*").eq("is_archived", false).order("title", { ascending: true }),
+    supabase.from("note_links").select("*").eq("source_note_id", note.id),
+    supabase.from("note_links").select("*").eq("target_note_id", note.id),
+    supabase.from("problem_logs").select("*").contains("linked_note_ids", [note.id]).order("updated_at", { ascending: false }).limit(8),
+    supabase.from("mistake_logs").select("*").contains("linked_note_ids", [note.id]).order("updated_at", { ascending: false }).limit(8),
+    supabase.from("note_reviews").select("*").eq("note_id", note.id).maybeSingle()
+  ]);
 
   const { data: signedData } = note.diagram_urls.length
     ? await supabase.storage.from("note-diagrams").createSignedUrls(note.diagram_urls, 60 * 60)
@@ -47,6 +59,19 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
     ) ?? [];
 
   const related = (relatedData ?? []) as Note[];
+  const allNotes = (allNotesData ?? []) as Note[];
+  const sourceLinks = (sourceLinksData ?? []) as NoteLink[];
+  const backlinks = (backlinksData ?? []) as NoteLink[];
+  const problems = (problemsData ?? []) as ProblemLog[];
+  const mistakes = (mistakesData ?? []) as MistakeLog[];
+  const review = reviewData as NoteReview | null;
+
+  const explicitLinks = sourceLinks
+    .map((link) => ({ link, note: allNotes.find((item) => item.id === link.target_note_id) }))
+    .filter((row): row is { link: NoteLink; note: Note } => Boolean(row.note));
+  const backlinkRows = backlinks
+    .map((link) => ({ link, note: allNotes.find((item) => item.id === link.source_note_id) }))
+    .filter((row): row is { link: NoteLink; note: Note } => Boolean(row.note));
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 lg:grid-cols-[minmax(0,616px)_288px] lg:px-10 lg:py-20">
@@ -64,7 +89,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
             <Badge tone="blue">{note.topic}</Badge>
             <Badge>{note.note_type}</Badge>
             <Badge tone={note.visibility === "public" ? "green" : "default"}>{note.visibility}</Badge>
-            <DifficultyBadge value={note.difficulty} />
+            <DifficultyBadge value={note.difficulty} noteType={note.note_type} />
           </div>
           <h1 className="text-4xl font-semibold leading-tight text-[#1a1c1c]">{note.title}</h1>
           {note.description ? (
@@ -107,20 +132,80 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
 
         <DiagramGallery diagrams={diagrams} />
 
+        <NoteReviewActions note={note} review={review} />
+
+        <NoteQualityPanel note={note} />
+
         <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
           <h2 className="text-lg font-semibold text-[#1a1c1c]">Related Notes</h2>
           <div className="mt-4 grid gap-2">
-            {related.length ? (
-              related.map((item) => (
-                <Link key={item.id} href={`/app/notes/${item.id}`} className="rounded p-2 hover:bg-white">
+            {explicitLinks.length ? (
+              explicitLinks.map(({ link, note: item }) => (
+                <Link key={link.id} href={`/app/notes/${item.id}`} className="rounded p-2 hover:bg-white">
                   <p className="text-sm font-semibold text-[#1a1c1c]">{item.title}</p>
+                  <p className="mt-1 text-xs text-[#0e3b69]">{link.relation_type}</p>
                   {item.description ? (
                     <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#43474f]">{item.description}</p>
                   ) : null}
                 </Link>
               ))
+            ) : related.length ? (
+              related.map((item) => (
+                <Link key={item.id} href={`/app/notes/${item.id}`} className="rounded p-2 hover:bg-white">
+                  <p className="text-sm font-semibold text-[#1a1c1c]">{item.title}</p>
+                  <p className="mt-1 text-xs text-[#43474f]">Same topic</p>
+                </Link>
+              ))
             ) : (
               <p className="text-sm leading-6 text-[#43474f]">Related notes will appear by topic.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
+          <h2 className="text-lg font-semibold text-[#1a1c1c]">Backlinks</h2>
+          <div className="mt-4 grid gap-2">
+            {backlinkRows.length ? (
+              backlinkRows.map(({ link, note: item }) => (
+                <Link key={link.id} href={`/app/notes/${item.id}`} className="rounded p-2 text-sm font-semibold text-[#0e3b69] hover:bg-white">
+                  {item.title}
+                  <span className="ml-2 text-xs font-normal text-[#43474f]">({link.relation_type})</span>
+                </Link>
+              ))
+            ) : (
+              <p className="text-sm leading-6 text-[#43474f]">No notes link here yet.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
+          <h2 className="text-lg font-semibold text-[#1a1c1c]">Problems where this appears</h2>
+          <div className="mt-4 grid gap-2">
+            {problems.length ? (
+              problems.map((problem) => (
+                <Link key={problem.id} href={`/app/problems/${problem.id}`} className="rounded p-2 hover:bg-white">
+                  <p className="text-sm font-semibold text-[#1a1c1c]">{problem.title}</p>
+                  {problem.key_idea ? <p className="mt-1 line-clamp-2 text-xs text-[#43474f]">{problem.key_idea}</p> : null}
+                </Link>
+              ))
+            ) : (
+              <p className="text-sm leading-6 text-[#43474f]">No linked problems yet.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
+          <h2 className="text-lg font-semibold text-[#1a1c1c]">Common mistakes from my log</h2>
+          <div className="mt-4 grid gap-2">
+            {mistakes.length ? (
+              mistakes.map((mistake) => (
+                <div key={mistake.id} className="rounded p-2">
+                  <p className="text-sm font-semibold text-[#1a1c1c]">{mistake.title}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-[#43474f]">{mistake.description}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm leading-6 text-[#43474f]">No linked mistakes yet.</p>
             )}
           </div>
         </section>

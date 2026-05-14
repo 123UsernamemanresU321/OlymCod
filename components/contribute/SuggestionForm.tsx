@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
+import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
 import { NOTE_TYPES, SUGGESTION_TYPES, TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, SuggestionType } from "@/lib/types";
@@ -24,7 +25,10 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
   const [noteType, setNoteType] = useState(targetNote?.note_type ?? "Technique");
   const [difficulty, setDifficulty] = useState<number | null>(targetNote?.difficulty ?? 3);
   const [tagsText, setTagsText] = useState(targetNote?.tags.join(", ") ?? "");
-  const [body, setBody] = useState(targetNote ? targetNote.body_markdown : "# Proposed Note\n\n## Statement\n\n");
+  const [body, setBody] = useState(
+    targetNote ? targetNote.body_markdown : buildNoteTemplate("Technique", "Proposed Note")
+  );
+  const [bodyUsesTemplate, setBodyUsesTemplate] = useState(!targetNote);
   const [reason, setReason] = useState("");
   const [sourceReference, setSourceReference] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -35,6 +39,24 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
     () => tagsText.split(",").map((tag) => tag.trim()).filter(Boolean),
     [tagsText]
   );
+  const format = useMemo(() => getNoteFormat(noteType), [noteType]);
+
+  function handleTitleChange(value: string) {
+    setTitle(value);
+    if (bodyUsesTemplate && !targetNote) {
+      setBody(buildNoteTemplate(noteType, value || "Proposed Note"));
+    }
+  }
+
+  function handleNoteTypeChange(value: string) {
+    const nextFormat = getNoteFormat(value);
+    setNoteType(value);
+    setDifficulty(nextFormat.usesDifficulty ? difficulty ?? nextFormat.defaultDifficulty ?? 3 : null);
+    if (!targetNote) setTopic(nextFormat.defaultTopic);
+    if (bodyUsesTemplate && !targetNote) {
+      setBody(buildNoteTemplate(value, title || "Proposed Note"));
+    }
+  }
 
   async function submit() {
     setBusy(true);
@@ -63,7 +85,7 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
           suggestion_type: suggestionType,
           topic,
           note_type: noteType,
-          difficulty,
+          difficulty: format.usesDifficulty ? difficulty : null,
           tags,
           body_markdown: body.trim(),
           reason: reason.trim() || null,
@@ -112,7 +134,7 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
       <section className="rounded-lg border border-[#c3c6d0] bg-white p-5">
         <div className="grid gap-5">
           <Field label="Suggestion title">
-            <input className={inputClassName()} value={title} onChange={(event) => setTitle(event.target.value)} />
+            <input className={inputClassName()} value={title} onChange={(event) => handleTitleChange(event.target.value)} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Suggestion type">
@@ -132,28 +154,41 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
               </select>
             </Field>
             <Field label="Note type">
-              <select className={inputClassName()} value={noteType} onChange={(event) => setNoteType(event.target.value)}>
+              <select className={inputClassName()} value={noteType} onChange={(event) => handleNoteTypeChange(event.target.value)}>
                 {NOTE_TYPES.filter((item) => item !== "Inbox").map((item) => (
                   <option key={item}>{item}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Difficulty">
-              <input
-                className={inputClassName()}
-                type="number"
-                min={1}
-                max={12}
-                value={difficulty ?? ""}
-                onChange={(event) => setDifficulty(event.target.value ? Number(event.target.value) : null)}
-              />
-            </Field>
+            {format.usesDifficulty ? (
+              <Field label="Difficulty">
+                <input
+                  className={inputClassName()}
+                  type="number"
+                  min={1}
+                  max={12}
+                  value={difficulty ?? ""}
+                  onChange={(event) => setDifficulty(event.target.value ? Number(event.target.value) : null)}
+                />
+              </Field>
+            ) : (
+              <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] px-3 py-2 text-sm leading-6 text-[#43474f]">
+                Difficulty is not used for {format.label.toLowerCase()} notes.
+              </div>
+            )}
           </div>
           <Field label="Tags">
             <input className={inputClassName()} value={tagsText} onChange={(event) => setTagsText(event.target.value)} />
           </Field>
           <Field label="Suggested Markdown / LaTeX">
-            <textarea className={inputClassName("min-h-[360px] font-mono text-sm leading-7")} value={body} onChange={(event) => setBody(event.target.value)} />
+            <textarea
+              className={inputClassName("min-h-[360px] font-mono text-sm leading-7")}
+              value={body}
+              onChange={(event) => {
+                setBodyUsesTemplate(false);
+                setBody(event.target.value);
+              }}
+            />
           </Field>
           <Field label="Reason for suggestion">
             <textarea className={inputClassName("min-h-24")} value={reason} onChange={(event) => setReason(event.target.value)} />

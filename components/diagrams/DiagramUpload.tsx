@@ -120,6 +120,18 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
       const nextPaths = [...paths, storagePath];
       try {
         await persistPaths(nextPaths);
+        await supabase.from("diagrams").upsert(
+          {
+            user_id: user.id,
+            note_id: noteId,
+            storage_path: storagePath,
+            filename: file.name,
+            mime_type: file.type || null,
+            size_bytes: file.size,
+            caption: null
+          },
+          { onConflict: "user_id,storage_path" }
+        );
       } catch (persistError) {
         await supabase.storage.from(bucket).remove([storagePath]);
         throw persistError;
@@ -140,6 +152,7 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
       await persistPaths(nextPaths);
       onChange(nextPaths);
       const { error: removeError } = await supabase.storage.from(bucket).remove([path]);
+      await supabase.from("diagrams").delete().eq("storage_path", path);
       if (removeError) {
         setError("Removed from this note, but storage cleanup failed. Try again later.");
       }

@@ -1,4 +1,4 @@
-import type { Note, Suggestion } from "@/lib/types";
+import type { MistakeLog, Note, ProblemLog, QuickCapture, Suggestion } from "@/lib/types";
 
 function downloadFile(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type });
@@ -60,4 +60,40 @@ export function exportSuggestionsAsJson(suggestions: Suggestion[]) {
     2
   );
   downloadFile("olympiad-codex-suggestions.json", payload, "application/json");
+}
+
+export function exportRowsAsJson(filename: string, key: string, rows: unknown[]) {
+  const payload = JSON.stringify(
+    {
+      exported_at: new Date().toISOString(),
+      app: "Olympiad Codex",
+      [key]: rows
+    },
+    null,
+    2
+  );
+  downloadFile(filename, payload, "application/json");
+}
+
+export function exportNotesByTopic(notes: Note[], topic: string) {
+  exportNotesAsMarkdown(notes.filter((note) => note.topic === topic));
+}
+
+export function exportEverythingAsJson(data: {
+  notes: Note[];
+  suggestions: Suggestion[];
+  problems: ProblemLog[];
+  mistakes: MistakeLog[];
+  captures: QuickCapture[];
+}) {
+  const payload = JSON.stringify(
+    {
+      exported_at: new Date().toISOString(),
+      app: "Olympiad Codex",
+      ...data
+    },
+    null,
+    2
+  );
+  downloadFile("olympiad-codex-backup.json", payload, "application/json");
 }

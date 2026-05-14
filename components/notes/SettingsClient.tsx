@@ -6,19 +6,38 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { STARTER_NOTES } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
-import type { AuditLog, Note, SiteSettings, Suggestion } from "@/lib/types";
-import { exportNotesAsJson, exportNotesAsMarkdown, exportSuggestionsAsJson } from "@/lib/utils/export";
+import type { AuditLog, MistakeLog, Note, ProblemLog, QuickCapture, SiteSettings, Suggestion } from "@/lib/types";
+import {
+  exportEverythingAsJson,
+  exportNotesAsJson,
+  exportNotesAsMarkdown,
+  exportRowsAsJson,
+  exportSuggestionsAsJson
+} from "@/lib/utils/export";
 
 interface SettingsClientProps {
   email?: string;
   role: string;
   notes: Note[];
   suggestions: Suggestion[];
+  problems: ProblemLog[];
+  mistakes: MistakeLog[];
+  captures: QuickCapture[];
   settings: SiteSettings;
   auditLogs: AuditLog[];
 }
 
-export function SettingsClient({ email, role, notes, suggestions, settings, auditLogs }: SettingsClientProps) {
+export function SettingsClient({
+  email,
+  role,
+  notes,
+  suggestions,
+  problems,
+  mistakes,
+  captures,
+  settings,
+  auditLogs
+}: SettingsClientProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -235,6 +254,26 @@ export function SettingsClient({ email, role, notes, suggestions, settings, audi
           <Button type="button" variant="secondary" onClick={() => exportSuggestionsAsJson(suggestions)}>
             <Download className="h-4 w-4" aria-hidden="true" />
             Export suggestions
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => exportRowsAsJson("olympiad-codex-problems.json", "problems", problems)}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Export problems
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => exportRowsAsJson("olympiad-codex-mistakes.json", "mistakes", mistakes)}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Export mistakes
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => exportRowsAsJson("olympiad-codex-captures.json", "captures", captures)}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Export captures
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => exportEverythingAsJson({ notes, suggestions, problems, mistakes, captures })}
+          >
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Export full JSON backup
           </Button>
         </div>
       </section>

@@ -1,19 +1,25 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { DiagramUpload } from "@/components/diagrams/DiagramUpload";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { AIWritingAssistant } from "@/components/notes/AIWritingAssistant";
+import { LinkedNotesManager } from "@/components/notes/LinkedNotesManager";
+import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
+import { VersionHistory } from "@/components/notes/VersionHistory";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { Toast } from "@/components/ui/Toast";
-import { DEFAULT_NOTE_TEMPLATE, NOTE_TYPES, TOPICS } from "@/lib/constants/notes";
+import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
+import { NOTE_TYPES, TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteDraft, ToastKind } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
+import { parseTags } from "@/lib/utils/tags";
 import { titleToSlug } from "@/lib/utils/slug";
 
 interface NoteFormProps {
@@ -37,7 +43,7 @@ function noteToDraft(note?: Note | null): NoteDraft {
       difficulty: 4,
       description: "",
       tags: [],
-      body_markdown: DEFAULT_NOTE_TEMPLATE,
+      body_markdown: buildNoteTemplate("Theorem", "[Title]"),
       diagram_urls: [],
       visibility: "private",
       is_favorite: false
@@ -63,29 +69,80 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draft, setDraft] = useState<NoteDraft>(() => noteToDraft(initialNote));
+  const [tagsText, setTagsText] = useState(() => noteToDraft(initialNote).tags.join(", "));
   const [savedId, setSavedId] = useState<string | null>(initialNote?.id ?? null);
   const [slugTouched, setSlugTouched] = useState(Boolean(initialNote?.slug));
+  const [topicTouched, setTopicTouched] = useState(Boolean(initialNote?.topic));
+  const [bodyUsesTemplate, setBodyUsesTemplate] = useState(!initialNote);
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+  const [mobileTab, setMobileTab] = useState<"edit" | "preview" | "metadata">("edit");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [localDraftStatus, setLocalDraftStatus] = useState("Local draft ready");
 
-  const tagsText = useMemo(() => draft.tags.join(", "), [draft.tags]);
+  const format = useMemo(() => getNoteFormat(draft.note_type), [draft.note_type]);
 
   function updateDraft(update: Partial<NoteDraft>) {
     setDraft((current) => ({ ...current, ...update }));
     setDirty(true);
   }
 
+  useEffect(() => {
+    if (!dirty) return;
+    const key = `olympiad-codex-draft-${savedId ?? "new"}`;
+    const timer = window.setTimeout(() => {
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({ draft, tagsText, savedAt: new Date().toISOString() })
+      );
+      setLocalDraftStatus("Saved locally");
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [dirty, draft, savedId, tagsText]);
+
   function handleTitleChange(title: string) {
     const update: Partial<NoteDraft> = { title };
     if (!slugTouched) update.slug = titleToSlug(title);
-    if (!initialNote && draft.body_markdown === DEFAULT_NOTE_TEMPLATE) {
-      update.body_markdown = DEFAULT_NOTE_TEMPLATE.replace("[Title]", title || "[Title]");
+    if (bodyUsesTemplate) {
+      update.body_markdown = buildNoteTemplate(draft.note_type, title || "[Title]");
     }
     updateDraft(update);
+  }
+
+  function handleNoteTypeChange(noteType: string) {
+    const nextFormat = getNoteFormat(noteType);
+    const update: Partial<NoteDraft> = {
+      note_type: noteType,
+      difficulty: nextFormat.usesDifficulty
+        ? draft.difficulty ?? nextFormat.defaultDifficulty ?? 3
+        : null
+    };
+
+    if (!topicTouched) {
+      update.topic = nextFormat.defaultTopic;
+    }
+
+    if (bodyUsesTemplate) {
+      update.body_markdown = buildNoteTemplate(noteType, draft.title || "[Title]");
+    }
+
+    updateDraft(update);
+  }
+
+  function applyCurrentTemplate() {
+    const hasBody = draft.body_markdown.trim().length > 0;
+    if (
+      hasBody &&
+      !bodyUsesTemplate &&
+      !window.confirm("Replace the current Markdown body with this note type template?")
+    ) {
+      return;
+    }
+
+    updateDraft({ body_markdown: buildNoteTemplate(draft.note_type, draft.title || "[Title]") });
+    setBodyUsesTemplate(true);
   }
 
   function insertMarkdown(before: string, after = "") {
@@ -108,16 +165,65 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     });
   }
 
+  function getSelectedMarkdown() {
+    const textarea = textareaRef.current;
+    if (!textarea) return "";
+    return draft.body_markdown.slice(textarea.selectionStart, textarea.selectionEnd);
+  }
+
+  function insertGeneratedMarkdown(markdown: string) {
+    const textarea = textareaRef.current;
+    setBodyUsesTemplate(false);
+
+    if (!textarea) {
+      updateDraft({ body_markdown: `${draft.body_markdown}${markdown}` });
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const next = `${draft.body_markdown.slice(0, start)}${markdown}${draft.body_markdown.slice(end)}`;
+    updateDraft({ body_markdown: next });
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.selectionStart = start + markdown.length;
+      textarea.selectionEnd = start + markdown.length;
+    });
+  }
+
+  function appendGeneratedMarkdown(markdown: string) {
+    setBodyUsesTemplate(false);
+    updateDraft({
+      body_markdown: `${draft.body_markdown.trimEnd()}\n\n${markdown.trim()}`.trimStart()
+    });
+  }
+
+  function replaceGeneratedMarkdown(markdown: string) {
+    setBodyUsesTemplate(false);
+    updateDraft({ body_markdown: markdown.trim() });
+  }
+
+  function applyAIMetadata(metadata: { description?: string | null; tags?: string[] }) {
+    const update: Partial<NoteDraft> = {};
+    if (metadata.description) update.description = metadata.description;
+    if (metadata.tags?.length) {
+      update.tags = metadata.tags;
+      setTagsText(metadata.tags.join(", "));
+    }
+    updateDraft(update);
+  }
+
   function buildPayload() {
     return {
       title: draft.title.trim(),
       slug: draft.slug.trim() || titleToSlug(draft.title),
       topic: draft.topic,
       note_type: draft.note_type,
-      difficulty: draft.difficulty ? Number(draft.difficulty) : null,
+      difficulty: format.usesDifficulty && draft.difficulty ? Number(draft.difficulty) : null,
       description: draft.description?.trim() || null,
-      tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
-      body_markdown: draft.body_markdown.trim() || DEFAULT_NOTE_TEMPLATE,
+      tags: parseTags(tagsText),
+      body_markdown: draft.body_markdown.trim() || buildNoteTemplate(draft.note_type, draft.title),
       diagram_urls: draft.diagram_urls,
       visibility: draft.visibility,
       published_at: draft.visibility === "public" ? new Date().toISOString() : null,
@@ -147,6 +253,22 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
 
       let targetId = savedId;
       if (savedId) {
+        await supabase.from("note_versions").insert({
+          user_id: user.id,
+          note_id: savedId,
+          title: initialNote?.title ?? draft.title,
+          body_markdown: initialNote?.body_markdown ?? draft.body_markdown,
+          metadata: {
+            slug: initialNote?.slug ?? draft.slug,
+            topic: initialNote?.topic ?? draft.topic,
+            note_type: initialNote?.note_type ?? draft.note_type,
+            difficulty: initialNote?.difficulty ?? draft.difficulty,
+            description: initialNote?.description ?? draft.description,
+            tags: initialNote?.tags ?? draft.tags,
+            visibility: initialNote?.visibility ?? draft.visibility,
+            is_favorite: initialNote?.is_favorite ?? draft.is_favorite
+          }
+        });
         const { error: updateError } = await supabase
           .from("notes")
           .update(payload)
@@ -171,7 +293,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       }
 
       setDirty(false);
-      setToast({ kind: "success", title: "Draft Saved", message: "Changes committed locally." });
+      setLocalDraftStatus("Saved to cloud");
+      setToast({ kind: "success", title: "Draft Saved", message: "Changes saved to Supabase." });
 
       if (viewAfterSave) {
         router.push(`/app/notes/${targetId}`);
@@ -225,7 +348,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
-              {dirty ? "Unsaved changes" : mode === "create" ? "New note" : "All changes saved"}
+              {dirty ? `Unsaved changes · ${localDraftStatus}` : mode === "create" ? "New note" : localDraftStatus}
             </p>
             <h1 className="truncate text-xl font-semibold text-[#1a1c1c]">
               {draft.title || "Untitled Note"}
@@ -262,7 +385,23 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
 
       <div className="mx-auto grid max-w-7xl gap-0 lg:grid-cols-2">
         <section className="border-[#c3c6d0] p-4 lg:min-h-[calc(100vh-64px)] lg:border-r lg:p-10">
-          <div className="rounded-lg border border-[#c3c6d0] bg-white p-6">
+          <div className="mb-6 flex border-b border-[#c3c6d0] lg:hidden">
+            {(["edit", "preview", "metadata"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={cn(
+                  "px-4 py-2 text-sm font-medium capitalize text-[#43474f]",
+                  mobileTab === tab && "border-b-2 border-[#0e3b69] text-[#0e3b69]"
+                )}
+                onClick={() => setMobileTab(tab)}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          <div className={cn("rounded-lg border border-[#c3c6d0] bg-white p-6", mobileTab !== "metadata" && "hidden lg:block")}>
             <div className="grid gap-5">
               <Field label="Title">
                 <input
@@ -290,7 +429,10 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                   <select
                     className={inputClassName()}
                     value={draft.topic}
-                    onChange={(event) => updateDraft({ topic: event.target.value })}
+                    onChange={(event) => {
+                      setTopicTouched(true);
+                      updateDraft({ topic: event.target.value });
+                    }}
                   >
                     {TOPICS.map((topic) => (
                       <option key={topic} value={topic}>
@@ -303,7 +445,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                   <select
                     className={inputClassName()}
                     value={draft.note_type}
-                    onChange={(event) => updateDraft({ note_type: event.target.value })}
+                    onChange={(event) => handleNoteTypeChange(event.target.value)}
                   >
                     {NOTE_TYPES.map((type) => (
                       <option key={type} value={type}>
@@ -312,20 +454,26 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                     ))}
                   </select>
                 </Field>
-                <Field label="Difficulty (1-12)">
-                  <input
-                    className={inputClassName()}
-                    type="number"
-                    min={1}
-                    max={12}
-                    value={draft.difficulty ?? ""}
-                    onChange={(event) =>
-                      updateDraft({
-                        difficulty: event.target.value ? Number(event.target.value) : null
-                      })
-                    }
-                  />
-                </Field>
+                {format.usesDifficulty ? (
+                  <Field label="Difficulty (1-12)">
+                    <input
+                      className={inputClassName()}
+                      type="number"
+                      min={1}
+                      max={12}
+                      value={draft.difficulty ?? ""}
+                      onChange={(event) =>
+                        updateDraft({
+                          difficulty: event.target.value ? Number(event.target.value) : null
+                        })
+                      }
+                    />
+                  </Field>
+                ) : (
+                  <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] px-3 py-2 text-sm leading-6 text-[#43474f]">
+                    Difficulty is not used for {format.label.toLowerCase()} notes.
+                  </div>
+                )}
                 <Field label="Visibility">
                   <select
                     className={inputClassName()}
@@ -351,14 +499,11 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                 <input
                   className={inputClassName()}
                   value={tagsText}
-                  onChange={(event) =>
-                    updateDraft({
-                      tags: event.target.value
-                        .split(",")
-                        .map((tag) => tag.trim())
-                        .filter(Boolean)
-                    })
-                  }
+                  onChange={(event) => {
+                    const nextTagsText = event.target.value;
+                    setTagsText(nextTagsText);
+                    updateDraft({ tags: parseTags(nextTagsText) });
+                  }}
                   placeholder="modular arithmetic, phi, coprime"
                 />
               </Field>
@@ -370,37 +515,43 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                 />
                 Favorite note
               </label>
+              <div className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-[#1a1c1c]">{format.label} format</p>
+                    <p className="mt-1 text-sm leading-6 text-[#43474f]">{format.description}</p>
+                  </div>
+                  <Button type="button" variant="secondary" onClick={applyCurrentTemplate}>
+                    Apply {format.label} template
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 lg:hidden">
-            <div className="flex border-b border-[#c3c6d0]">
-              {(["edit", "preview"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={cn(
-                    "px-4 py-2 text-sm font-medium capitalize text-[#43474f]",
-                    mobileTab === tab && "border-b-2 border-[#0e3b69] text-[#0e3b69]"
-                  )}
-                  onClick={() => setMobileTab(tab)}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className={cn("mt-6", mobileTab === "preview" && "hidden lg:block")}>
+          <div className={cn("mt-6", mobileTab !== "edit" && "hidden lg:block")}>
             <EditorToolbar onInsert={insertMarkdown} />
             <textarea
               ref={textareaRef}
               className="codex-scrollbar mt-0 min-h-[560px] w-full resize-y border border-t-0 border-[#c3c6d0] bg-white p-4 font-mono text-sm leading-7 text-[#1a1c1c] outline-none focus:ring-2 focus:ring-[#a5c8ff]"
               value={draft.body_markdown}
-              onChange={(event) => updateDraft({ body_markdown: event.target.value })}
+              onChange={(event) => {
+                setBodyUsesTemplate(false);
+                updateDraft({ body_markdown: event.target.value });
+              }}
               placeholder="Write Markdown and LaTeX here..."
             />
           </div>
+
+          <AIWritingAssistant
+            draft={draft}
+            noteId={savedId}
+            getSelectedText={getSelectedMarkdown}
+            onInsertMarkdown={insertGeneratedMarkdown}
+            onAppendMarkdown={appendGeneratedMarkdown}
+            onReplaceMarkdown={replaceGeneratedMarkdown}
+            onApplyMetadata={applyAIMetadata}
+          />
 
           <div className="mt-6">
             <DiagramUpload
@@ -411,12 +562,18 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
               }
             />
           </div>
+
+          <div className="mt-6 grid gap-6">
+            <LinkedNotesManager noteId={savedId} draft={draft} />
+            <NoteQualityPanel draft={draft} onAppendMarkdown={appendGeneratedMarkdown} />
+            <VersionHistory noteId={savedId} />
+          </div>
         </section>
 
         <section
           className={cn(
             "p-4 lg:block lg:min-h-[calc(100vh-64px)] lg:p-10",
-            mobileTab === "edit" && "hidden"
+            mobileTab !== "preview" && "hidden lg:block"
           )}
         >
           <div className="sticky top-20 mb-4 flex items-center justify-between border-b border-[#c3c6d0] bg-[#f9f9f9]/95 py-2 text-[13px] font-medium tracking-[0.04em] text-[#43474f] backdrop-blur lg:top-4">

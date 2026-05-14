@@ -7,6 +7,7 @@
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
+    "test": "node --test tests/*.test.mjs",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
@@ -23,7 +24,8 @@
     "rehype-sanitize": "latest",
     "remark-gfm": "latest",
     "remark-math": "latest",
-    "tailwind-merge": "latest"
+    "tailwind-merge": "latest",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "latest",
