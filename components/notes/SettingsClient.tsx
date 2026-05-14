@@ -23,6 +23,9 @@ export function SettingsClient({ email, role, notes, suggestions, settings, audi
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [siteSettings, setSiteSettings] = useState(settings);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordBusy, setPasswordBusy] = useState(false);
 
   async function signOut() {
     const supabase = createClient();
@@ -76,6 +79,35 @@ export function SettingsClient({ email, role, notes, suggestions, settings, audi
     router.refresh();
   }
 
+  async function updatePassword(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage(null);
+
+    if (newPassword.length < 8) {
+      setMessage("Choose a password with at least 8 characters.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setMessage("The password confirmation does not match.");
+      return;
+    }
+
+    setPasswordBusy(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setPasswordBusy(false);
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setNewPassword("");
+    setConfirmPassword("");
+    setMessage("Password updated.");
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 lg:px-10">
       <header>
@@ -112,6 +144,42 @@ export function SettingsClient({ email, role, notes, suggestions, settings, audi
           Owner routes are protected by role-based access. Contributors can submit suggestions,
           but they cannot directly edit official notes.
         </div>
+      </section>
+
+      <section className="mt-8 rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-6">
+        <h2 className="flex items-center gap-3 border-b border-[#c3c6d0] pb-4 text-xl font-semibold">
+          <KeyRound className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          Change Password
+        </h2>
+        <form onSubmit={updatePassword} className="mt-6 grid gap-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <label className="grid gap-2 text-sm font-medium text-[#43474f]">
+            New password
+            <input
+              className="min-h-11 rounded border border-[#c3c6d0] bg-white px-3 text-base text-[#1a1c1c] outline-none focus:border-[#2c5282] focus:ring-2 focus:ring-[#dbeafe]"
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              minLength={8}
+              autoComplete="new-password"
+              required
+            />
+          </label>
+          <label className="grid gap-2 text-sm font-medium text-[#43474f]">
+            Confirm password
+            <input
+              className="min-h-11 rounded border border-[#c3c6d0] bg-white px-3 text-base text-[#1a1c1c] outline-none focus:border-[#2c5282] focus:ring-2 focus:ring-[#dbeafe]"
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              minLength={8}
+              autoComplete="new-password"
+              required
+            />
+          </label>
+          <Button type="submit" disabled={passwordBusy}>
+            {passwordBusy ? "Updating..." : "Update password"}
+          </Button>
+        </form>
       </section>
 
       <section className="mt-8 rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-6">
