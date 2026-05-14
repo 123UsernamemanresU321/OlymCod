@@ -10,6 +10,7 @@ import {
   Inbox,
   LogOut,
   Plus,
+  ShieldCheck,
   Search,
   Settings,
   Shapes,
@@ -23,9 +24,11 @@ import { cn } from "@/lib/utils/cn";
 const NAV_ITEMS = [
   { href: "/app", label: "Dashboard", icon: Home, exact: true },
   { href: "/app/notes", label: "Notes", icon: FileText },
+  { href: "/app/review", label: "Review", icon: ShieldCheck },
   { href: "/app/inbox", label: "Inbox", icon: Inbox },
   { href: "/app/notes?topic=Geometry", label: "Geometry", icon: Shapes },
   { href: "/app/formula-bank", label: "Formula Bank", icon: Calculator },
+  { href: "/app/users", label: "Users", icon: UserCircle },
   { href: "/app/settings", label: "Settings", icon: Settings }
 ];
 
@@ -39,11 +42,13 @@ const MOBILE_ITEMS = [
 interface AppShellProps {
   children: React.ReactNode;
   email?: string;
+  role?: string;
 }
 
-export function AppShell({ children, email }: AppShellProps) {
+export function AppShell({ children, email, role }: AppShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const isEditingNote = pathname === "/app/notes/new" || pathname.endsWith("/edit");
 
   async function signOut() {
     const supabase = createClient();
@@ -107,6 +112,7 @@ export function AppShell({ children, email }: AppShellProps) {
               <p className="truncate text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
                 {email ?? "Researcher"}
               </p>
+              <p className="text-[12px] capitalize text-[#0e3b69]">{role ?? "owner"}</p>
             </div>
           </div>
           <button
@@ -134,13 +140,15 @@ export function AppShell({ children, email }: AppShellProps) {
 
       <main className="min-h-screen pb-24 pt-16 lg:ml-64 lg:pb-0 lg:pt-0">{children}</main>
 
-      <Link
-        href="/app/notes/new"
-        className="fixed bottom-24 right-6 z-40 grid h-14 w-14 place-items-center rounded-full bg-[#2c5282] text-white shadow-[0_16px_30px_rgba(26,32,44,0.2)] lg:hidden"
-        aria-label="New note"
-      >
-        <Plus className="h-5 w-5" aria-hidden="true" />
-      </Link>
+      {!isEditingNote ? (
+        <Link
+          href="/app/notes/new"
+          className="fixed bottom-24 right-6 z-40 grid h-14 w-14 place-items-center rounded-full bg-[#2c5282] text-white shadow-[0_16px_30px_rgba(26,32,44,0.2)] lg:hidden"
+          aria-label="New note"
+        >
+          <Plus className="h-5 w-5" aria-hidden="true" />
+        </Link>
+      ) : null}
 
       <nav className="fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-4 border-t border-[#c3c6d0] bg-[#f9f9f9] lg:hidden">
         {MOBILE_ITEMS.map((item) => {

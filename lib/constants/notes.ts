@@ -1,4 +1,11 @@
-import type { NoteDraft, NoteType, Topic } from "@/lib/types";
+import type {
+  NoteDraft,
+  NoteType,
+  SuggestionStatus,
+  SuggestionType,
+  Topic,
+  UserRole
+} from "@/lib/types";
 
 export const TOPICS: Topic[] = [
   "Number Theory",
@@ -23,6 +30,39 @@ export const NOTE_TYPES: NoteType[] = [
   "Example",
   "Inbox"
 ];
+
+export const USER_ROLES: UserRole[] = [
+  "owner",
+  "trusted_contributor",
+  "contributor",
+  "viewer",
+  "banned"
+];
+
+export const SUGGESTION_TYPES: SuggestionType[] = [
+  "typo",
+  "correction",
+  "addition",
+  "new_note",
+  "diagram",
+  "formula",
+  "explanation",
+  "example",
+  "related_technique",
+  "common_mistake",
+  "other"
+];
+
+export const SUGGESTION_STATUSES: SuggestionStatus[] = [
+  "pending",
+  "approved",
+  "rejected",
+  "needs_changes",
+  "merged",
+  "spam"
+];
+
+export const OWNER_EMAIL = "erichuang.shangjing@outlook.com";
 
 export const DIFFICULTY_LABELS: Record<number, string> = {
   1: "Basic",
@@ -104,6 +144,7 @@ Multiplication by $a$ permutes the reduced residue classes modulo $n$.
 Since $\\varphi(10)=4$ and $\\gcd(3,10)=1$, we have $3^4 \\equiv 1 \\pmod {10}$.
 `,
     diagram_urls: [],
+    visibility: "private",
     is_favorite: true
   },
   {
@@ -128,6 +169,7 @@ $$a^{p-1} \\equiv 1 \\pmod p.$$
 Use this for exponent reductions modulo a prime.
 `,
     diagram_urls: [],
+    visibility: "private",
     is_favorite: false
   },
   {
@@ -150,6 +192,7 @@ If more than $m$ objects are placed into $m$ boxes, at least one box contains at
 Use this when a problem asks you to prove that two things must coincide, repeat, or share a property.
 `,
     diagram_urls: [],
+    visibility: "private",
     is_favorite: false
   },
   {
@@ -172,6 +215,7 @@ Find a quantity or property that does not change after each allowed operation.
 Use this in operation games, coloring problems, parity problems, and impossible-state proofs.
 `,
     diagram_urls: [],
+    visibility: "private",
     is_favorite: false
   },
   {
@@ -194,6 +238,7 @@ $$\\frac{x_1+\\cdots+x_n}{n} \\ge \\sqrt[n]{x_1x_2\\cdots x_n}.$$
 Equality holds when all variables are equal.
 `,
     diagram_urls: [],
+    visibility: "private",
     is_favorite: false
   },
   {
@@ -218,6 +263,7 @@ For two secants $PAB$ and $PCD$,
 $$PA \\cdot PB = PC \\cdot PD.$$
 `,
     diagram_urls: [],
+    visibility: "private",
     is_favorite: true
   }
 ];

@@ -28,8 +28,7 @@ export function NoteCard({ note, compact = false }: NoteCardProps) {
     await supabase
       .from("notes")
       .update({ is_favorite: !note.is_favorite })
-      .eq("id", note.id)
-      .eq("user_id", user.id);
+      .eq("id", note.id);
     router.refresh();
   }
 
@@ -42,6 +41,7 @@ export function NoteCard({ note, compact = false }: NoteCardProps) {
         <div className="flex flex-wrap gap-2">
           <Badge tone="blue">{note.topic}</Badge>
           <Badge>{note.note_type}</Badge>
+          <Badge tone={note.visibility === "public" ? "green" : "default"}>{note.visibility}</Badge>
         </div>
         <button
           type="button"

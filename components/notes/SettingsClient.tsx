@@ -1,23 +1,28 @@
 "use client";
 
-import { Download, KeyRound, LogOut, Mail, Palette, ShieldCheck, UploadCloud } from "lucide-react";
+import { Download, KeyRound, LogOut, Mail, ShieldCheck, ToggleLeft, UploadCloud } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { STARTER_NOTES } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
-import type { Note } from "@/lib/types";
-import { exportNotesAsJson, exportNotesAsMarkdown } from "@/lib/utils/export";
+import type { AuditLog, Note, SiteSettings, Suggestion } from "@/lib/types";
+import { exportNotesAsJson, exportNotesAsMarkdown, exportSuggestionsAsJson } from "@/lib/utils/export";
 
 interface SettingsClientProps {
   email?: string;
+  role: string;
   notes: Note[];
+  suggestions: Suggestion[];
+  settings: SiteSettings;
+  auditLogs: AuditLog[];
 }
 
-export function SettingsClient({ email, notes }: SettingsClientProps) {
+export function SettingsClient({ email, role, notes, suggestions, settings, auditLogs }: SettingsClientProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [siteSettings, setSiteSettings] = useState(settings);
 
   async function signOut() {
     const supabase = createClient();
@@ -58,6 +63,19 @@ export function SettingsClient({ email, notes }: SettingsClientProps) {
     }
   }
 
+  async function updateSetting(update: Partial<SiteSettings>) {
+    setMessage(null);
+    const supabase = createClient();
+    const { error } = await supabase.from("site_settings").update(update).eq("id", "main");
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    setSiteSettings((current) => ({ ...current, ...update }));
+    setMessage("Site settings updated.");
+    router.refresh();
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 lg:px-10">
       <header>
@@ -82,6 +100,7 @@ export function SettingsClient({ email, notes }: SettingsClientProps) {
               Primary Email Address
             </p>
             <p className="mt-1 text-base text-[#1a1c1c]">{email ?? "Unknown"}</p>
+            <p className="mt-1 text-sm capitalize text-[#0e3b69]">Role: {role}</p>
           </div>
           <Button type="button" variant="secondary" onClick={signOut}>
             <LogOut className="h-4 w-4" aria-hidden="true" />
@@ -90,22 +109,41 @@ export function SettingsClient({ email, notes }: SettingsClientProps) {
         </div>
         <div className="mt-6 flex items-start gap-3 text-sm leading-6 text-[#43474f]">
           <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#0e3b69]" aria-hidden="true" />
-          Your notes are private to the logged-in user. Database access is protected by Row Level
-          Security policies using your authenticated user ID.
+          Owner routes are protected by role-based access. Contributors can submit suggestions,
+          but they cannot directly edit official notes.
         </div>
       </section>
 
       <section className="mt-8 rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-6">
         <h2 className="flex items-center gap-3 border-b border-[#c3c6d0] pb-4 text-xl font-semibold">
-          <Palette className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          Academic Preferences
+          <ToggleLeft className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          Publication and Contribution Mode
         </h2>
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          {["Light", "Dark", "System"].map((theme) => (
-            <button key={theme} type="button" className="rounded border border-[#c3c6d0] bg-white p-6 text-sm font-medium text-[#43474f]">
-              {theme}
-            </button>
-          ))}
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <label className="flex items-center gap-3 rounded border border-[#c3c6d0] bg-white p-4 text-sm font-medium text-[#43474f]">
+            <input
+              type="checkbox"
+              checked={siteSettings.public_notes_enabled}
+              onChange={(event) => void updateSetting({ public_notes_enabled: event.target.checked })}
+            />
+            Public notes enabled
+          </label>
+          <label className="flex items-center gap-3 rounded border border-[#c3c6d0] bg-white p-4 text-sm font-medium text-[#43474f]">
+            <input
+              type="checkbox"
+              checked={siteSettings.contributions_enabled}
+              onChange={(event) => void updateSetting({ contributions_enabled: event.target.checked })}
+            />
+            Contributions enabled
+          </label>
+          <label className="flex items-center gap-3 rounded border border-[#c3c6d0] bg-white p-4 text-sm font-medium text-[#43474f]">
+            <input
+              type="checkbox"
+              checked={siteSettings.require_login_to_contribute}
+              onChange={(event) => void updateSetting({ require_login_to_contribute: event.target.checked })}
+            />
+            Require login
+          </label>
         </div>
       </section>
 
@@ -115,9 +153,9 @@ export function SettingsClient({ email, notes }: SettingsClientProps) {
           Data Export
         </h2>
         <p className="mt-6 text-sm leading-6 text-[#43474f]">
-          Download a complete archive of your notes, stored diagram paths, and saved formulas.
+          Download a complete archive of official notes, stored diagram paths, and submitted suggestions.
         </p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
           <Button type="button" variant="secondary" onClick={() => exportNotesAsJson(notes)}>
             <Download className="h-4 w-4" aria-hidden="true" />
             Export all notes as JSON
@@ -125,6 +163,10 @@ export function SettingsClient({ email, notes }: SettingsClientProps) {
           <Button type="button" variant="secondary" onClick={() => exportNotesAsMarkdown(notes)}>
             <Download className="h-4 w-4" aria-hidden="true" />
             Export Markdown
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => exportSuggestionsAsJson(suggestions)}>
+            <Download className="h-4 w-4" aria-hidden="true" />
+            Export suggestions
           </Button>
         </div>
       </section>
@@ -142,6 +184,24 @@ export function SettingsClient({ email, notes }: SettingsClientProps) {
           <KeyRound className="h-4 w-4" aria-hidden="true" />
           {busy ? "Creating..." : "Create starter notes"}
         </Button>
+      </section>
+
+      <section className="mt-8 rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-6">
+        <h2 className="border-b border-[#c3c6d0] pb-4 text-xl font-semibold">Audit Log</h2>
+        <div className="mt-5 grid gap-3">
+          {auditLogs.length ? (
+            auditLogs.map((log) => (
+              <div key={log.id} className="rounded border border-[#c3c6d0] bg-white p-3 text-sm">
+                <p className="font-medium text-[#1a1c1c]">{log.action}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.06em] text-[#43474f]">
+                  {log.target_type} · {new Date(log.created_at).toLocaleString()}
+                </p>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-[#43474f]">Important owner and contribution actions will appear here.</p>
+          )}
+        </div>
       </section>
     </div>
   );

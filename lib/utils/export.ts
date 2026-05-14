@@ -1,4 +1,4 @@
-import type { Note } from "@/lib/types";
+import type { Note, Suggestion } from "@/lib/types";
 
 function downloadFile(filename: string, content: string, type: string) {
   const blob = new Blob([content], { type });
@@ -34,6 +34,7 @@ export function exportNotesAsMarkdown(notes: Note[]) {
         `slug: ${JSON.stringify(note.slug)}`,
         `topic: ${JSON.stringify(note.topic)}`,
         `note_type: ${JSON.stringify(note.note_type)}`,
+        `visibility: ${JSON.stringify(note.visibility)}`,
         `difficulty: ${note.difficulty ?? ""}`,
         `tags: ${JSON.stringify(note.tags)}`,
         `favorite: ${note.is_favorite}`,
@@ -46,4 +47,17 @@ export function exportNotesAsMarkdown(notes: Note[]) {
     .join("\n\n---\n\n");
 
   downloadFile("olympiad-codex-notes.md", markdown, "text/markdown");
+}
+
+export function exportSuggestionsAsJson(suggestions: Suggestion[]) {
+  const payload = JSON.stringify(
+    {
+      exported_at: new Date().toISOString(),
+      app: "Olympiad Codex",
+      suggestions
+    },
+    null,
+    2
+  );
+  downloadFile("olympiad-codex-suggestions.json", payload, "application/json");
 }

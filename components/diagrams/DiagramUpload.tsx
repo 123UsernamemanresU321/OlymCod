@@ -18,6 +18,7 @@ interface DiagramUploadProps {
 }
 
 export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
+  const bucket = "note-diagrams";
   const [signed, setSigned] = useState<SignedDiagram[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -33,7 +34,7 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
 
       const supabase = createClient();
       const { data, error: signedError } = await supabase.storage
-        .from("diagrams")
+        .from(bucket)
         .createSignedUrls(paths, 60 * 60);
 
       if (cancelled) return;
@@ -107,7 +108,7 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
 
       const storagePath = `${user.id}/${noteId}/${safeFilename(file.name)}`;
       const { error: uploadError } = await supabase.storage
-        .from("diagrams")
+        .from(bucket)
         .upload(storagePath, file, {
           cacheControl: "3600",
           upsert: false,
@@ -117,7 +118,12 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
       if (uploadError) throw uploadError;
 
       const nextPaths = [...paths, storagePath];
-      await persistPaths(nextPaths);
+      try {
+        await persistPaths(nextPaths);
+      } catch (persistError) {
+        await supabase.storage.from(bucket).remove([storagePath]);
+        throw persistError;
+      }
       onChange(nextPaths);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Upload failed.");
@@ -131,9 +137,12 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
     const nextPaths = paths.filter((item) => item !== path);
     try {
       const supabase = createClient();
-      await supabase.storage.from("diagrams").remove([path]);
       await persistPaths(nextPaths);
       onChange(nextPaths);
+      const { error: removeError } = await supabase.storage.from(bucket).remove([path]);
+      if (removeError) {
+        setError("Removed from this note, but storage cleanup failed. Try again later.");
+      }
     } catch (removeError) {
       setError(removeError instanceof Error ? removeError.message : "Could not remove diagram.");
     }

@@ -20,6 +20,10 @@ function parseTopicGuess(description: string | null) {
   return description?.replace(/^Topic guess:\s*/i, "") || "Number Theory";
 }
 
+function isKnownTopic(topic: string) {
+  return TOPICS.some((item) => item === topic);
+}
+
 export function InboxClient({ notes }: InboxClientProps) {
   const router = useRouter();
   const [rawIdea, setRawIdea] = useState("");
@@ -71,38 +75,51 @@ export function InboxClient({ notes }: InboxClientProps) {
   }
 
   async function archive(note: Note) {
-    const supabase = createClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase.from("notes").update({ is_archived: true }).eq("id", note.id).eq("user_id", user.id);
-    router.refresh();
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error(userError?.message ?? "You must be logged in.");
+      const { error: archiveError } = await supabase
+        .from("notes")
+        .update({ is_archived: true })
+        .eq("id", note.id);
+      if (archiveError) throw archiveError;
+      router.refresh();
+    } catch (archiveError) {
+      setError(archiveError instanceof Error ? archiveError.message : "Could not archive note.");
+    }
   }
 
   async function convert(note: Note) {
-    const supabase = createClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error(userError?.message ?? "You must be logged in.");
 
-    const guessedTopic = parseTopicGuess(note.description);
-    await supabase
-      .from("notes")
-      .update({
-        topic: TOPICS.includes(guessedTopic as never) ? guessedTopic : "Number Theory",
-        note_type: "Technique",
-        title: note.title || "Converted note",
-        slug: note.slug.replace(/-\d+$/, ""),
-        description: null,
-        difficulty: 3
-      })
-      .eq("id", note.id)
-      .eq("user_id", user.id);
+      const guessedTopic = parseTopicGuess(note.description);
+      const { error: convertError } = await supabase
+        .from("notes")
+        .update({
+          topic: isKnownTopic(guessedTopic) ? guessedTopic : "Number Theory",
+          note_type: "Technique",
+          title: note.title || "Converted note",
+          description: null,
+          difficulty: 3
+        })
+        .eq("id", note.id);
 
-    router.push(`/app/notes/${note.id}/edit`);
-    router.refresh();
+      if (convertError) throw convertError;
+      router.push(`/app/notes/${note.id}/edit`);
+      router.refresh();
+    } catch (convertError) {
+      setError(convertError instanceof Error ? convertError.message : "Could not convert note.");
+    }
   }
 
   return (

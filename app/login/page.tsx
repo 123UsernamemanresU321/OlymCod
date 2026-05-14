@@ -1,15 +1,12 @@
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserProfile } from "@/lib/auth/server";
 
 export default async function LoginPage() {
-  const supabase = await createClient();
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getCurrentUserProfile();
 
   if (user) {
-    redirect("/app");
+    redirect(profile?.role === "owner" ? "/app" : "/contribution-status");
   }
 
   return <LoginForm />;

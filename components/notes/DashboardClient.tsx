@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Calculator, Dices, FileText, Inbox, Plus, Search, Shapes, Sigma } from "lucide-react";
+import { BookOpen, Calculator, Dices, FileText, Inbox, Plus, Search, ShieldCheck, Shapes, Sigma } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { NoteCard } from "@/components/notes/NoteCard";
@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TOPICS } from "@/lib/constants/notes";
-import type { Note } from "@/lib/types";
+import type { Note, SiteSettings, Suggestion } from "@/lib/types";
 import { matchesNoteSearch } from "@/lib/utils/notes";
 
 interface DashboardClientProps {
   notes: Note[];
+  suggestions: Suggestion[];
+  settings: SiteSettings;
 }
 
 const topicIcons = {
@@ -26,7 +28,7 @@ const topicIcons = {
   Inbox
 };
 
-export function DashboardClient({ notes }: DashboardClientProps) {
+export function DashboardClient({ notes, suggestions, settings }: DashboardClientProps) {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => notes.filter((note) => matchesNoteSearch(note, query)), [notes, query]);
   const recent = [...filtered].sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at)).slice(0, 3);
@@ -35,9 +37,9 @@ export function DashboardClient({ notes }: DashboardClientProps) {
 
   const stats = [
     { label: "Total notes", value: notes.length, tone: "bg-[#a5c8ff]" },
-    { label: "Theorem notes", value: notes.filter((note) => note.note_type === "Theorem").length, tone: "bg-[#93d4af]" },
-    { label: "Geometry notes", value: notes.filter((note) => note.topic === "Geometry").length, tone: "bg-[#dde2f3]" },
-    { label: "Formula notes", value: notes.filter((note) => note.note_type === "Formula" || note.topic === "Formula Bank").length, tone: "bg-[#ffdad6]" }
+    { label: "Private notes", value: notes.filter((note) => note.visibility === "private").length, tone: "bg-[#dde2f3]" },
+    { label: "Public notes", value: notes.filter((note) => note.visibility === "public").length, tone: "bg-[#93d4af]" },
+    { label: "Pending suggestions", value: suggestions.filter((item) => item.status === "pending").length, tone: "bg-[#ffdad6]" }
   ];
 
   return (
@@ -66,6 +68,10 @@ export function DashboardClient({ notes }: DashboardClientProps) {
             <Inbox className="h-4 w-4" aria-hidden="true" />
             Quick Capture
           </Button>
+          <Button type="button" variant="secondary" onClick={() => location.assign("/app/review")}>
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            Review Suggestions
+          </Button>
           <Button
             type="button"
             variant="secondary"
@@ -78,6 +84,35 @@ export function DashboardClient({ notes }: DashboardClientProps) {
             <Dices className="h-4 w-4" aria-hidden="true" />
             Random Technique
           </Button>
+        </div>
+      </section>
+
+      <section className="grid gap-4 rounded-lg border border-[#c3c6d0] bg-white p-5 sm:grid-cols-3">
+        <div>
+          <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[#43474f]">
+            Contribution Mode
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[#1a1c1c]">
+            {settings.contributions_enabled ? "Enabled" : "Disabled"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[#43474f]">
+            Public Notes
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[#1a1c1c]">
+            {settings.public_notes_enabled ? "Enabled" : "Disabled"}
+          </p>
+        </div>
+        <div>
+          <p className="text-[13px] font-medium uppercase tracking-[0.06em] text-[#43474f]">
+            Approved / Rejected
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[#1a1c1c]">
+            {suggestions.filter((item) => item.status === "approved" || item.status === "merged").length}
+            {" / "}
+            {suggestions.filter((item) => item.status === "rejected" || item.status === "spam").length}
+          </p>
         </div>
       </section>
 
@@ -165,6 +200,30 @@ export function DashboardClient({ notes }: DashboardClientProps) {
               <p className="text-sm leading-6 text-[#43474f]">Favorite notes appear here.</p>
             )}
           </div>
+        </div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between border-b border-[#c3c6d0] pb-2">
+          <h2 className="text-xl font-medium text-[#1a1c1c]">Recent Contributor Activity</h2>
+          <Link href="/app/review" className="text-[13px] font-medium text-[#0e3b69]">
+            Review queue
+          </Link>
+        </div>
+        <div className="mt-5 grid gap-3">
+          {suggestions.length ? (
+            suggestions.slice(0, 5).map((suggestion) => (
+              <Link key={suggestion.id} href={`/app/review/${suggestion.id}`} className="rounded border border-[#c3c6d0] bg-[#f9f9f9] p-4 hover:bg-white">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-medium">{suggestion.title}</span>
+                  <Badge>{suggestion.status.replaceAll("_", " ")}</Badge>
+                </div>
+                <p className="mt-1 line-clamp-1 text-sm text-[#43474f]">{suggestion.body_markdown}</p>
+              </Link>
+            ))
+          ) : (
+            <p className="text-sm leading-6 text-[#43474f]">Contributor activity will appear here.</p>
+          )}
         </div>
       </section>
     </div>

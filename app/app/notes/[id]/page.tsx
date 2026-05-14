@@ -1,6 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { DiagramGallery } from "@/components/diagrams/DiagramGallery";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { NoteViewActions } from "@/components/notes/NoteViewActions";
@@ -18,10 +18,11 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
     data: { user }
   } = await supabase.auth.getUser();
 
+  if (!user) redirect("/login");
+
   const { data: noteData } = await supabase
     .from("notes")
     .select("*")
-    .eq("user_id", user!.id)
     .eq("id", id)
     .single();
 
@@ -31,14 +32,13 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
   const { data: relatedData } = await supabase
     .from("notes")
     .select("*")
-    .eq("user_id", user!.id)
     .eq("is_archived", false)
     .eq("topic", note.topic)
     .neq("id", note.id)
     .limit(3);
 
   const { data: signedData } = note.diagram_urls.length
-    ? await supabase.storage.from("diagrams").createSignedUrls(note.diagram_urls, 60 * 60)
+    ? await supabase.storage.from("note-diagrams").createSignedUrls(note.diagram_urls, 60 * 60)
     : { data: [] };
 
   const diagrams =
@@ -63,6 +63,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
           <div className="mb-4 flex flex-wrap gap-2">
             <Badge tone="blue">{note.topic}</Badge>
             <Badge>{note.note_type}</Badge>
+            <Badge tone={note.visibility === "public" ? "green" : "default"}>{note.visibility}</Badge>
             <DifficultyBadge value={note.difficulty} />
           </div>
           <h1 className="text-4xl font-semibold leading-tight text-[#1a1c1c]">{note.title}</h1>
@@ -96,6 +97,10 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
               <div className="mt-2 flex flex-wrap gap-2">
                 {note.tags.length ? note.tags.map((tag) => <Badge key={tag}>{tag}</Badge>) : <Badge>No tags</Badge>}
               </div>
+            </div>
+            <div className="flex justify-between gap-3">
+              <span className="text-[#43474f]">Visibility</span>
+              <Badge tone={note.visibility === "public" ? "green" : "default"}>{note.visibility}</Badge>
             </div>
           </div>
         </section>

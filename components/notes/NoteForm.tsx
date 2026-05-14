@@ -39,6 +39,7 @@ function noteToDraft(note?: Note | null): NoteDraft {
       tags: [],
       body_markdown: DEFAULT_NOTE_TEMPLATE,
       diagram_urls: [],
+      visibility: "private",
       is_favorite: false
     };
   }
@@ -53,6 +54,7 @@ function noteToDraft(note?: Note | null): NoteDraft {
     tags: note.tags ?? [],
     body_markdown: note.body_markdown,
     diagram_urls: note.diagram_urls ?? [],
+    visibility: note.visibility ?? "private",
     is_favorite: note.is_favorite
   };
 }
@@ -106,9 +108,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     });
   }
 
-  function buildPayload(userId: string) {
+  function buildPayload() {
     return {
-      user_id: userId,
       title: draft.title.trim(),
       slug: draft.slug.trim() || titleToSlug(draft.title),
       topic: draft.topic,
@@ -118,6 +119,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
       body_markdown: draft.body_markdown.trim() || DEFAULT_NOTE_TEMPLATE,
       diagram_urls: draft.diagram_urls,
+      visibility: draft.visibility,
+      published_at: draft.visibility === "public" ? new Date().toISOString() : null,
       is_favorite: draft.is_favorite,
       is_archived: false
     };
@@ -138,7 +141,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         throw new Error(userError?.message ?? "You must be logged in to save notes.");
       }
 
-      const payload = buildPayload(user.id);
+      const payload = buildPayload();
       if (!payload.title) throw new Error("Title is required.");
       if (!payload.slug) throw new Error("Slug is required.");
 
@@ -147,14 +150,13 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         const { error: updateError } = await supabase
           .from("notes")
           .update(payload)
-          .eq("id", savedId)
-          .eq("user_id", user.id);
+          .eq("id", savedId);
 
         if (updateError) throw updateError;
       } else {
         const { data, error: insertError } = await supabase
           .from("notes")
-          .insert(payload)
+          .insert({ ...payload, user_id: user.id })
           .select("id")
           .single();
 
@@ -203,8 +205,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       const { error: deleteError } = await supabase
         .from("notes")
         .delete()
-        .eq("id", savedId)
-        .eq("user_id", user.id);
+        .eq("id", savedId);
 
       if (deleteError) throw deleteError;
 
@@ -284,7 +285,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                   required
                 />
               </Field>
-              <div className="grid gap-5 sm:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-4">
                 <Field label="Topic">
                   <select
                     className={inputClassName()}
@@ -324,6 +325,18 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                       })
                     }
                   />
+                </Field>
+                <Field label="Visibility">
+                  <select
+                    className={inputClassName()}
+                    value={draft.visibility}
+                    onChange={(event) =>
+                      updateDraft({ visibility: event.target.value as "private" | "public" })
+                    }
+                  >
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                  </select>
                 </Field>
               </div>
               <Field label="Description">
@@ -393,7 +406,9 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             <DiagramUpload
               noteId={savedId}
               paths={draft.diagram_urls}
-              onChange={(diagram_urls) => updateDraft({ diagram_urls })}
+              onChange={(diagram_urls) =>
+                setDraft((current) => ({ ...current, diagram_urls }))
+              }
             />
           </div>
         </section>
@@ -414,7 +429,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         </section>
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#c3c6d0] bg-[#f9f9f9] p-4 lg:hidden">
+      <div className="fixed inset-x-0 bottom-16 z-30 border-t border-[#c3c6d0] bg-[#f9f9f9] p-4 lg:hidden">
         <Button type="button" className="w-full" onClick={() => void saveNote(false)} disabled={busy}>
           <Save className="h-4 w-4" aria-hidden="true" />
           {busy ? "Saving..." : "Save Note"}

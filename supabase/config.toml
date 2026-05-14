@@ -1,0 +1,18 @@
+project_id = "cneuoscyhucvijjqgzfl"
+
+[auth]
+site_url = "https://olympiad-codex.vercel.app"
+additional_redirect_urls = [
+  "http://localhost:3000/**",
+  "https://olympiad-codex.vercel.app/**",
+  "https://*-123usernamemanresu321s-projects.vercel.app/**"
+]
+
+[auth.mfa.totp]
+enroll_enabled = true
+verify_enabled = true
+
+[auth.email]
+enable_confirmations = true
+max_frequency = "1m0s"
+otp_length = 8

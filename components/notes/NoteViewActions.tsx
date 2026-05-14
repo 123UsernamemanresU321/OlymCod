@@ -17,40 +17,63 @@ export function NoteViewActions({ note }: NoteViewActionsProps) {
   const router = useRouter();
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function toggleFavorite() {
-    const supabase = createClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user) return;
-    await supabase
-      .from("notes")
-      .update({ is_favorite: !note.is_favorite })
-      .eq("id", note.id)
-      .eq("user_id", user.id);
-    router.refresh();
+    setError(null);
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error(userError?.message ?? "You must be logged in.");
+      const { error: updateError } = await supabase
+        .from("notes")
+        .update({ is_favorite: !note.is_favorite })
+        .eq("id", note.id);
+      if (updateError) throw updateError;
+      router.refresh();
+    } catch (favoriteError) {
+      setError(favoriteError instanceof Error ? favoriteError.message : "Could not update favorite.");
+    }
   }
 
   async function deleteNote() {
     setBusy(true);
-    const supabase = createClient();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setBusy(false);
-      return;
-    }
+    setError(null);
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+        error: userError
+      } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error(userError?.message ?? "You must be logged in.");
 
-    await supabase.from("notes").delete().eq("id", note.id).eq("user_id", user.id);
-    router.push("/app/notes");
-    router.refresh();
+      const { error: deleteError } = await supabase
+        .from("notes")
+        .delete()
+        .eq("id", note.id);
+      if (deleteError) throw deleteError;
+
+      router.push("/app/notes");
+      router.refresh();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Could not delete note.");
+      setDeleteOpen(false);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
+        {error ? (
+          <p className="col-span-2 rounded border border-[#ffb4ab] bg-[#ffdad6] p-3 text-sm text-[#8f1d15]">
+            {error}
+          </p>
+        ) : null}
         <Link
           href={`/app/notes/${note.id}/edit`}
           className="inline-flex min-h-10 items-center justify-center gap-2 rounded border border-[#2c5282] bg-[#2c5282] px-4 py-2 text-[13px] font-medium tracking-[0.04em] text-white hover:bg-[#23466f]"
