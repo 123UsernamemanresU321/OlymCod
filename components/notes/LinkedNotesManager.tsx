@@ -6,7 +6,7 @@ import { Link2, Trash2, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { inputClassName } from "@/components/ui/Field";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
-import { NOTE_LINK_RELATIONS } from "@/lib/constants/daily";
+import { NOTE_LINK_RELATIONS, inverseNoteLinkRelation } from "@/lib/constants/daily";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteDraft, NoteLink } from "@/lib/types";
 
@@ -72,6 +72,15 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
         .select("*")
         .single();
       if (error) throw error;
+      await supabase.from("note_links").upsert(
+        {
+          user_id: user.id,
+          source_note_id: targetId,
+          target_note_id: noteId,
+          relation_type: inverseNoteLinkRelation(relation)
+        },
+        { onConflict: "user_id,source_note_id,target_note_id,relation_type" }
+      );
       setLinks((current) => [...current, data as NoteLink]);
       setTargetId("");
     } catch (linkError) {
@@ -82,8 +91,20 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
   }
 
   async function removeLink(linkId: string) {
+    const link = links.find((item) => item.id === linkId);
     const supabase = createClient();
     await supabase.from("note_links").delete().eq("id", linkId);
+    if (link) {
+      await supabase
+        .from("note_links")
+        .delete()
+        .match({
+          user_id: link.user_id,
+          source_note_id: link.target_note_id,
+          target_note_id: link.source_note_id,
+          relation_type: inverseNoteLinkRelation(link.relation_type)
+        });
+    }
     setLinks((current) => current.filter((link) => link.id !== linkId));
   }
 

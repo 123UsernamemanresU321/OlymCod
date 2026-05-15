@@ -65,6 +65,22 @@ export const NOTE_LINK_RELATIONS: NoteLinkRelation[] = [
   "special case"
 ];
 
+export function inverseNoteLinkRelation(relation: string): NoteLinkRelation {
+  const inverseRelations: Record<NoteLinkRelation, NoteLinkRelation> = {
+    related: "related",
+    prerequisite: "used together",
+    "stronger version": "weaker version",
+    "weaker version": "stronger version",
+    "commonly confused": "commonly confused",
+    "used together": "used together",
+    "example of": "special case",
+    generalization: "special case",
+    "special case": "generalization"
+  };
+
+  return inverseRelations[relation as NoteLinkRelation] ?? "related";
+}
+
 export const REVIEW_STATUSES: ReviewStatus[] = [
   "new",
   "learning",

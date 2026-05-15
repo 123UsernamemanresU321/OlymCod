@@ -194,6 +194,8 @@ Open `/app/mistakes`. Track repeated errors by topic, type, severity, correct pr
 
 Saved note edit pages include a **Linked Notes** panel. Add relation types like `prerequisite`, `commonly confused`, or `used together`. Note view pages show related notes, backlinks, linked problems, and linked mistakes.
 
+Directional links create reciprocal links automatically. For example, linking another note as `generalization` creates the reverse link as `special case`; `stronger version` reverses to `weaker version`; symmetric relations like `related`, `commonly confused`, and `used together` mirror themselves.
+
 ### Light Review
 
 Open `/app/review-notes`. Reviews are deliberately simple:
@@ -303,6 +305,11 @@ $$a^{\varphi(n)} \equiv 1 \pmod n.$$
 ```
 
 The Markdown editor toolbar includes a LaTeX command dropdown for common wrappers and symbols such as `$...$`, `$$...$$`, `\frac{}`, `\sqrt{}`, `\begin{aligned}`, `\binom{}`, `\mathbb{}`, congruences, angle notation, parallel, and perpendicular.
+
+The renderer accepts both standard Codex delimiters and DeepSeek-style delimiters:
+
+- inline: `$...$` and `\(...\)`
+- block: `$$...$$` and `\[...\]`
 
 ## Run Locally
 

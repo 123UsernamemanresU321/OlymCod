@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { BookOpen, Command, FileText, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TOPICS } from "@/lib/constants/notes";
@@ -158,6 +159,79 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
     router.push(href);
   }
 
+  const overlay =
+    open && typeof document !== "undefined"
+      ? createPortal(
+          <div className="fixed inset-0 z-[1000] bg-black/45 p-3 backdrop-blur-[1px] sm:p-6">
+            <div className="mx-auto mt-12 max-w-2xl rounded-lg border border-[#c3c6d0] bg-white shadow-xl">
+              <div className="flex items-center gap-3 border-b border-[#c3c6d0] p-3">
+                <Search className="h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
+                <input
+                  autoFocus
+                  className={inputClassName("border-0 bg-transparent p-0 focus:ring-0")}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search notes, problems, tags, topics, or actions..."
+                />
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="grid h-8 w-8 place-items-center rounded text-[#43474f] hover:bg-[#f9f9f9]"
+                  aria-label="Close command palette"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+              <div className="max-h-[70vh] overflow-y-auto p-3">
+                {groups.map((group) => {
+                  const groupResults = results.filter((item) => item.group === group);
+                  if (!groupResults.length) return null;
+                  return (
+                    <section key={group} className="mb-4">
+                      <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#43474f]">
+                        {group}
+                      </h2>
+                      <div className="grid gap-1">
+                        {groupResults.map((item) => (
+                          <button
+                            key={`${item.group}-${item.id}`}
+                            type="button"
+                            onClick={() => openResult(item.href)}
+                            className="flex items-start gap-3 rounded p-3 text-left hover:bg-[#eef4ff]"
+                          >
+                            {item.group === "Notes" ? (
+                              <FileText className="mt-0.5 h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
+                            ) : (
+                              <BookOpen className="mt-0.5 h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
+                            )}
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-semibold text-[#1a1c1c]">
+                                {item.title}
+                              </span>
+                              {item.preview ? (
+                                <span className="line-clamp-1 text-[12px] text-[#43474f]">
+                                  {item.preview}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+                {!results.length ? (
+                  <p className="p-4 text-sm text-[#43474f]">
+                    No results. Try `tag:modular`, `topic:geometry`, or `status:needs_practice`.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>,
+          document.body
+        )
+      : null;
+
   return (
     <>
       <button
@@ -168,75 +242,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
         <Command className="h-4 w-4" aria-hidden="true" />
         <span className="hidden sm:inline">Command</span>
       </button>
-
-      {open ? (
-        <div className="fixed inset-0 z-50 bg-black/30 p-3 sm:p-6">
-          <div className="mx-auto mt-12 max-w-2xl rounded-lg border border-[#c3c6d0] bg-white shadow-xl">
-            <div className="flex items-center gap-3 border-b border-[#c3c6d0] p-3">
-              <Search className="h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
-              <input
-                autoFocus
-                className={inputClassName("border-0 bg-transparent p-0 focus:ring-0")}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search notes, problems, tags, topics, or actions..."
-              />
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="grid h-8 w-8 place-items-center rounded text-[#43474f] hover:bg-[#f9f9f9]"
-                aria-label="Close command palette"
-              >
-                <X className="h-4 w-4" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="max-h-[70vh] overflow-y-auto p-3">
-              {groups.map((group) => {
-                const groupResults = results.filter((item) => item.group === group);
-                if (!groupResults.length) return null;
-                return (
-                  <section key={group} className="mb-4">
-                    <h2 className="mb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#43474f]">
-                      {group}
-                    </h2>
-                    <div className="grid gap-1">
-                      {groupResults.map((item) => (
-                        <button
-                          key={`${item.group}-${item.id}`}
-                          type="button"
-                          onClick={() => openResult(item.href)}
-                          className="flex items-start gap-3 rounded p-3 text-left hover:bg-[#eef4ff]"
-                        >
-                          {item.group === "Notes" ? (
-                            <FileText className="mt-0.5 h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
-                          ) : (
-                            <BookOpen className="mt-0.5 h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
-                          )}
-                          <span className="min-w-0">
-                            <span className="block truncate text-sm font-semibold text-[#1a1c1c]">
-                              {item.title}
-                            </span>
-                            {item.preview ? (
-                              <span className="line-clamp-1 text-[12px] text-[#43474f]">
-                                {item.preview}
-                              </span>
-                            ) : null}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                );
-              })}
-              {!results.length ? (
-                <p className="p-4 text-sm text-[#43474f]">
-                  No results. Try `tag:modular`, `topic:geometry`, or `status:needs_practice`.
-                </p>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {overlay}
     </>
   );
 }

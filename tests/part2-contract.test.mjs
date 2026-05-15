@@ -60,3 +60,30 @@ test("front page and app shell expose login, command palette, and quick capture"
   assert.match(shell, /Review/);
   assert.match(shell, /Diagrams/);
 });
+
+test("note links are reciprocal and command palette overlays above app chrome", () => {
+  const daily = read("../lib/constants/daily.ts");
+  const linkedNotes = read("../components/notes/LinkedNotesManager.tsx");
+  const commandPalette = read("../components/command/CommandPalette.tsx");
+  const schema = read("../supabase/schema.sql");
+  const reciprocalMigration = read("../supabase/migrations/20260515_reciprocal_note_links.sql");
+
+  assert.match(daily, /inverseNoteLinkRelation/);
+  assert.match(daily, /generalization.*special case/s);
+  assert.match(daily, /special case.*generalization/s);
+  assert.match(linkedNotes, /inverseNoteLinkRelation/);
+  assert.match(schema, /ensure_reciprocal_note_link/);
+  assert.match(schema, /delete_reciprocal_note_link/);
+  assert.match(reciprocalMigration, /note_links_insert_reciprocal/);
+  assert.match(commandPalette, /createPortal/);
+  assert.match(commandPalette, /z-\[1000\]/);
+});
+
+test("markdown preview normalizes DeepSeek math delimiters", () => {
+  const rendering = read("../lib/markdown/rendering.ts");
+  const preview = read("../components/editor/MarkdownPreview.tsx");
+  assert.match(rendering, /normalizeMathDelimiters/);
+  assert.match(rendering, /\\\\\\\(/);
+  assert.match(rendering, /\\\\\\\[/);
+  assert.match(preview, /normalizeMathDelimiters/);
+});
