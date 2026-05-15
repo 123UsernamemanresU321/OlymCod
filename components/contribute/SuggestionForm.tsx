@@ -4,10 +4,11 @@ import { Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { TopicSelector } from "@/components/notes/TopicSelector";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
-import { NOTE_TYPES, SUGGESTION_TYPES, TOPICS } from "@/lib/constants/notes";
+import { NOTE_TYPES, SUGGESTION_TYPES } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, SuggestionType } from "@/lib/types";
 import { safeFilename, validateDiagramFile } from "@/lib/utils/files";
@@ -147,11 +148,7 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
               </select>
             </Field>
             <Field label="Topic">
-              <select className={inputClassName()} value={topic} onChange={(event) => setTopic(event.target.value)}>
-                {TOPICS.filter((item) => item !== "Inbox").map((item) => (
-                  <option key={item}>{item}</option>
-                ))}
-              </select>
+              <TopicSelector value={topic} onChange={setTopic} />
             </Field>
             <Field label="Note type">
               <select className={inputClassName()} value={noteType} onChange={(event) => handleNoteTypeChange(event.target.value)}>

@@ -19,6 +19,35 @@ export const TOPICS: Topic[] = [
   "Inbox"
 ];
 
+export const MATH_TOPICS: Topic[] = [
+  "Number Theory",
+  "Combinatorics",
+  "Algebra",
+  "Geometry",
+  "Inequalities"
+];
+
+export const SPECIAL_TOPICS: Topic[] = ["Formula Bank", "Problem Patterns", "Inbox"];
+
+export function splitTopicValue(topic: string | null | undefined) {
+  return (topic ?? "")
+    .split("+")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+export function buildTopicValue(topics: string[]) {
+  const cleanTopics = Array.from(
+    new Set(topics.map((topic) => topic.trim()).filter(Boolean))
+  );
+  return cleanTopics.length ? cleanTopics.join(" + ") : "Number Theory";
+}
+
+export function topicIncludes(topic: string | null | undefined, filter: string) {
+  if (!filter || filter === "All") return true;
+  return splitTopicValue(topic).includes(filter);
+}
+
 export const NOTE_TYPES: NoteType[] = [
   "Theorem",
   "Lemma",

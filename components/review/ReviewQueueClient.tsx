@@ -5,7 +5,13 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { inputClassName } from "@/components/ui/Field";
-import { SUGGESTION_STATUSES, SUGGESTION_TYPES, TOPICS } from "@/lib/constants/notes";
+import {
+  MATH_TOPICS,
+  SPECIAL_TOPICS,
+  SUGGESTION_STATUSES,
+  SUGGESTION_TYPES,
+  topicIncludes
+} from "@/lib/constants/notes";
 import type { Profile, Suggestion } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/utils/notes";
 
@@ -45,7 +51,7 @@ export function ReviewQueueClient({ suggestions, profiles }: ReviewQueueClientPr
       if (query && !haystack.includes(query.toLowerCase())) return false;
       if (status !== "All" && suggestion.status !== status) return false;
       if (type !== "All" && suggestion.suggestion_type !== type) return false;
-      if (topic !== "All" && suggestion.topic !== topic) return false;
+      if (!topicIncludes(suggestion.topic, topic)) return false;
       if (contributor !== "All" && suggestion.contributor_id !== contributor) return false;
       return true;
     });
@@ -75,7 +81,7 @@ export function ReviewQueueClient({ suggestions, profiles }: ReviewQueueClientPr
         </select>
         <select className={inputClassName("w-auto min-w-36")} value={topic} onChange={(event) => setTopic(event.target.value)}>
           <option>All</option>
-          {TOPICS.filter((item) => item !== "Inbox").map((item) => <option key={item}>{item}</option>)}
+          {[...MATH_TOPICS, ...SPECIAL_TOPICS.filter((item) => item !== "Inbox")].map((item) => <option key={item}>{item}</option>)}
         </select>
         <select className={inputClassName("w-auto min-w-48")} value={contributor} onChange={(event) => setContributor(event.target.value)}>
           <option>All</option>

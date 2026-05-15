@@ -9,13 +9,14 @@ import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { AIWritingAssistant } from "@/components/notes/AIWritingAssistant";
 import { LinkedNotesManager } from "@/components/notes/LinkedNotesManager";
 import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
+import { TopicSelector } from "@/components/notes/TopicSelector";
 import { VersionHistory } from "@/components/notes/VersionHistory";
 import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { Toast } from "@/components/ui/Toast";
 import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
-import { NOTE_TYPES, TOPICS } from "@/lib/constants/notes";
+import { NOTE_TYPES } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteDraft, ToastKind } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
@@ -424,23 +425,17 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                   required
                 />
               </Field>
-              <div className="grid gap-5 sm:grid-cols-4">
-                <Field label="Topic">
-                  <select
-                    className={inputClassName()}
-                    value={draft.topic}
-                    onChange={(event) => {
-                      setTopicTouched(true);
-                      updateDraft({ topic: event.target.value });
-                    }}
-                  >
-                    {TOPICS.map((topic) => (
-                      <option key={topic} value={topic}>
-                        {topic}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+              <Field label="Topic">
+                <TopicSelector
+                  value={draft.topic}
+                  includeInbox
+                  onChange={(topic) => {
+                    setTopicTouched(true);
+                    updateDraft({ topic });
+                  }}
+                />
+              </Field>
+              <div className="grid gap-5 sm:grid-cols-3">
                 <Field label="Note type">
                   <select
                     className={inputClassName()}

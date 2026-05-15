@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { inputClassName } from "@/components/ui/Field";
-import { TOPICS } from "@/lib/constants/notes";
+import { MATH_TOPICS, SPECIAL_TOPICS, topicIncludes } from "@/lib/constants/notes";
 import type { Note } from "@/lib/types";
 import { matchesNoteSearch, sortNotes } from "@/lib/utils/notes";
 
@@ -17,7 +17,7 @@ export function PublicNotesClient({ notes }: { notes: Note[] }) {
     return sortNotes(
       notes.filter((note) => {
         if (!matchesNoteSearch(note, query)) return false;
-        if (topic !== "All" && note.topic !== topic) return false;
+        if (!topicIncludes(note.topic, topic)) return false;
         return true;
       }),
       "updated"
@@ -51,7 +51,7 @@ export function PublicNotesClient({ notes }: { notes: Note[] }) {
         <section className="mt-8 flex flex-wrap gap-3 rounded-lg border border-[#c3c6d0] bg-white p-4">
           <select className={inputClassName("w-auto min-w-44")} value={topic} onChange={(event) => setTopic(event.target.value)}>
             <option>All</option>
-            {TOPICS.filter((item) => item !== "Inbox").map((item) => (
+            {[...MATH_TOPICS, ...SPECIAL_TOPICS.filter((item) => item !== "Inbox")].map((item) => (
               <option key={item}>{item}</option>
             ))}
           </select>

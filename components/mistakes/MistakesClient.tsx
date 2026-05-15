@@ -7,8 +7,9 @@ import { CheckCircle2, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
+import { TopicSelector } from "@/components/notes/TopicSelector";
 import { MISTAKE_TYPES } from "@/lib/constants/daily";
-import { TOPICS } from "@/lib/constants/notes";
+import { MATH_TOPICS, SPECIAL_TOPICS, topicIncludes } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { MistakeLog, Note } from "@/lib/types";
 
@@ -47,7 +48,7 @@ export function MistakesClient({ mistakes, notes }: MistakesClientProps) {
         .join(" ")
         .toLowerCase();
       if (q && !haystack.includes(q)) return false;
-      if (topic && mistake.topic !== topic) return false;
+      if (topic && !topicIncludes(mistake.topic, topic)) return false;
       if (mistakeType && mistake.mistake_type !== mistakeType) return false;
       if (resolved === "unresolved" && mistake.is_resolved) return false;
       if (resolved === "resolved" && !mistake.is_resolved) return false;
@@ -151,6 +152,9 @@ export function MistakesClient({ mistakes, notes }: MistakesClientProps) {
                 </select>
               </Field>
             </div>
+            <Field label="Topic">
+              <TopicSelector value={topic || "Number Theory"} onChange={setTopic} />
+            </Field>
             <Field label="Description">
               <textarea className={inputClassName("min-h-28")} value={description} onChange={(event) => setDescription(event.target.value)} />
             </Field>
@@ -186,7 +190,7 @@ export function MistakesClient({ mistakes, notes }: MistakesClientProps) {
           <input className={inputClassName()} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search mistakes..." />
           <select className={inputClassName()} value={topic} onChange={(event) => setTopic(event.target.value)}>
             <option value="">All topics</option>
-            {TOPICS.filter((item) => item !== "Inbox").map((item) => (
+            {[...MATH_TOPICS, ...SPECIAL_TOPICS.filter((item) => item !== "Inbox")].map((item) => (
               <option key={item} value={item}>
                 {item}
               </option>

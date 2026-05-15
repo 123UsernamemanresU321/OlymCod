@@ -217,11 +217,14 @@ begin
     );
   end if;
 
-  if not exists (select 1 from pg_constraint where conname = 'notes_topic_check' and conrelid = 'public.notes'::regclass) then
-    alter table public.notes add constraint notes_topic_check check (
-      topic in ('Number Theory', 'Combinatorics', 'Algebra', 'Geometry', 'Inequalities', 'Formula Bank', 'Problem Patterns', 'Inbox')
-    );
+  if exists (select 1 from pg_constraint where conname = 'notes_topic_check' and conrelid = 'public.notes'::regclass) then
+    alter table public.notes drop constraint notes_topic_check;
   end if;
+
+  alter table public.notes add constraint notes_topic_check check (
+    topic in ('Formula Bank', 'Problem Patterns', 'Inbox')
+    or topic ~ '^(Number Theory|Combinatorics|Algebra|Geometry|Inequalities)( \\+ (Number Theory|Combinatorics|Algebra|Geometry|Inequalities))*$'
+  );
 
   if exists (select 1 from pg_constraint where conname = 'notes_note_type_check' and conrelid = 'public.notes'::regclass) then
     alter table public.notes drop constraint notes_note_type_check;

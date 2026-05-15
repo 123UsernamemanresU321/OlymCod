@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { ImagePlus, Plus, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { TopicSelector } from "@/components/notes/TopicSelector";
 import { CAPTURE_TYPES } from "@/lib/constants/daily";
-import { TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import { validateDiagramFile, safeFilename } from "@/lib/utils/files";
 import { parseTags } from "@/lib/utils/tags";
@@ -190,18 +190,7 @@ export function QuickCapture({
                   </select>
                 </Field>
                 <Field label="Topic guess">
-                  <select
-                    className={inputClassName()}
-                    value={topicGuess}
-                    onChange={(event) => setTopicGuess(event.target.value)}
-                  >
-                    <option value="">No guess</option>
-                    {TOPICS.filter((topic) => topic !== "Inbox").map((topic) => (
-                      <option key={topic} value={topic}>
-                        {topic}
-                      </option>
-                    ))}
-                  </select>
+                  <TopicSelector value={topicGuess} onChange={setTopicGuess} allowEmpty />
                 </Field>
               </div>
 

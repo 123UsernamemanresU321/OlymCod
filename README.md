@@ -267,6 +267,8 @@ npx vercel deploy --prod
 
 The editor uses note-type-specific formats. Changing the note type updates the starter template while the note body is still untouched; after manual edits, use **Apply template** if you intentionally want to replace the body.
 
+Topics use a compact chip picker instead of a long combination dropdown. You can select one or more core subjects and the app stores them as a combined topic such as `Combinatorics + Geometry` or `Algebra + Number Theory`. Special buckets such as `Formula Bank`, `Problem Patterns`, and `Inbox` remain single-choice buckets. Filtering by `Geometry` will still match `Combinatorics + Geometry`.
+
 Current official note types:
 
 - `Theorem`: statement, conditions, intuition, proof sketch, examples, mistakes, related techniques.

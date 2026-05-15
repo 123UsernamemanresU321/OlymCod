@@ -92,6 +92,25 @@ test("AI related-note prompt uses current-note directional semantics", () => {
   assert.match(route, /relation_type is always from the current note to the candidate note/);
 });
 
+test("topics support compact multi-topic combinations", () => {
+  const notesConstants = read("../lib/constants/notes.ts");
+  const topicSelector = read("../components/notes/TopicSelector.tsx");
+  const noteForm = read("../components/notes/NoteForm.tsx");
+  const notesLibrary = read("../components/notes/NotesLibraryClient.tsx");
+  const schema = read("../supabase/schema.sql");
+  const migration = read("../supabase/migrations/20260515000200_topic_combinations.sql");
+
+  assert.match(notesConstants, /MATH_TOPICS/);
+  assert.match(notesConstants, /buildTopicValue/);
+  assert.match(notesConstants, /topicIncludes/);
+  assert.match(topicSelector, /TopicSelector/);
+  assert.match(topicSelector, /selected:|Selected:/i);
+  assert.match(noteForm, /<TopicSelector/);
+  assert.match(notesLibrary, /topicIncludes/);
+  assert.match(schema, /Number Theory\|Combinatorics\|Algebra\|Geometry\|Inequalities/);
+  assert.match(migration, /drop constraint notes_topic_check/);
+});
+
 test("markdown preview normalizes DeepSeek math delimiters", () => {
   const rendering = read("../lib/markdown/rendering.ts");
   const preview = read("../components/editor/MarkdownPreview.tsx");

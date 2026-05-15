@@ -7,13 +7,13 @@ import { Archive, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
+import { TopicSelector } from "@/components/notes/TopicSelector";
 import {
   CONVERSION_TEMPLATE_TYPES,
   buildConversionTemplate,
   templateToNoteDefaults,
   type ConversionTemplateType
 } from "@/lib/constants/daily";
-import { TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { QuickCapture } from "@/lib/types";
 import { parseTags } from "@/lib/utils/tags";
@@ -288,17 +288,7 @@ export function CaptureClient({ captures, initialConvertId = null }: CaptureClie
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Topic">
-                  <select
-                    className={inputClassName()}
-                    value={topic}
-                    onChange={(event) => setTopic(event.target.value)}
-                  >
-                    {TOPICS.filter((item) => item !== "Inbox").map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
+                  <TopicSelector value={topic} onChange={setTopic} />
                 </Field>
                 <Field label="Difficulty">
                   <input

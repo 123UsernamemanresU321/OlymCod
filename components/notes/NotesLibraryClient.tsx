@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { NoteCard } from "@/components/notes/NoteCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inputClassName } from "@/components/ui/Field";
-import { NOTE_TYPES, TOPICS } from "@/lib/constants/notes";
+import { MATH_TOPICS, NOTE_TYPES, SPECIAL_TOPICS, topicIncludes } from "@/lib/constants/notes";
 import type { Note, SortKey } from "@/lib/types";
 import { matchesNoteSearch, sortNotes } from "@/lib/utils/notes";
 
@@ -26,7 +26,7 @@ export function NotesLibraryClient({ notes }: NotesLibraryClientProps) {
   const filtered = useMemo(() => {
     const result = notes.filter((note) => {
       if (!matchesNoteSearch(note, query)) return false;
-      if (topic !== "All" && note.topic !== topic) return false;
+      if (!topicIncludes(note.topic, topic)) return false;
       if (noteType !== "All" && note.note_type !== noteType) return false;
       if (difficulty !== "All" && note.difficulty !== Number(difficulty)) return false;
       if (favoritesOnly && !note.is_favorite) return false;
@@ -58,7 +58,7 @@ export function NotesLibraryClient({ notes }: NotesLibraryClientProps) {
         <span className="text-[13px] font-medium tracking-[0.04em] text-[#43474f]">Filter</span>
         <select className={inputClassName("w-auto min-w-32")} value={topic} onChange={(event) => setTopic(event.target.value)}>
           <option>All</option>
-          {TOPICS.map((item) => (
+          {[...MATH_TOPICS, ...SPECIAL_TOPICS].map((item) => (
             <option key={item}>{item}</option>
           ))}
         </select>
