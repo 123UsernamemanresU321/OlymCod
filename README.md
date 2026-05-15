@@ -220,6 +220,14 @@ Use `Cmd/Ctrl + K` or the mobile command button. It searches notes, problem logs
 
 Open `/app/diagrams`. Upload SVG/PNG/JPG/JPEG diagrams, attach them to notes, copy Markdown image syntax, remove diagrams from notes, or delete unused diagrams. Files stay in the private `note-diagrams` bucket and previews use signed URLs.
 
+In the note editor, save the note once, upload a diagram in the Geometry diagrams panel, then click **Insert in Markdown** on the uploaded diagram card. The app inserts Markdown like:
+
+```md
+![diagram-name.svg](/api/diagrams/render?path=...)
+```
+
+You do not need to manually find the Supabase storage path. The `/api/diagrams/render` route verifies that the current user can read a note containing that diagram, then creates a short-lived signed preview URL. The editor preview renders the image immediately, and the saved Markdown remains stable because it does not contain an expiring Supabase signed URL.
+
 ### Local Drafts And Versions
 
 The editor saves a browser-local draft shortly after changes. Cloud saves also write the previous note body and metadata to `note_versions`, and the edit page can show and restore recent versions.

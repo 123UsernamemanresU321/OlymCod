@@ -119,3 +119,20 @@ test("markdown preview normalizes DeepSeek math delimiters", () => {
   assert.match(rendering, /\\\\\\\[/);
   assert.match(preview, /normalizeMathDelimiters/);
 });
+
+test("diagram uploads can be inserted into markdown with stable private preview URLs", () => {
+  const diagramUtils = read("../lib/utils/diagrams.ts");
+  const renderRoute = read("../app/api/diagrams/render/route.ts");
+  const upload = read("../components/diagrams/DiagramUpload.tsx");
+  const noteForm = read("../components/notes/NoteForm.tsx");
+  const preview = read("../components/editor/MarkdownPreview.tsx");
+
+  assert.match(diagramUtils, /diagramMarkdownImage/);
+  assert.match(diagramUtils, /\/api\/diagrams\/render\?path=/);
+  assert.match(renderRoute, /createSignedUrl/);
+  assert.match(renderRoute, /contains\("diagram_urls", \[path\]\)/);
+  assert.match(upload, /onInsertMarkdown/);
+  assert.match(upload, /Insert in Markdown/);
+  assert.match(noteForm, /insertDiagramMarkdown/);
+  assert.match(preview, /normalizeDiagramImageUrl/);
+});

@@ -205,6 +205,16 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     updateDraft({ body_markdown: markdown.trim() });
   }
 
+  function insertDiagramMarkdown(markdown: string) {
+    const block = `\n\n${markdown.trim()}\n\n`;
+    insertGeneratedMarkdown(block);
+    setToast({
+      kind: "success",
+      title: "Diagram inserted",
+      message: "The diagram Markdown was placed at your cursor and should render in Live Preview."
+    });
+  }
+
   function applyAIMetadata(metadata: { description?: string | null; tags?: string[] }) {
     const update: Partial<NoteDraft> = {};
     if (metadata.description) update.description = metadata.description;
@@ -552,6 +562,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             <DiagramUpload
               noteId={savedId}
               paths={draft.diagram_urls}
+              onInsertMarkdown={insertDiagramMarkdown}
               onChange={(diagram_urls) =>
                 setDraft((current) => ({ ...current, diagram_urls }))
               }

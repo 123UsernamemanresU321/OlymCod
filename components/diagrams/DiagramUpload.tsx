@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileImage, Trash2, Upload } from "lucide-react";
+import { FileImage, ImagePlus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
+import { diagramMarkdownImage } from "@/lib/utils/diagrams";
 import { safeFilename, validateDiagramFile } from "@/lib/utils/files";
 
 interface SignedDiagram {
@@ -15,9 +16,10 @@ interface DiagramUploadProps {
   noteId: string | null;
   paths: string[];
   onChange: (paths: string[]) => void;
+  onInsertMarkdown?: (markdown: string) => void;
 }
 
-export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
+export function DiagramUpload({ noteId, paths, onChange, onInsertMarkdown }: DiagramUploadProps) {
   const bucket = "note-diagrams";
   const [signed, setSigned] = useState<SignedDiagram[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -169,7 +171,9 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
             <FileImage className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
             Geometry diagrams
           </h3>
-          <p className="mt-1 text-sm text-[#43474f]">Upload SVG, PNG, JPG, or JPEG files.</p>
+          <p className="mt-1 text-sm text-[#43474f]">
+            Upload SVG, PNG, JPG, or JPEG files. Use Insert in Markdown to place a diagram at your cursor.
+          </p>
         </div>
         <label className="inline-flex">
           <input
@@ -204,27 +208,42 @@ export function DiagramUpload({ noteId, paths, onChange }: DiagramUploadProps) {
 
       {signed.length ? (
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          {signed.map((item) => (
-            <figure key={item.path} className="rounded border border-[#c3c6d0] bg-white p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={item.signedUrl}
-                alt="Uploaded geometry diagram"
-                className="h-44 w-full object-contain"
-              />
-              <figcaption className="mt-3 flex items-center justify-between gap-3 text-xs text-[#43474f]">
-                <span className="truncate">{item.path.split("/").pop()}</span>
-                <button
-                  type="button"
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded text-[#8f1d15] hover:bg-[#ffdad6]"
-                  aria-label="Remove diagram"
-                  onClick={() => void removePath(item.path)}
-                >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
-                </button>
-              </figcaption>
-            </figure>
-          ))}
+          {signed.map((item) => {
+            const filename = item.path.split("/").pop() ?? "Diagram";
+            return (
+              <figure key={item.path} className="rounded border border-[#c3c6d0] bg-white p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={item.signedUrl}
+                  alt="Uploaded geometry diagram"
+                  className="h-44 w-full object-contain"
+                />
+                <figcaption className="mt-3 space-y-3 text-xs text-[#43474f]">
+                  <span className="block truncate">{filename}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {onInsertMarkdown ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={() => onInsertMarkdown(diagramMarkdownImage(item.path, filename))}
+                      >
+                        <ImagePlus className="h-4 w-4" aria-hidden="true" />
+                        Insert in Markdown
+                      </Button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="grid h-9 w-9 shrink-0 place-items-center rounded text-[#8f1d15] hover:bg-[#ffdad6]"
+                      aria-label="Remove diagram"
+                      onClick={() => void removePath(item.path)}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </div>
+                </figcaption>
+              </figure>
+            );
+          })}
         </div>
       ) : null}
     </section>
