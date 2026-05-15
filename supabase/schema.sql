@@ -608,6 +608,15 @@ create trigger note_links_delete_reciprocal
 after delete on public.note_links
 for each row execute function public.delete_reciprocal_note_link();
 
+insert into public.note_links (user_id, source_note_id, target_note_id, relation_type)
+select
+  user_id,
+  target_note_id,
+  source_note_id,
+  public.inverse_note_link_relation(relation_type)
+from public.note_links
+on conflict (user_id, source_note_id, target_note_id, relation_type) do nothing;
+
 alter table public.profiles enable row level security;
 alter table public.notes enable row level security;
 alter table public.suggestions enable row level security;

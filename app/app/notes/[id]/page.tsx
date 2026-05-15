@@ -7,6 +7,7 @@ import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
 import { NoteReviewActions } from "@/components/notes/NoteReviewActions";
 import { NoteViewActions } from "@/components/notes/NoteViewActions";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
+import { inverseNoteLinkRelation } from "@/lib/constants/daily";
 import { createClient } from "@/lib/supabase/server";
 import type { MistakeLog, Note, NoteLink, NoteReview, ProblemLog } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/utils/notes";
@@ -69,9 +70,15 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
   const explicitLinks = sourceLinks
     .map((link) => ({ link, note: allNotes.find((item) => item.id === link.target_note_id) }))
     .filter((row): row is { link: NoteLink; note: Note } => Boolean(row.note));
+  const explicitlyRelatedNoteIds = new Set(explicitLinks.map(({ note }) => note.id));
   const backlinkRows = backlinks
-    .map((link) => ({ link, note: allNotes.find((item) => item.id === link.source_note_id) }))
-    .filter((row): row is { link: NoteLink; note: Note } => Boolean(row.note));
+    .flatMap((link) => {
+      const backlinkNote = allNotes.find((item) => item.id === link.source_note_id);
+      return backlinkNote
+        ? [{ link, currentRelation: inverseNoteLinkRelation(link.relation_type), note: backlinkNote }]
+        : [];
+    })
+    .filter((row) => !explicitlyRelatedNoteIds.has(row.note.id));
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 lg:grid-cols-[minmax(0,616px)_288px] lg:px-10 lg:py-20">
@@ -166,10 +173,10 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
           <h2 className="text-lg font-semibold text-[#1a1c1c]">Backlinks</h2>
           <div className="mt-4 grid gap-2">
             {backlinkRows.length ? (
-              backlinkRows.map(({ link, note: item }) => (
+              backlinkRows.map(({ link, currentRelation, note: item }) => (
                 <Link key={link.id} href={`/app/notes/${item.id}`} className="rounded p-2 text-sm font-semibold text-[#0e3b69] hover:bg-white">
                   {item.title}
-                  <span className="ml-2 text-xs font-normal text-[#43474f]">({link.relation_type})</span>
+                  <span className="ml-2 text-xs font-normal text-[#43474f]">({currentRelation})</span>
                 </Link>
               ))
             ) : (

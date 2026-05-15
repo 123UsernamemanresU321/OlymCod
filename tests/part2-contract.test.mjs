@@ -64,6 +64,7 @@ test("front page and app shell expose login, command palette, and quick capture"
 test("note links are reciprocal and command palette overlays above app chrome", () => {
   const daily = read("../lib/constants/daily.ts");
   const linkedNotes = read("../components/notes/LinkedNotesManager.tsx");
+  const noteView = read("../app/app/notes/[id]/page.tsx");
   const commandPalette = read("../components/command/CommandPalette.tsx");
   const schema = read("../supabase/schema.sql");
   const reciprocalMigration = read("../supabase/migrations/20260515_reciprocal_note_links.sql");
@@ -74,9 +75,21 @@ test("note links are reciprocal and command palette overlays above app chrome", 
   assert.match(linkedNotes, /inverseNoteLinkRelation/);
   assert.match(schema, /ensure_reciprocal_note_link/);
   assert.match(schema, /delete_reciprocal_note_link/);
+  assert.match(schema, /public\.inverse_note_link_relation\(relation_type\)/);
   assert.match(reciprocalMigration, /note_links_insert_reciprocal/);
+  assert.match(reciprocalMigration, /on conflict \(user_id, source_note_id, target_note_id, relation_type\) do nothing/);
+  assert.match(noteView, /currentRelation: inverseNoteLinkRelation/);
+  assert.match(noteView, /explicitlyRelatedNoteIds/);
+  assert.match(noteView, /!explicitlyRelatedNoteIds\.has\(row\.note\.id\)/);
   assert.match(commandPalette, /createPortal/);
   assert.match(commandPalette, /z-\[1000\]/);
+});
+
+test("AI related-note prompt uses current-note directional semantics", () => {
+  const route = read("../app/api/ai/note-assist/route.ts");
+  assert.match(route, /current note Euler Phi Theorem -> candidate Fermat's Little Theorem = 'special case'/);
+  assert.match(route, /current note Fermat's Little Theorem -> candidate Euler Phi Theorem = 'generalization'/);
+  assert.match(route, /relation_type is always from the current note to the candidate note/);
 });
 
 test("markdown preview normalizes DeepSeek math delimiters", () => {

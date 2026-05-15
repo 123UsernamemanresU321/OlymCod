@@ -93,7 +93,7 @@ function modeInstruction(mode: AssistMode) {
     clean_rough_capture:
       "Turn a messy quick capture into a structured note draft. Keep uncertain claims clearly marked.",
     suggest_related_notes:
-      "Suggest possible note links using only provided existing note titles. Include relation type and a short reason for each.",
+      "Suggest possible note links using only provided existing note titles. The relation type must describe how the suggested note relates to the current note from the current note's page. Example: on an Euler Phi Theorem note, suggest Fermat's Little Theorem as 'special case'; on a Fermat's Little Theorem note, suggest Euler Phi Theorem as 'generalization'. Include relation type and a short reason for each.",
     generate_recall_questions:
       "Generate 3 to 5 recall questions that test whether the owner understands this note. Include concise answer hints.",
     find_common_mistakes:
@@ -129,6 +129,14 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
     "",
     "Return one JSON object with this exact shape:",
     '{"markdown":"Markdown content to preview or insert","description":"optional short note description or null","tags":["optional","tags"]}',
+    "",
+    "Directional note-link semantics:",
+    "- relation_type is always from the current note to the candidate note.",
+    "- If the current note is broader and the candidate is narrower, use 'special case'.",
+    "- If the candidate is broader than the current note, use 'generalization'.",
+    "- Example: current note Euler Phi Theorem -> candidate Fermat's Little Theorem = 'special case'.",
+    "- Example: current note Fermat's Little Theorem -> candidate Euler Phi Theorem = 'generalization'.",
+    "- Other allowed relation types include: related, prerequisite, stronger version, weaker version, commonly confused, used together, example of.",
     "",
     "Note context:",
     JSON.stringify(

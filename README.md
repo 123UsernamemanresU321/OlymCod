@@ -194,7 +194,7 @@ Open `/app/mistakes`. Track repeated errors by topic, type, severity, correct pr
 
 Saved note edit pages include a **Linked Notes** panel. Add relation types like `prerequisite`, `commonly confused`, or `used together`. Note view pages show related notes, backlinks, linked problems, and linked mistakes.
 
-Directional links create reciprocal links automatically. For example, linking another note as `generalization` creates the reverse link as `special case`; `stronger version` reverses to `weaker version`; symmetric relations like `related`, `commonly confused`, and `used together` mirror themselves.
+Directional links are always labeled from the page you are viewing to the other note, and reciprocal links are created automatically. For example, an Euler Phi Theorem note should link to Fermat's Little Theorem as `special case`; the Fermat's Little Theorem note should link back to Euler Phi Theorem as `generalization`. `stronger version` reverses to `weaker version`; symmetric relations like `related`, `commonly confused`, and `used together` mirror themselves.
 
 ### Light Review
 
