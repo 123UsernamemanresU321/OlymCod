@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Link2, Plus } from "lucide-react";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -191,7 +192,7 @@ ${problem.mistake_made ?? ""}
           {linkedNotes.length ? (
             linkedNotes.map((note) => (
               <Link key={note.id} href={`/app/notes/${note.id}`} className="rounded border border-[#c3c6d0] px-3 py-2 text-sm text-[#0e3b69]">
-                {note.title}
+                <InlineMarkdown text={note.title} />
               </Link>
             ))
           ) : (

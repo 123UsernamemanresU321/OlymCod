@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { createClient } from "@/lib/supabase/server";
@@ -42,8 +43,12 @@ export default async function PublicNotePage({ params }: { params: Promise<{ slu
             <Badge>{note.note_type}</Badge>
             <DifficultyBadge value={note.difficulty} noteType={note.note_type} />
           </div>
-          <h1 className="mt-5 text-4xl font-semibold leading-tight">{note.title}</h1>
-          {note.description ? <p className="mt-4 text-lg leading-8 text-[#43474f]">{note.description}</p> : null}
+          <h1 className="mt-5 text-4xl font-semibold leading-tight">
+            <InlineMarkdown text={note.title} />
+          </h1>
+          {note.description ? (
+            <InlineMarkdown text={note.description} className="mt-4 block text-lg leading-8 text-[#43474f]" />
+          ) : null}
           <div className="mt-8">
             <MarkdownPreview markdown={note.body_markdown} />
           </div>

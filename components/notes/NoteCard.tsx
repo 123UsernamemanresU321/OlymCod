@@ -3,6 +3,7 @@
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { createClient } from "@/lib/supabase/client";
 import type { Note } from "@/lib/types";
@@ -59,7 +60,7 @@ export function NoteCard({ note, compact = false }: NoteCardProps) {
 
       <div className="flex items-start justify-between gap-4">
         <h2 className="text-xl font-semibold leading-7 text-[#1a1c1c] group-hover:text-[#0e3b69]">
-          {note.title}
+          <InlineMarkdown text={note.title} />
         </h2>
         <span className="shrink-0 text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
           {formatUpdatedAt(note.updated_at)}
@@ -67,9 +68,14 @@ export function NoteCard({ note, compact = false }: NoteCardProps) {
       </div>
 
       {note.description ? (
-        <p className={compact ? "mt-3 line-clamp-2 text-sm text-[#43474f]" : "mt-3 line-clamp-3 text-base leading-7 text-[#43474f]"}>
-          {note.description}
-        </p>
+        <InlineMarkdown
+          text={note.description}
+          className={
+            compact
+              ? "mt-3 line-clamp-2 text-sm text-[#43474f]"
+              : "mt-3 line-clamp-3 text-base leading-7 text-[#43474f]"
+          }
+        />
       ) : null}
 
       <div className="mt-5 flex flex-wrap gap-2">

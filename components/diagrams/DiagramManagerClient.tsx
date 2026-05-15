@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Link2, Trash2, Upload } from "lucide-react";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { createClient } from "@/lib/supabase/client";
@@ -183,7 +184,13 @@ export function DiagramManagerClient({ diagrams, notes }: DiagramManagerClientPr
                 <h2 className="mt-3 truncate text-base font-semibold text-[#1a1c1c]">{diagram.filename}</h2>
                 <p className="mt-1 text-sm text-[#43474f]">{diagram.caption ?? "No caption"}</p>
                 <p className="mt-1 text-[12px] text-[#43474f]">
-                  {note ? `Attached to ${note.title}` : "Unattached"}
+                  {note ? (
+                    <>
+                      Attached to <InlineMarkdown text={note.title} />
+                    </>
+                  ) : (
+                    "Unattached"
+                  )}
                 </p>
                 <div className="mt-4 grid gap-2">
                   <select

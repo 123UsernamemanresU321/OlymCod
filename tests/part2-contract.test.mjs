@@ -136,3 +136,21 @@ test("diagram uploads can be inserted into markdown with stable private preview 
   assert.match(noteForm, /insertDiagramMarkdown/);
   assert.match(preview, /normalizeDiagramImageUrl/);
 });
+
+test("note titles and descriptions render inline LaTeX on main note surfaces", () => {
+  const inlineMarkdown = read("../components/editor/InlineMarkdown.tsx");
+  const noteCard = read("../components/notes/NoteCard.tsx");
+  const privateNote = read("../app/app/notes/[id]/page.tsx");
+  const publicNote = read("../app/notes/[slug]/page.tsx");
+  const publicList = read("../components/public/PublicNotesClient.tsx");
+  const formulaBank = read("../components/notes/FormulaBankClient.tsx");
+
+  assert.match(inlineMarkdown, /normalizeMathDelimiters/);
+  assert.match(inlineMarkdown, /ReactMarkdown/);
+  assert.match(inlineMarkdown, /inline/);
+  assert.match(noteCard, /InlineMarkdown/);
+  assert.match(privateNote, /InlineMarkdown/);
+  assert.match(publicNote, /InlineMarkdown/);
+  assert.match(publicList, /InlineMarkdown/);
+  assert.match(formulaBank, /InlineMarkdown/);
+});

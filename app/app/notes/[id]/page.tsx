@@ -2,6 +2,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { DiagramGallery } from "@/components/diagrams/DiagramGallery";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
 import { NoteReviewActions } from "@/components/notes/NoteReviewActions";
@@ -98,9 +99,11 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
             <Badge tone={note.visibility === "public" ? "green" : "default"}>{note.visibility}</Badge>
             <DifficultyBadge value={note.difficulty} noteType={note.note_type} />
           </div>
-          <h1 className="text-4xl font-semibold leading-tight text-[#1a1c1c]">{note.title}</h1>
+          <h1 className="text-4xl font-semibold leading-tight text-[#1a1c1c]">
+            <InlineMarkdown text={note.title} />
+          </h1>
           {note.description ? (
-            <p className="mt-4 text-lg leading-8 text-[#43474f]">{note.description}</p>
+            <InlineMarkdown text={note.description} className="mt-4 block text-lg leading-8 text-[#43474f]" />
           ) : null}
           <p className="mt-4 text-sm text-[#43474f]">Last updated: {formatUpdatedAt(note.updated_at)}</p>
         </header>
@@ -149,17 +152,21 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
             {explicitLinks.length ? (
               explicitLinks.map(({ link, note: item }) => (
                 <Link key={link.id} href={`/app/notes/${item.id}`} className="rounded p-2 hover:bg-white">
-                  <p className="text-sm font-semibold text-[#1a1c1c]">{item.title}</p>
+                  <p className="text-sm font-semibold text-[#1a1c1c]">
+                    <InlineMarkdown text={item.title} />
+                  </p>
                   <p className="mt-1 text-xs text-[#0e3b69]">{link.relation_type}</p>
                   {item.description ? (
-                    <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#43474f]">{item.description}</p>
+                    <InlineMarkdown text={item.description} className="mt-1 line-clamp-2 text-xs leading-5 text-[#43474f]" />
                   ) : null}
                 </Link>
               ))
             ) : related.length ? (
               related.map((item) => (
                 <Link key={item.id} href={`/app/notes/${item.id}`} className="rounded p-2 hover:bg-white">
-                  <p className="text-sm font-semibold text-[#1a1c1c]">{item.title}</p>
+                  <p className="text-sm font-semibold text-[#1a1c1c]">
+                    <InlineMarkdown text={item.title} />
+                  </p>
                   <p className="mt-1 text-xs text-[#43474f]">Same topic</p>
                 </Link>
               ))
@@ -175,7 +182,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
             {backlinkRows.length ? (
               backlinkRows.map(({ link, currentRelation, note: item }) => (
                 <Link key={link.id} href={`/app/notes/${item.id}`} className="rounded p-2 text-sm font-semibold text-[#0e3b69] hover:bg-white">
-                  {item.title}
+                  <InlineMarkdown text={item.title} />
                   <span className="ml-2 text-xs font-normal text-[#43474f]">({currentRelation})</span>
                 </Link>
               ))

@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { inputClassName } from "@/components/ui/Field";
 import { MATH_TOPICS, SPECIAL_TOPICS, topicIncludes } from "@/lib/constants/notes";
@@ -75,11 +76,11 @@ export function PublicNotesClient({ notes }: { notes: Note[] }) {
                   <Badge tone="blue">{note.topic}</Badge>
                   <Badge>{note.note_type}</Badge>
                 </div>
-                <h2 className="text-xl font-semibold">{note.title}</h2>
+                <h2 className="text-xl font-semibold">
+                  <InlineMarkdown text={note.title} />
+                </h2>
                 {note.description ? (
-                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#43474f]">
-                    {note.description}
-                  </p>
+                  <InlineMarkdown text={note.description} className="mt-3 line-clamp-3 text-sm leading-6 text-[#43474f]" />
                 ) : null}
                 <div className="mt-5 flex flex-wrap gap-2">
                   <DifficultyBadge value={note.difficulty} noteType={note.note_type} />

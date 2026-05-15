@@ -1,5 +1,6 @@
 import { ArrowRight, BookOpen, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { createClient } from "@/lib/supabase/server";
 import type { Note, SiteSettings } from "@/lib/types";
 
@@ -94,11 +95,11 @@ export default async function PublicHomePage() {
                 className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5 hover:bg-white"
               >
                 <BookOpen className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-                <h3 className="mt-3 text-lg font-semibold">{note.title}</h3>
+                <h3 className="mt-3 text-lg font-semibold">
+                  <InlineMarkdown text={note.title} />
+                </h3>
                 {note.description ? (
-                  <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#43474f]">
-                    {note.description}
-                  </p>
+                  <InlineMarkdown text={note.description} className="mt-2 line-clamp-3 text-sm leading-6 text-[#43474f]" />
                 ) : null}
               </Link>
             ))

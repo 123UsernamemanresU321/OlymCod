@@ -3,6 +3,7 @@
 import { Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { inputClassName } from "@/components/ui/Field";
@@ -68,14 +69,16 @@ export function FormulaBankClient({ notes }: FormulaBankClientProps) {
             className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5 hover:bg-white"
           >
             <div className="flex items-start justify-between gap-3">
-              <h2 className="text-xl font-semibold text-[#1a1c1c]">{note.title}</h2>
+              <h2 className="text-xl font-semibold text-[#1a1c1c]">
+                <InlineMarkdown text={note.title} />
+              </h2>
               <Badge tone="blue">{note.topic}</Badge>
             </div>
             <div className="mt-4 rounded border-l-4 border-[#2c5282] bg-white px-4 py-3">
               <MarkdownPreview markdown={note.body_markdown.split("\n").slice(0, 8).join("\n")} />
             </div>
             {note.description ? (
-              <p className="mt-4 text-sm leading-6 text-[#43474f]">{note.description}</p>
+              <InlineMarkdown text={note.description} className="mt-4 block text-sm leading-6 text-[#43474f]" />
             ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
               <DifficultyBadge value={note.difficulty} noteType={note.note_type} />

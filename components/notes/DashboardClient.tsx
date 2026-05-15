@@ -3,6 +3,7 @@
 import { BookOpen, Calculator, Dices, FileText, Inbox, Plus, Search, ShieldCheck, Shapes, Sigma } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { NoteCard } from "@/components/notes/NoteCard";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -201,7 +202,7 @@ export function DashboardClient({ notes, suggestions, reviews, settings }: Dashb
                   href={`/app/notes/${note.id}`}
                   className="flex items-center justify-between gap-3 p-2 text-sm font-medium text-[#1a1c1c] hover:bg-white"
                 >
-                  <span className="truncate">{note.title}</span>
+                  <InlineMarkdown text={note.title} className="truncate" />
                   <Badge>{note.topic}</Badge>
                 </Link>
               ))
@@ -221,7 +222,7 @@ export function DashboardClient({ notes, suggestions, reviews, settings }: Dashb
                   href={`/app/notes/${note.id}`}
                   className="flex items-center justify-between gap-3 p-2 text-sm font-medium text-[#1a1c1c] hover:bg-white"
                 >
-                  <span className="truncate">{note.title}</span>
+                  <InlineMarkdown text={note.title} className="truncate" />
                   <Badge>{note.topic}</Badge>
                 </Link>
               ))

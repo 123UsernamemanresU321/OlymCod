@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, Shuffle } from "lucide-react";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { nextReviewDateFromRating } from "@/lib/constants/daily";
@@ -84,7 +85,7 @@ export function ReviewNotesClient({ notes, reviews }: ReviewNotesClientProps) {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <Link href={`/app/notes/${note.id}`} className="text-lg font-semibold text-[#1a1c1c] hover:text-[#0e3b69]">
-              {note.title}
+              <InlineMarkdown text={note.title} />
             </Link>
             <p className="mt-1 text-sm text-[#43474f]">{note.topic} · {note.note_type}</p>
           </div>

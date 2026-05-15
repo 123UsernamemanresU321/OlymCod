@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Link2, Trash2, Wand2 } from "lucide-react";
+import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { Button } from "@/components/ui/Button";
 import { inputClassName } from "@/components/ui/Field";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
@@ -157,7 +158,7 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
           linkRows.map(({ link, note }) => (
             <div key={link.id} className="flex items-center justify-between gap-3 rounded border border-[#d5d7de] bg-white p-3">
               <Link href={`/app/notes/${note.id}`} className="min-w-0 text-sm font-semibold text-[#0e3b69]">
-                {note.title}
+                <InlineMarkdown text={note.title} />
                 <span className="ml-2 font-normal text-[#43474f]">({link.relation_type})</span>
               </Link>
               <button type="button" onClick={() => void removeLink(link.id)} className="text-[#8f1d15]" aria-label="Remove note link">
