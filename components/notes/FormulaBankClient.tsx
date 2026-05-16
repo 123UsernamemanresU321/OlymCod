@@ -7,6 +7,7 @@ import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { inputClassName } from "@/components/ui/Field";
+import { MATH_TOPICS, topicIncludes } from "@/lib/constants/notes";
 import type { Note } from "@/lib/types";
 import { matchesNoteSearch } from "@/lib/utils/notes";
 
@@ -14,7 +15,7 @@ interface FormulaBankClientProps {
   notes: Note[];
 }
 
-const formulaCategories = ["All", "Number Theory", "Algebra", "Geometry", "Inequalities"];
+const formulaCategories = ["All", ...MATH_TOPICS];
 
 export function FormulaBankClient({ notes }: FormulaBankClientProps) {
   const [query, setQuery] = useState("");
@@ -24,7 +25,7 @@ export function FormulaBankClient({ notes }: FormulaBankClientProps) {
     () =>
       notes.filter((note) => {
         if (!matchesNoteSearch(note, query)) return false;
-        if (category !== "All" && note.topic !== category) return false;
+        if (!topicIncludes(note.topic, category)) return false;
         return true;
       }),
     [notes, query, category]

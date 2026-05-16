@@ -28,6 +28,9 @@ export const MATH_TOPICS: Topic[] = [
 ];
 
 export const SPECIAL_TOPICS: Topic[] = ["Formula Bank", "Problem Patterns", "Inbox"];
+export const COLLECTION_TOPICS: Topic[] = ["Formula Bank", "Problem Patterns"];
+export const EXCLUSIVE_TOPICS: Topic[] = ["Inbox"];
+const COMBINABLE_TOPIC_ORDER = [...COLLECTION_TOPICS, ...MATH_TOPICS];
 
 export function splitTopicValue(topic: string | null | undefined) {
   return (topic ?? "")
@@ -40,7 +43,15 @@ export function buildTopicValue(topics: string[]) {
   const cleanTopics = Array.from(
     new Set(topics.map((topic) => topic.trim()).filter(Boolean))
   );
-  return cleanTopics.length ? cleanTopics.join(" + ") : "Number Theory";
+
+  if (cleanTopics.includes("Inbox")) return "Inbox";
+
+  const orderedTopics = [
+    ...COMBINABLE_TOPIC_ORDER.filter((topic) => cleanTopics.includes(topic)),
+    ...cleanTopics.filter((topic) => !COMBINABLE_TOPIC_ORDER.includes(topic as Topic))
+  ];
+
+  return orderedTopics.length ? orderedTopics.join(" + ") : "Number Theory";
 }
 
 export function topicIncludes(topic: string | null | undefined, filter: string) {

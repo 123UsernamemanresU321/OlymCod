@@ -111,6 +111,24 @@ test("topics support compact multi-topic combinations", () => {
   assert.match(migration, /drop constraint notes_topic_check/);
 });
 
+test("Formula Bank is a combinable collection, not an exclusive math topic", () => {
+  const notesConstants = read("../lib/constants/notes.ts");
+  const topicSelector = read("../components/notes/TopicSelector.tsx");
+  const formulaBank = read("../components/notes/FormulaBankClient.tsx");
+  const formulaPage = read("../app/app/formula-bank/page.tsx");
+  const schema = read("../supabase/schema.sql");
+  const migration = read("../supabase/migrations/20260516000100_collection_topic_combinations.sql");
+
+  assert.match(notesConstants, /COLLECTION_TOPICS/);
+  assert.match(topicSelector, /toggleCollectionTopic/);
+  assert.match(topicSelector, /chooseInboxTopic/);
+  assert.match(formulaBank, /topicIncludes/);
+  assert.match(formulaPage, /topic\.ilike\.\%Formula Bank\%/);
+  assert.match(schema, /Formula Bank\|Problem Patterns/);
+  assert.match(migration, /Formula Bank\|Problem Patterns/);
+  assert.match(migration, /topic = 'Inbox'/);
+});
+
 test("markdown preview normalizes DeepSeek math delimiters", () => {
   const rendering = read("../lib/markdown/rendering.ts");
   const preview = read("../components/editor/MarkdownPreview.tsx");

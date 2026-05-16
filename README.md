@@ -275,7 +275,9 @@ npx vercel deploy --prod
 
 The editor uses note-type-specific formats. Changing the note type updates the starter template while the note body is still untouched; after manual edits, use **Apply template** if you intentionally want to replace the body.
 
-Topics use a compact chip picker instead of a long combination dropdown. You can select one or more core subjects and the app stores them as a combined topic such as `Combinatorics + Geometry` or `Algebra + Number Theory`. Special buckets such as `Formula Bank`, `Problem Patterns`, and `Inbox` remain single-choice buckets. Filtering by `Geometry` will still match `Combinatorics + Geometry`.
+Topics use a compact chip picker instead of a long combination dropdown. You can select one or more core subjects and the app stores them as a combined topic such as `Combinatorics + Geometry` or `Algebra + Number Theory`. Collection chips such as `Formula Bank` and `Problem Patterns` can be combined with core subjects, for example `Formula Bank + Combinatorics`. `Inbox` remains exclusive because it means the item has not been organized yet. Filtering by `Geometry` will still match `Combinatorics + Geometry`.
+
+`Formula Bank` is a collection/view: it means "show this in the formula bank." `Formula` and `Formula Log` are note types/templates: they control the fields, template, and whether difficulty is shown. A combinatorics formula should usually be `note_type = Formula Log` or `Formula` and `topic = Formula Bank + Combinatorics`.
 
 Current official note types:
 

@@ -222,8 +222,8 @@ begin
   end if;
 
   alter table public.notes add constraint notes_topic_check check (
-    topic in ('Formula Bank', 'Problem Patterns', 'Inbox')
-    or topic ~ '^(Number Theory|Combinatorics|Algebra|Geometry|Inequalities)( \\+ (Number Theory|Combinatorics|Algebra|Geometry|Inequalities))*$'
+    topic = 'Inbox'
+    or topic ~ '^(Formula Bank|Problem Patterns|Number Theory|Combinatorics|Algebra|Geometry|Inequalities)( \\+ (Formula Bank|Problem Patterns|Number Theory|Combinatorics|Algebra|Geometry|Inequalities))*$'
   );
 
   if exists (select 1 from pg_constraint where conname = 'notes_note_type_check' and conrelid = 'public.notes'::regclass) then
