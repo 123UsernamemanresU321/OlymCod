@@ -28,7 +28,7 @@ Part 2 adds the daily-use layer: quick capture, inbox conversion, problem logs, 
 The configured owner email is:
 
 ```text
-erichuang.shangjing@outlook.com
+EMAIL
 ```
 
 When this user logs in, `public.ensure_current_profile()` assigns the `owner` role.
