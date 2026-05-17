@@ -280,3 +280,14 @@ export interface NoteVersion {
   metadata: Record<string, unknown>;
   created_at: string;
 }
+
+export interface NotebookPreset {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  config: Record<string, unknown>;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}

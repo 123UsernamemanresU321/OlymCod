@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  BookOpen,
   ClipboardList,
   FileText,
   Home,
@@ -8,7 +9,6 @@ import {
   LogOut,
   NotebookTabs,
   Plus,
-  Search,
   Settings,
   Target,
   UserCircle,
@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { href: "/app/problems", label: "Problems", icon: ClipboardList },
   { href: "/app/mistakes", label: "Mistakes", icon: XCircle },
   { href: "/app/review-notes", label: "Review", icon: NotebookTabs },
+  { href: "/app/notebook", label: "Notebook", icon: BookOpen },
   { href: "/app/diagrams", label: "Diagrams", icon: Image },
   { href: "/app/settings", label: "Settings", icon: Settings }
 ];
@@ -35,9 +36,9 @@ const NAV_ITEMS = [
 const MOBILE_ITEMS = [
   { href: "/app", label: "Home", icon: Home, exact: true },
   { href: "/app/notes", label: "Notes", icon: FileText },
+  { href: "/app/notebook", label: "Notebook", icon: BookOpen },
   { href: "/app/capture", label: "Capture", icon: Plus },
-  { href: "/app/review-notes", label: "Review", icon: Target },
-  { href: "/app/notes", label: "Search", icon: Search }
+  { href: "/app/review-notes", label: "Review", icon: Target }
 ];
 
 interface AppShellProps {
@@ -59,8 +60,8 @@ export function AppShell({ children, email, role }: AppShellProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9] text-[#1a1c1c]">
-      <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-[#c3c6d0] bg-[#f9f9f9] py-10 lg:flex">
+    <div className="app-shell-root min-h-screen bg-[#f9f9f9] text-[#1a1c1c]">
+      <aside className="app-shell-sidebar fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-[#c3c6d0] bg-[#f9f9f9] py-10 lg:flex">
         <div className="px-6">
           <Link href="/app" className="block text-5xl font-semibold leading-[0.98] text-[#0e3b69]">
             Olympiad
@@ -131,7 +132,7 @@ export function AppShell({ children, email, role }: AppShellProps) {
         </div>
       </aside>
 
-      <header className="fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-[#c3c6d0] bg-[#f9f9f9]/95 px-6 backdrop-blur lg:hidden">
+      <header className="app-shell-mobile-header fixed inset-x-0 top-0 z-30 flex h-16 items-center justify-between border-b border-[#c3c6d0] bg-[#f9f9f9]/95 px-6 backdrop-blur lg:hidden">
         <Link href="/app" className="text-2xl font-semibold text-[#0e3b69]">
           Olympiad Codex
         </Link>
@@ -143,13 +144,11 @@ export function AppShell({ children, email, role }: AppShellProps) {
         </div>
       </header>
 
-      <main className="min-h-screen pb-24 pt-16 lg:ml-64 lg:pb-0 lg:pt-0">{children}</main>
+      <main className="app-shell-main min-h-screen pb-24 pt-16 lg:ml-64 lg:pb-0 lg:pt-0">{children}</main>
 
-      {!isEditingNote ? (
-        <QuickCapture floating />
-      ) : null}
+      <div className="notebook-print-hidden">{!isEditingNote ? <QuickCapture floating /> : null}</div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t border-[#c3c6d0] bg-[#f9f9f9] lg:hidden">
+      <nav className="app-shell-mobile-nav fixed inset-x-0 bottom-0 z-30 grid h-16 grid-cols-5 border-t border-[#c3c6d0] bg-[#f9f9f9] lg:hidden">
         {MOBILE_ITEMS.map((item) => {
           const Icon = item.icon;
           const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);

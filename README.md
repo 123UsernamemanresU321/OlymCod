@@ -28,7 +28,6 @@ Part 2 adds the daily-use layer: quick capture, inbox conversion, problem logs, 
 The configured owner email is:
 
 ```text
-EMAIL
 ```
 
 When this user logs in, `public.ensure_current_profile()` assigns the `owner` role.
@@ -90,10 +89,11 @@ This creates:
 - `note_reviews`
 - `diagrams`
 - `note_versions`
+- `notebook_presets`
 - private `note-diagrams` and `suggestion-diagrams` buckets
 - RLS policies for owner-only official note editing and contributor-only suggestions
 
-After pulling Part 2 changes, run either the full `supabase/schema.sql` or the focused migration `supabase/migrations/20260514_part2_daily_use.sql` in the Supabase SQL Editor. Both are written with `create table if not exists`, `drop policy if exists`, and idempotent triggers so they can be rerun safely.
+After pulling Part 2 changes, run either the full `supabase/schema.sql` or the focused migration `supabase/migrations/20260514_part2_daily_use.sql` in the Supabase SQL Editor. For Notebook Builder presets, also run `supabase/migrations/20260517000100_notebook_presets.sql` if you are applying migrations manually. These files are written with `create table if not exists`, `drop policy if exists`, and idempotent triggers so they can be rerun safely.
 
 ## RLS Model
 
@@ -125,6 +125,7 @@ Owner pages:
 - `/app/problems/[id]`
 - `/app/mistakes`
 - `/app/review-notes`
+- `/app/notebook`
 - `/app/diagrams`
 - `/app/review`
 - `/app/review/[id]`
@@ -241,6 +242,59 @@ On mobile, the note editor uses tabs:
 - Metadata
 
 The save button stays accessible at the bottom of the screen.
+
+## Notebook Builder
+
+Open `/app/notebook` to turn your notes into a printable or exportable mathematical notebook. The route is protected by the owner-only app layout, and every export API filters tables with `user_id = auth.uid()`/the current user before building the notebook.
+
+The builder can include:
+
+- notes and Formula Bank notes
+- problem logs
+- mistake logs
+- quick captures and inbox notes
+- diagrams
+- notes due for review
+
+Detail levels control how much appears:
+
+- `Index Mode`: title, metadata, tags.
+- `Statement Mode`: statement, formula, core idea, or key relation only.
+- `Compact Revision Mode`: statement/core idea, when to use it, and common mistakes.
+- `Standard Notebook Mode`: statement, use cases, intuition, examples, mistakes, related items, and diagrams.
+- `Full Detail Mode`: complete Markdown bodies plus linked problems, mistakes, reviews, and diagrams.
+- `Formula Sheet Mode`: compact formula, conditions, and use case.
+- `Problem Booklet Mode`: problem source, statement, key idea, solution summary, linked techniques, and mistakes.
+
+Common workflows:
+
+- Compact theorem sheet: load **Compact Theorem Sheet**, then print or export Markdown.
+- Full personal notebook: load **Full Personal Notebook** and keep `Standard Notebook Mode` or `Full Detail Mode`.
+- Formula sheet: load **Formula Sheet**; it includes formula notes and notes tagged by the Formula Bank topic.
+- Problem booklet: load **Problem Review Booklet**, then enable or disable problem statements and solution summaries.
+- Weak-topic revision pack: load **Weak Topics Review** to focus on `learning` and `needs_practice` review statuses.
+
+Presets:
+
+- Built-in presets are code defaults and are not inserted into Supabase automatically.
+- Use **Save Preset** to store the current builder configuration in `notebook_presets`.
+- Saved presets can be loaded, updated, deleted, or marked as default.
+
+Export and print:
+
+- **Print / Save as PDF** uses browser print with a print stylesheet. Choose “Save as PDF” in the browser dialog.
+- Server-side PDF generation is intentionally not included in v1 because browser print preserves Markdown, KaTeX, and signed diagram rendering more reliably.
+- **Export Markdown** respects the selected filters, detail level, section toggles, grouping, and sort order.
+- **Export JSON** returns `{ exported_at, app, config, item_count, items }` for backup or later processing.
+- **Copy Markdown** uses the Clipboard API and falls back to a Markdown download if clipboard access is blocked.
+
+Notebook AI helpers are optional and owner-only. `POST /api/ai/notebook-assist` can suggest a preset from a goal, identify missing sections, or draft a cover summary. AI output is previewed first and never changes notebook content unless you apply it manually.
+
+PDF limitations:
+
+- Very large exports may take time to render; the preview starts with the first 50 items and warns above 300 items.
+- Browser print quality depends on the browser and printer driver.
+- Private diagrams render through app routes and signed Supabase URLs, so export while logged in.
 
 ## DeepSeek AI Writing Assistant
 

@@ -154,3 +154,84 @@ a {
   scrollbar-color: #c3c6d0 transparent;
   scrollbar-width: thin;
 }
+
+.notebook-document {
+  background: white;
+}
+
+.notebook-entry {
+  break-inside: avoid;
+}
+
+.notebook-page-break {
+  break-before: page;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .app-shell-sidebar,
+  .app-shell-mobile-header,
+  .app-shell-mobile-nav,
+  .notebook-print-hidden {
+    display: none !important;
+  }
+
+  .app-shell-main {
+    margin-left: 0 !important;
+    padding: 0 !important;
+  }
+
+  .notebook-document {
+    max-width: none !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+
+  .notebook-entry {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    border-color: #d8d8d8 !important;
+    box-shadow: none !important;
+  }
+
+  .notebook-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .codex-prose,
+  .codex-prose h1,
+  .codex-prose h2,
+  .codex-prose h3,
+  .codex-prose h4 {
+    color: black !important;
+  }
+
+  .codex-prose a {
+    color: black !important;
+    text-decoration: underline;
+  }
+
+  .codex-prose img,
+  .notebook-document img {
+    max-width: 100% !important;
+    max-height: 220mm;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .katex-display {
+    overflow: visible !important;
+  }
+}
