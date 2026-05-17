@@ -155,28 +155,235 @@ a {
   scrollbar-width: thin;
 }
 
-.notebook-document {
+.notebook-document,
+.print-document {
   background: white;
 }
 
-.notebook-entry {
+.notebook-entry,
+.print-entry {
   break-inside: avoid;
 }
 
-.notebook-page-break {
+.notebook-page-break,
+.print-topic-page-break {
   break-before: page;
+}
+
+.print-document {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  color: #161718;
+}
+
+.print-cover,
+.print-toc,
+.print-topic,
+.print-entry {
+  background: white;
+}
+
+.print-cover {
+  min-height: 78vh;
+  padding-top: 12vh;
+}
+
+.print-kicker {
+  margin: 0;
+  color: #0e3b69;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.print-cover h1,
+.print-toc h1,
+.print-topic-title {
+  margin: 0;
+  color: #161718;
+  letter-spacing: 0;
+}
+
+.print-cover h1 {
+  max-width: 760px;
+  margin-top: 1rem;
+  font-size: 3rem;
+  font-weight: 680;
+  line-height: 1.08;
+}
+
+.print-cover-summary {
+  max-width: 720px;
+  margin: 1.25rem 0 0;
+  color: #34383f;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.print-cover-meta {
+  display: grid;
+  max-width: 720px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem 2rem;
+  margin: 2rem 0 0;
+  color: #34383f;
+  font-size: 0.9rem;
+}
+
+.print-cover-meta div {
+  border-top: 1px solid #d7d9de;
+  padding-top: 0.45rem;
+}
+
+.print-cover-meta dt {
+  color: #5c6068;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.print-cover-meta dd {
+  margin: 0.15rem 0 0;
+}
+
+.print-toc {
+  padding-top: 0.25rem;
+}
+
+.print-toc h1 {
+  font-size: 2rem;
+  font-weight: 650;
+}
+
+.print-toc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 2rem;
+  margin-top: 1.25rem;
+}
+
+.print-toc-topic h2 {
+  margin: 0 0 0.35rem;
+  color: #0e3b69;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.print-toc-topic ol {
+  margin: 0;
+  padding-left: 1.2rem;
+  color: #34383f;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.print-topic {
+  margin-top: 2rem;
+}
+
+.print-topic-title {
+  border-bottom: 1px solid #1f2933;
+  padding-bottom: 0.35rem;
+  font-size: 1.85rem;
+  font-weight: 660;
+}
+
+.print-topic-entries {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.print-entry {
+  border-top: 1px solid #d7d9de;
+  padding-top: 0.85rem;
+}
+
+.print-topic-title + .print-topic-entries > .print-entry:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.print-entry h2 {
+  margin: 0;
+  color: #161718;
+  font-size: 1.24rem;
+  font-weight: 650;
+  line-height: 1.22;
+}
+
+.print-metadata {
+  margin: 0.25rem 0 0;
+  color: #555b64;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.print-description {
+  display: block;
+  margin-top: 0.4rem;
+  color: #34383f;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.print-entry-sections {
+  margin-top: 0.55rem;
+}
+
+.print-section {
+  margin-top: 0.55rem;
+}
+
+.print-section-title {
+  margin: 0 0 0.18rem;
+  color: #0e3b69;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.print-section-body {
+  font-size: 0.94rem;
+  line-height: 1.45;
+}
+
+.print-warning {
+  border: 1px solid #f4c26b;
+  background: #fff8e6;
+  padding: 0.65rem;
+  color: #6b4a00;
+  font-size: 0.86rem;
 }
 
 @media print {
   @page {
     size: A4;
-    margin: 16mm;
+    margin: 14mm 13mm 16mm 13mm;
   }
 
   html,
   body {
+    width: 100% !important;
+    min-height: 0 !important;
     background: white !important;
-    color: black !important;
+    color: #111 !important;
+    font-size: 10.5pt;
+    line-height: 1.42;
+  }
+
+  .app-shell-root,
+  .app-shell-main {
+    min-height: 0 !important;
+    background: white !important;
   }
 
   .app-shell-sidebar,
@@ -191,23 +398,139 @@ a {
     padding: 0 !important;
   }
 
-  .notebook-document {
+  .notebook-document,
+  .print-document {
+    width: 100% !important;
     max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background: white !important;
-    color: black !important;
+    color: #111 !important;
     box-shadow: none !important;
   }
 
+  .notebook-document {
+    display: block !important;
+  }
+
   .notebook-entry {
-    break-inside: avoid;
+    break-inside: avoid-page;
     page-break-inside: avoid;
     border-color: #d8d8d8 !important;
     box-shadow: none !important;
   }
 
-  .notebook-page-break {
+  .print-cover {
+    min-height: auto;
+    padding-top: 38mm;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .print-toc {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .print-topic-page-break {
     break-before: page;
     page-break-before: always;
+  }
+
+  .print-entry {
+    border-top: 0.35pt solid #cfd3da;
+    padding-top: 3.5mm;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .print-entry.long-entry {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .print-entry-header {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  .print-entry-index {
+    padding-top: 2mm;
+  }
+
+  .print-document-formula-sheet .print-topic-entries {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4mm 6mm;
+  }
+
+  .print-entry-formula {
+    padding-top: 2.5mm;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  .print-cover h1 {
+    font-size: 24pt;
+  }
+
+  .print-toc h1,
+  .print-topic-title {
+    font-size: 17pt;
+  }
+
+  .print-entry h2 {
+    font-size: 13pt;
+  }
+
+  .print-metadata {
+    font-size: 8.5pt;
+  }
+
+  .print-description,
+  .print-section-body {
+    font-size: 10pt;
+  }
+
+  .print-font-small .print-section-body,
+  .print-font-small .print-description {
+    font-size: 9.2pt;
+  }
+
+  .print-font-large .print-section-body,
+  .print-font-large .print-description {
+    font-size: 11pt;
+  }
+
+  .notebook-page-break,
+  .print-topic-page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .print-cover,
+  .print-toc,
+  .print-topic,
+  .print-entry,
+  .print-section,
+  figure,
+  .print-diagram {
+    box-shadow: none !important;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .print-topic-title,
+  .print-section-title {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
   }
 
   .codex-prose,
@@ -215,23 +538,90 @@ a {
   .codex-prose h2,
   .codex-prose h3,
   .codex-prose h4 {
-    color: black !important;
+    color: #111 !important;
   }
 
-  .codex-prose a {
-    color: black !important;
+  .print-document .codex-prose {
+    color: #111;
+    font-size: inherit;
+    line-height: 1.42;
+  }
+
+  .print-document .codex-prose h1,
+  .print-document .codex-prose h2,
+  .print-document .codex-prose h3,
+  .print-document .codex-prose h4 {
+    margin: 0.5rem 0 0.25rem;
+    border: 0;
+    padding: 0;
+    color: #111 !important;
+    font-size: inherit;
+    line-height: 1.25;
+  }
+
+  .print-document .codex-prose p {
+    margin: 0.22rem 0 0.38rem;
+  }
+
+  .print-document .codex-prose ul,
+  .print-document .codex-prose ol {
+    margin: 0.35rem 0 0.6rem 1.25rem;
+    padding-left: 1rem;
+  }
+
+  .print-document .codex-prose li {
+    margin: 0.15rem 0;
+  }
+
+  .print-document .codex-prose blockquote {
+    margin: 0.45rem 0;
+    border-left: 2pt solid #6b7280;
+    background: white;
+    padding: 0.2rem 0 0.2rem 0.6rem;
+    color: #222;
+  }
+
+  .print-document .codex-prose code {
+    border: 0.35pt solid #d5d7de;
+    background: #f5f5f5;
+    font-size: 0.9em;
+  }
+
+  .print-document .codex-prose a {
+    color: #111 !important;
     text-decoration: underline;
   }
 
   .codex-prose img,
-  .notebook-document img {
+  .notebook-document img,
+  .print-document img,
+  .print-diagram img {
     max-width: 100% !important;
-    max-height: 220mm;
-    break-inside: avoid;
+    height: auto !important;
+    max-height: 210mm;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    object-fit: contain;
+  }
+
+  figure,
+  .print-diagram {
+    break-inside: avoid-page;
     page-break-inside: avoid;
   }
 
+  .katex {
+    font-size: 1em;
+    white-space: normal;
+  }
+
   .katex-display {
+    max-width: 100%;
+    margin: 0.75em 0;
     overflow: visible !important;
+    font-size: 0.95em;
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+    text-align: center;
   }
 }

@@ -6,6 +6,7 @@ import { NotebookControls } from "@/components/notebook/NotebookControls";
 import { NotebookExportButtons } from "@/components/notebook/NotebookExportButtons";
 import { NotebookPresetDialog } from "@/components/notebook/NotebookPresetDialog";
 import { NotebookPreview } from "@/components/notebook/NotebookPreview";
+import { storeNotebookPrintConfig } from "@/components/notebook/print/NotebookPrintRouteClient";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
 import {
@@ -104,7 +105,8 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
 
   function printNotebook() {
     setRenderAll(true);
-    window.setTimeout(() => window.print(), 150);
+    storeNotebookPrintConfig(config);
+    window.open("/app/notebook/print?autoprint=1", "_blank", "noopener,noreferrer");
   }
 
   async function runAi() {

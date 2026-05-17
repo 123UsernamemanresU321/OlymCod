@@ -280,10 +280,13 @@ Presets:
 - Use **Save Preset** to store the current builder configuration in `notebook_presets`.
 - Saved presets can be loaded, updated, deleted, or marked as default.
 
-Export and print:
+Notebook Preview, Print View, and PDF:
 
-- **Print / Save as PDF** uses browser print with a print stylesheet. Choose “Save as PDF” in the browser dialog.
-- Server-side PDF generation is intentionally not included in v1 because browser print preserves Markdown, KaTeX, and signed diagram rendering more reliably.
+- `/app/notebook` is the interactive builder and screen preview.
+- `/app/notebook/print` is the dedicated print document view. It renders only the notebook document: cover, table of contents, topics, entries, diagrams, and mathematical content.
+- **Print / Save as PDF** stores the current builder config, opens `/app/notebook/print`, and then uses browser print from that clean document route. Choose “Save as PDF” in the browser dialog.
+- Browser PDF headers and footers are controlled by the browser, not the app. In Safari or Chrome, disable “Print headers and footers” or similar options for a clean PDF without URL/date/title/page text.
+- Server-side app-generated PDF is intentionally not shipped yet because it would require Puppeteer or serverless Chromium and deployment-specific tuning. There is no fake PDF button; browser print is the supported PDF path.
 - **Export Markdown** respects the selected filters, detail level, section toggles, grouping, and sort order.
 - **Export JSON** returns `{ exported_at, app, config, item_count, items }` for backup or later processing.
 - **Copy Markdown** uses the Clipboard API and falls back to a Markdown download if clipboard access is blocked.
@@ -292,8 +295,11 @@ Notebook AI helpers are optional and owner-only. `POST /api/ai/notebook-assist` 
 
 PDF limitations:
 
-- Very large exports may take time to render; the preview starts with the first 50 items and warns above 300 items.
-- Browser print quality depends on the browser and printer driver.
+- Very large exports may take time to render; the builder preview starts with the first 50 items and warns above 300 items. The print route renders the full selected notebook.
+- Browser print quality depends on the browser and printer driver. Use the dedicated print route rather than printing the builder page.
+- If math appears unrendered, wait for `/app/notebook/print` to finish loading before opening the print dialog; KaTeX CSS is loaded globally.
+- If diagrams do not appear, confirm you are logged in and the private diagram render route can read the note containing the diagram path.
+- If page breaks look poor, try disabling two-column layout except for Formula Sheet mode, use Compact Revision or Statement mode, or enable topic page breaks in the builder.
 - Private diagrams render through app routes and signed Supabase URLs, so export while logged in.
 
 ## DeepSeek AI Writing Assistant

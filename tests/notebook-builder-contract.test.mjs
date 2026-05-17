@@ -8,14 +8,25 @@ function read(path) {
 
 test("notebook builder route, navigation, and components are present", () => {
   const route = read("../app/app/notebook/page.tsx");
+  const printRoute = read("../app/app/notebook/print/page.tsx");
   const shell = read("../components/layout/AppShell.tsx");
   const builder = read("../components/notebook/NotebookBuilder.tsx");
   const controls = read("../components/notebook/NotebookControls.tsx");
   const preview = read("../components/notebook/NotebookPreview.tsx");
   const exports = read("../components/notebook/NotebookExportButtons.tsx");
   const presets = read("../components/notebook/NotebookPresetDialog.tsx");
+  const printDocument = read("../components/notebook/print/NotebookPrintDocument.tsx");
+  const printCover = read("../components/notebook/print/NotebookPrintCover.tsx");
+  const printToc = read("../components/notebook/print/NotebookPrintTOC.tsx");
+  const printEntry = read("../components/notebook/print/NotebookPrintEntry.tsx");
 
   assert.match(route, /NotebookBuilder/);
+  assert.match(printRoute, /NotebookPrintRouteClient/);
+  assert.match(printDocument, /print-document/);
+  assert.match(printCover, /print-cover/);
+  assert.match(printToc, /print-toc/);
+  assert.match(printEntry, /print-entry/);
+  assert.match(printEntry, /print-metadata/);
   assert.match(shell, /\/app\/notebook/);
   assert.match(builder, /Build|Preview|Export/);
   assert.match(controls, /Content Sources/);
@@ -92,6 +103,12 @@ test("notebook print styles hide controls and preserve notebook content", () => 
   const css = read("../app/globals.css");
 
   assert.match(css, /@media print/);
+  assert.match(css, /@page\s*\{[\s\S]*size: A4/);
+  assert.match(css, /margin: 14mm 13mm 16mm 13mm/);
+  assert.match(css, /\.print-document/);
+  assert.match(css, /\.print-topic/);
+  assert.match(css, /\.print-metadata/);
+  assert.match(css, /break-inside: avoid-page/);
   assert.match(css, /notebook-print-hidden/);
   assert.match(css, /notebook-page-break/);
   assert.match(css, /notebook-entry/);
