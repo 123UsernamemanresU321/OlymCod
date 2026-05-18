@@ -57,6 +57,8 @@ export const NOTEBOOK_SECTION_TOGGLES: Array<{ key: NotebookSectionToggle; label
   { key: "showProofs", label: "Show proofs" },
   { key: "showExamples", label: "Show examples" },
   { key: "showCommonMistakes", label: "Show common mistakes" },
+  { key: "showRecognitionTriggers", label: "Show recognition triggers" },
+  { key: "showFalseUses", label: "Show common false uses" },
   { key: "showRelatedNotes", label: "Show related notes" },
   { key: "showBacklinks", label: "Show backlinks" },
   { key: "showLinkedProblems", label: "Show linked problems" },
@@ -80,6 +82,8 @@ const defaultSectionToggles: NotebookConfig["sectionToggles"] = {
   showProofs: true,
   showExamples: true,
   showCommonMistakes: true,
+  showRecognitionTriggers: true,
+  showFalseUses: true,
   showRelatedNotes: true,
   showBacklinks: false,
   showLinkedProblems: true,
@@ -110,6 +114,8 @@ export const DEFAULT_NOTEBOOK_CONFIG: NotebookConfig = {
     diagrams: false,
     reviewDueNotes: false
   },
+  selectionMode: "whitelist",
+  noteIds: [],
   topics: [],
   noteTypes: [],
   difficultyMin: 1,
@@ -117,6 +123,15 @@ export const DEFAULT_NOTEBOOK_CONFIG: NotebookConfig = {
   tags: [],
   reviewStatuses: [],
   problemStatuses: [],
+  excludeNoteIds: [],
+  excludeTopics: [],
+  excludeNoteTypes: [],
+  excludeDifficultyMin: null,
+  excludeDifficultyMax: null,
+  excludeTags: [],
+  excludeReviewStatuses: [],
+  excludeProblemStatuses: [],
+  excludeMastered: false,
   detailLevel: "Standard Notebook Mode",
   sectionToggles: defaultSectionToggles,
   layoutStyle: "Clean Notebook",
@@ -157,12 +172,94 @@ export function normalizeNotebookConfig(input: unknown): NotebookConfig {
     tags: Array.isArray(value.tags) ? value.tags.filter(Boolean).map(String) : [],
     reviewStatuses: Array.isArray(value.reviewStatuses) ? value.reviewStatuses.filter(Boolean).map(String) : [],
     problemStatuses: Array.isArray(value.problemStatuses) ? value.problemStatuses.filter(Boolean).map(String) : [],
+    selectionMode: value.selectionMode === "blacklist" ? "blacklist" : "whitelist",
+    noteIds: Array.isArray(value.noteIds) ? value.noteIds.filter(Boolean).map(String) : [],
+    excludeNoteIds: Array.isArray(value.excludeNoteIds) ? value.excludeNoteIds.filter(Boolean).map(String) : [],
+    excludeTopics: Array.isArray(value.excludeTopics) ? value.excludeTopics.filter(Boolean).map(String) : [],
+    excludeNoteTypes: Array.isArray(value.excludeNoteTypes) ? value.excludeNoteTypes.filter(Boolean).map(String) : [],
+    excludeTags: Array.isArray(value.excludeTags) ? value.excludeTags.filter(Boolean).map(String) : [],
+    excludeReviewStatuses: Array.isArray(value.excludeReviewStatuses) ? value.excludeReviewStatuses.filter(Boolean).map(String) : [],
+    excludeProblemStatuses: Array.isArray(value.excludeProblemStatuses) ? value.excludeProblemStatuses.filter(Boolean).map(String) : [],
+    excludeDifficultyMin: value.excludeDifficultyMin == null ? null : Math.min(12, Math.max(1, Number(value.excludeDifficultyMin))),
+    excludeDifficultyMax: value.excludeDifficultyMax == null ? null : Math.min(12, Math.max(1, Number(value.excludeDifficultyMax))),
+    excludeMastered: Boolean(value.excludeMastered),
     difficultyMin: Math.min(12, Math.max(1, Number(value.difficultyMin ?? 1))),
     difficultyMax: Math.min(12, Math.max(1, Number(value.difficultyMax ?? 12)))
   });
 }
 
 export const BUILT_IN_NOTEBOOK_PRESETS: NotebookPresetDefinition[] = [
+  {
+    name: "All Except Mastered",
+    description: "Everything useful, excluding mastered and ignored review items.",
+    config: withConfig({
+      selectionMode: "blacklist",
+      excludeReviewStatuses: ["ignored"],
+      excludeMastered: true,
+      detailLevel: "Standard Notebook Mode"
+    })
+  },
+  {
+    name: "Weak Notes Only",
+    description: "Learning and needs-practice notes for focused repair.",
+    config: withConfig({
+      contentSources: { reviewDueNotes: true },
+      reviewStatuses: ["learning", "needs_practice"],
+      detailLevel: "Compact Revision Mode",
+      layoutStyle: "Minimal Exam Revision"
+    })
+  },
+  {
+    name: "Contest Quick Pack",
+    description: "Compact contest review with triggers, false uses, and mid-range difficulty.",
+    config: withConfig({
+      selectionMode: "blacklist",
+      excludeReviewStatuses: ["mastered", "ignored"],
+      difficultyMin: 4,
+      difficultyMax: 9,
+      detailLevel: "Compact Revision Mode",
+      sectionToggles: { showProofs: false, showRecognitionTriggers: true, showFalseUses: true }
+    })
+  },
+  {
+    name: "False Uses Sheet",
+    description: "A compact sheet of traps and non-examples.",
+    config: withConfig({
+      detailLevel: "Compact Revision Mode",
+      sectionToggles: {
+        showStatements: false,
+        showProofs: false,
+        showExamples: false,
+        showRecognitionTriggers: false,
+        showFalseUses: true
+      },
+      layoutStyle: "Minimal Exam Revision"
+    })
+  },
+  {
+    name: "Recognition Trigger Sheet",
+    description: "Recognition cues for deciding which technique to try.",
+    config: withConfig({
+      detailLevel: "Compact Revision Mode",
+      sectionToggles: {
+        showStatements: false,
+        showProofs: false,
+        showExamples: false,
+        showRecognitionTriggers: true,
+        showFalseUses: false
+      },
+      layoutStyle: "Minimal Exam Revision"
+    })
+  },
+  {
+    name: "Geometry Traps Pack",
+    description: "Geometry notes with diagrams, triggers, and false uses.",
+    config: withConfig({
+      topics: ["Geometry"],
+      detailLevel: "Compact Revision Mode",
+      sectionToggles: { showDiagrams: true, showRecognitionTriggers: true, showFalseUses: true }
+    })
+  },
   {
     name: "Full Personal Notebook",
     description: "All notes in standard/full detail, grouped by topic.",

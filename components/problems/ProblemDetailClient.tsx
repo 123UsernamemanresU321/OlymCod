@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Link2, Plus } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Link2, Pencil, Plus, Sparkles } from "lucide-react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
@@ -23,6 +23,7 @@ export function ProblemDetailClient({ problem, notes }: ProblemDetailClientProps
   const [noteId, setNoteId] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [aiAnalysis, setAiAnalysis] = useState("");
 
   const linkedNotes = problem.linked_note_ids
     .map((id) => notes.find((note) => note.id === id))
@@ -43,6 +44,58 @@ export function ProblemDetailClient({ problem, notes }: ProblemDetailClientProps
       return;
     }
     router.refresh();
+  }
+
+  async function updateStatus(status: ProblemLog["status"]) {
+    setBusy(true);
+    setMessage(null);
+    const supabase = createClient();
+    const { error } = await supabase.from("problem_logs").update({ status }).eq("id", problem.id);
+    setBusy(false);
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+    router.refresh();
+  }
+
+  async function analyzeMistake() {
+    setBusy(true);
+    setMessage(null);
+    setAiAnalysis("");
+    try {
+      const response = await fetch("/api/ai/note-assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "analyze_mistake",
+          instruction:
+            "Analyze this problem log. Suggest mistake category, likely missing theorem/technique, recognition trigger to add, false use/common trap, and linked notes. Do not apply changes.",
+          note: {
+            title: problem.title,
+            topic: problem.topic ?? "Problem Patterns",
+            note_type: "Past Problem",
+            difficulty: problem.difficulty,
+            description: problem.key_idea,
+            tags: problem.tags,
+            body_markdown: [
+              problem.problem_text,
+              problem.solution_summary,
+              problem.key_idea,
+              problem.mistake_made,
+              problem.mistake_category
+            ].filter(Boolean).join("\n\n")
+          }
+        })
+      });
+      const payload = (await response.json()) as { markdown?: string; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "AI request failed.");
+      setAiAnalysis(payload.markdown ?? "");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not analyze mistake.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function createMistake() {
@@ -150,6 +203,8 @@ ${problem.mistake_made ?? ""}
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge tone="blue">{problem.status.replaceAll("_", " ")}</Badge>
+            {problem.topic ? <Badge>{problem.topic}</Badge> : null}
+            {problem.mistake_category ? <Badge tone="red">{problem.mistake_category}</Badge> : null}
             <DifficultyBadge value={problem.difficulty} />
           </div>
         </div>
@@ -181,6 +236,14 @@ ${problem.mistake_made ?? ""}
             <section>
               <h2 className="text-lg font-semibold">Mistake made</h2>
               <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#43474f]">{problem.mistake_made}</p>
+            </section>
+          ) : null}
+          {aiAnalysis ? (
+            <section>
+              <h2 className="text-lg font-semibold">AI mistake analysis</h2>
+              <div className="mt-3 rounded border border-[#d5d7de] bg-[#f9f9f9] p-4">
+                <MarkdownPreview markdown={aiAnalysis} />
+              </div>
             </section>
           ) : null}
         </div>
@@ -218,6 +281,21 @@ ${problem.mistake_made ?? ""}
       </section>
 
       <section className="mt-6 flex flex-col gap-2 sm:flex-row">
+        <Button type="button" variant="secondary" onClick={() => router.push(`/app/problems/${problem.id}/edit`)}>
+          <Pencil className="h-4 w-4" aria-hidden="true" />
+          Edit Problem
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => void updateStatus("review_later")} disabled={busy}>
+          Mark as Review Later
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => void updateStatus("mastered")} disabled={busy}>
+          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+          Mark as Mastered
+        </Button>
+        <Button type="button" variant="secondary" onClick={() => void analyzeMistake()} disabled={busy}>
+          <Sparkles className="h-4 w-4" aria-hidden="true" />
+          Analyze Mistake
+        </Button>
         <Button type="button" variant="secondary" onClick={() => void createMistake()} disabled={busy}>
           <AlertTriangle className="h-4 w-4" aria-hidden="true" />
           Create Mistake from this problem

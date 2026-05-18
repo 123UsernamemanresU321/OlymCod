@@ -14,6 +14,8 @@ type AssistMode =
   | "analyze_mistake"
   | "past_problem_scaffold"
   | "suggest_metadata"
+  | "suggest_recognition_triggers"
+  | "suggest_false_uses"
   | "ask_my_codex"
   | "clean_rough_capture"
   | "suggest_related_notes"
@@ -28,13 +30,20 @@ interface AIWritingAssistantProps {
   onInsertMarkdown: (markdown: string) => void;
   onAppendMarkdown: (markdown: string) => void;
   onReplaceMarkdown: (markdown: string) => void;
-  onApplyMetadata: (metadata: { description?: string | null; tags?: string[] }) => void;
+  onApplyMetadata: (metadata: {
+    description?: string | null;
+    tags?: string[];
+    recognition_triggers?: string[];
+    false_uses?: string[];
+  }) => void;
 }
 
 type AIResult = {
   markdown: string;
   description: string | null;
   tags: string[];
+  recognition_triggers: string[];
+  false_uses: string[];
   model?: string;
 };
 
@@ -68,6 +77,16 @@ const assistModes: Array<{ value: AssistMode; label: string; hint: string }> = [
     value: "suggest_metadata",
     label: "Suggest description/tags",
     hint: "Generate a concise description and searchable tags."
+  },
+  {
+    value: "suggest_recognition_triggers",
+    label: "Suggest Recognition Triggers",
+    hint: "Draft phrases that tell you when this theorem or technique should come to mind."
+  },
+  {
+    value: "suggest_false_uses",
+    label: "Suggest False Uses",
+    hint: "Draft conditions, traps, and situations where this note should not be used."
   },
   {
     value: "ask_my_codex",
@@ -108,6 +127,8 @@ const modePlaceholders: Record<AssistMode, string> = {
   analyze_mistake: "Example: I kept cancelling terms modulo n even when they were not coprime.",
   past_problem_scaffold: "Paste the problem statement, source, and anything you tried.",
   suggest_metadata: "Example: Make the description short and choose tags useful for search.",
+  suggest_recognition_triggers: "Example: Suggest short search phrases for recognizing this in a contest problem.",
+  suggest_false_uses: "Example: List common conditions where this theorem fails or is misapplied.",
   ask_my_codex: "Example: Which notes help with modular exponent cycles?",
   clean_rough_capture: "Paste a rough capture and ask for the best note format.",
   suggest_related_notes: "Example: Find prerequisites and commonly confused notes.",
@@ -132,7 +153,12 @@ export function AIWritingAssistant({
   const [error, setError] = useState<string | null>(null);
 
   const hasMarkdown = Boolean(result?.markdown.trim());
-  const hasMetadata = Boolean(result?.description || result?.tags.length);
+  const hasMetadata = Boolean(
+    result?.description ||
+      result?.tags.length ||
+      result?.recognition_triggers.length ||
+      result?.false_uses.length
+  );
 
   async function generate() {
     setBusy(true);
@@ -155,7 +181,9 @@ export function AIWritingAssistant({
             difficulty: draft.difficulty,
             description: draft.description,
             tags: draft.tags,
-            body_markdown: draft.body_markdown
+            body_markdown: draft.body_markdown,
+            recognition_triggers: draft.recognition_triggers,
+            false_uses: draft.false_uses
           }
         })
       });
@@ -169,6 +197,8 @@ export function AIWritingAssistant({
         markdown: payload.markdown ?? "",
         description: payload.description ?? null,
         tags: Array.isArray(payload.tags) ? payload.tags : [],
+        recognition_triggers: Array.isArray(payload.recognition_triggers) ? payload.recognition_triggers : [],
+        false_uses: Array.isArray(payload.false_uses) ? payload.false_uses : [],
         model: payload.model
       });
     } catch (generateError) {
@@ -259,6 +289,14 @@ export function AIWritingAssistant({
               {result.tags.length ? (
                 <p className="mt-2 text-sm text-[#43474f]">Tags: {result.tags.join(", ")}</p>
               ) : null}
+              {result.recognition_triggers.length ? (
+                <p className="mt-2 text-sm text-[#43474f]">
+                  Recognition triggers: {result.recognition_triggers.join(", ")}
+                </p>
+              ) : null}
+              {result.false_uses.length ? (
+                <p className="mt-2 text-sm text-[#43474f]">False uses: {result.false_uses.join(", ")}</p>
+              ) : null}
             </div>
           ) : null}
 
@@ -295,7 +333,13 @@ export function AIWritingAssistant({
               type="button"
               variant="secondary"
               onClick={() =>
-                result && onApplyMetadata({ description: result.description, tags: result.tags })
+                result &&
+                onApplyMetadata({
+                  description: result.description,
+                  tags: result.tags,
+                  recognition_triggers: result.recognition_triggers,
+                  false_uses: result.false_uses
+                })
               }
               disabled={!hasMetadata}
             >

@@ -46,6 +46,8 @@ function noteToDraft(note?: Note | null): NoteDraft {
       tags: [],
       body_markdown: buildNoteTemplate("Theorem", "[Title]"),
       diagram_urls: [],
+      recognition_triggers: [],
+      false_uses: [],
       visibility: "private",
       is_favorite: false
     };
@@ -61,9 +63,18 @@ function noteToDraft(note?: Note | null): NoteDraft {
     tags: note.tags ?? [],
     body_markdown: note.body_markdown,
     diagram_urls: note.diagram_urls ?? [],
+    recognition_triggers: note.recognition_triggers ?? [],
+    false_uses: note.false_uses ?? [],
     visibility: note.visibility ?? "private",
     is_favorite: note.is_favorite
   };
+}
+
+function parseLearningList(value: string) {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
@@ -71,6 +82,10 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [draft, setDraft] = useState<NoteDraft>(() => noteToDraft(initialNote));
   const [tagsText, setTagsText] = useState(() => noteToDraft(initialNote).tags.join(", "));
+  const [recognitionText, setRecognitionText] = useState(() =>
+    noteToDraft(initialNote).recognition_triggers.join("\n")
+  );
+  const [falseUsesText, setFalseUsesText] = useState(() => noteToDraft(initialNote).false_uses.join("\n"));
   const [savedId, setSavedId] = useState<string | null>(initialNote?.id ?? null);
   const [slugTouched, setSlugTouched] = useState(Boolean(initialNote?.slug));
   const [topicTouched, setTopicTouched] = useState(Boolean(initialNote?.topic));
@@ -96,12 +111,12 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     const timer = window.setTimeout(() => {
       window.localStorage.setItem(
         key,
-        JSON.stringify({ draft, tagsText, savedAt: new Date().toISOString() })
+        JSON.stringify({ draft, tagsText, recognitionText, falseUsesText, savedAt: new Date().toISOString() })
       );
       setLocalDraftStatus("Saved locally");
     }, 1800);
     return () => window.clearTimeout(timer);
-  }, [dirty, draft, savedId, tagsText]);
+  }, [dirty, draft, falseUsesText, recognitionText, savedId, tagsText]);
 
   function handleTitleChange(title: string) {
     const update: Partial<NoteDraft> = { title };
@@ -215,12 +230,25 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     });
   }
 
-  function applyAIMetadata(metadata: { description?: string | null; tags?: string[] }) {
+  function applyAIMetadata(metadata: {
+    description?: string | null;
+    tags?: string[];
+    recognition_triggers?: string[];
+    false_uses?: string[];
+  }) {
     const update: Partial<NoteDraft> = {};
     if (metadata.description) update.description = metadata.description;
     if (metadata.tags?.length) {
       update.tags = metadata.tags;
       setTagsText(metadata.tags.join(", "));
+    }
+    if (metadata.recognition_triggers?.length) {
+      update.recognition_triggers = metadata.recognition_triggers;
+      setRecognitionText(metadata.recognition_triggers.join("\n"));
+    }
+    if (metadata.false_uses?.length) {
+      update.false_uses = metadata.false_uses;
+      setFalseUsesText(metadata.false_uses.join("\n"));
     }
     updateDraft(update);
   }
@@ -236,6 +264,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       tags: parseTags(tagsText),
       body_markdown: draft.body_markdown.trim() || buildNoteTemplate(draft.note_type, draft.title),
       diagram_urls: draft.diagram_urls,
+      recognition_triggers: parseLearningList(recognitionText),
+      false_uses: parseLearningList(falseUsesText),
       visibility: draft.visibility,
       published_at: draft.visibility === "public" ? new Date().toISOString() : null,
       is_favorite: draft.is_favorite,
@@ -276,6 +306,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             difficulty: initialNote?.difficulty ?? draft.difficulty,
             description: initialNote?.description ?? draft.description,
             tags: initialNote?.tags ?? draft.tags,
+            recognition_triggers: initialNote?.recognition_triggers ?? draft.recognition_triggers,
+            false_uses: initialNote?.false_uses ?? draft.false_uses,
             visibility: initialNote?.visibility ?? draft.visibility,
             is_favorite: initialNote?.is_favorite ?? draft.is_favorite
           }
@@ -510,6 +542,30 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                     updateDraft({ tags: parseTags(nextTagsText) });
                   }}
                   placeholder="modular arithmetic, phi, coprime"
+                />
+              </Field>
+              <Field label="Recognition Triggers">
+                <textarea
+                  className={inputClassName("min-h-24")}
+                  value={recognitionText}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setRecognitionText(next);
+                    updateDraft({ recognition_triggers: parseLearningList(next) });
+                  }}
+                  placeholder="large exponent modulo n, three cevians in a triangle"
+                />
+              </Field>
+              <Field label="Common False Uses">
+                <textarea
+                  className={inputClassName("min-h-24")}
+                  value={falseUsesText}
+                  onChange={(event) => {
+                    const next = event.target.value;
+                    setFalseUsesText(next);
+                    updateDraft({ false_uses: parseLearningList(next) });
+                  }}
+                  placeholder="Do not use if gcd(a,n) is not 1."
                 />
               </Field>
               <label className="flex items-center gap-3 text-sm font-medium text-[#43474f]">

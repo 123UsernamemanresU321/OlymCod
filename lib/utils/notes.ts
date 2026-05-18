@@ -11,7 +11,9 @@ export function matchesNoteSearch(note: Note, query: string) {
     note.body_markdown,
     note.topic,
     note.note_type,
-    ...note.tags
+    ...note.tags,
+    ...(note.recognition_triggers ?? []),
+    ...(note.false_uses ?? [])
   ]
     .join(" ")
     .toLowerCase();

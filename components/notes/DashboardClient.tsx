@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Calculator, Dices, FileText, Inbox, Plus, Search, ShieldCheck, Shapes, Sigma } from "lucide-react";
+import { BookOpen, Calculator, Dices, FileText, Flame, Inbox, Plus, Search, ShieldCheck, Shapes, Sigma, Target } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
@@ -9,13 +9,17 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TOPICS } from "@/lib/constants/notes";
-import type { Note, NoteReview, SiteSettings, Suggestion } from "@/lib/types";
+import { calculateMastery } from "@/lib/mastery/calculateMastery";
+import { analyzeMistakePatterns } from "@/lib/problems/analyzeMistakePatterns";
+import type { MistakeLog, Note, NoteReview, ProblemLog, SiteSettings, Suggestion } from "@/lib/types";
 import { matchesNoteSearch } from "@/lib/utils/notes";
 
 interface DashboardClientProps {
   notes: Note[];
   suggestions: Suggestion[];
   reviews: NoteReview[];
+  problems: ProblemLog[];
+  mistakes: MistakeLog[];
   settings: SiteSettings;
 }
 
@@ -30,7 +34,7 @@ const topicIcons = {
   Inbox
 };
 
-export function DashboardClient({ notes, suggestions, reviews, settings }: DashboardClientProps) {
+export function DashboardClient({ notes, suggestions, reviews, problems, mistakes, settings }: DashboardClientProps) {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => notes.filter((note) => matchesNoteSearch(note, query)), [notes, query]);
   const recent = [...filtered].sort((a, b) => +new Date(b.updated_at) - +new Date(a.updated_at)).slice(0, 3);
@@ -44,6 +48,9 @@ export function DashboardClient({ notes, suggestions, reviews, settings }: Dashb
       return !review || !review.next_review_at || review.next_review_at <= today;
     })
     .slice(0, 5);
+  const masteryRows = useMemo(() => calculateMastery({ notes, reviews, problems, mistakes }), [mistakes, notes, problems, reviews]);
+  const mistakePatterns = useMemo(() => analyzeMistakePatterns(problems, notes, "30d"), [notes, problems]);
+  const weakestTopic = masteryRows.filter((row) => row.label !== "Unknown").sort((a, b) => a.score - b.score)[0];
 
   const stats = [
     { label: "Total notes", value: notes.length, tone: "bg-[#a5c8ff]" },
@@ -124,6 +131,30 @@ export function DashboardClient({ notes, suggestions, reviews, settings }: Dashb
             {suggestions.filter((item) => item.status === "rejected" || item.status === "spam").length}
           </p>
         </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <Link href="/app/revision-pack" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <Target className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Generate Contest Revision Pack</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">Build a compact pack from weak notes, failed problems, triggers, and false uses.</p>
+        </Link>
+        <Link href="/app/mastery" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <Flame className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Mastery Heatmap</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">
+            {weakestTopic ? `Weakest topic now: ${weakestTopic.topic} (${weakestTopic.label}).` : "Track topic strength as you review."}
+          </p>
+        </Link>
+        <Link href="/app/mistakes" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <ShieldCheck className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Mistake Pattern</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">
+            {mistakePatterns.topCategories[0]
+              ? `${mistakePatterns.topCategories[0].label}: ${mistakePatterns.topCategories[0].count} recent weak problems.`
+              : "Patterns appear once problems are marked failed or review later."}
+          </p>
+        </Link>
       </section>
 
       <section>

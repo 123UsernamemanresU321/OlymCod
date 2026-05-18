@@ -10,15 +10,17 @@ import { Field, inputClassName } from "@/components/ui/Field";
 import { TopicSelector } from "@/components/notes/TopicSelector";
 import { MISTAKE_TYPES } from "@/lib/constants/daily";
 import { MATH_TOPICS, SPECIAL_TOPICS, topicIncludes } from "@/lib/constants/notes";
+import { analyzeMistakePatterns } from "@/lib/problems/analyzeMistakePatterns";
 import { createClient } from "@/lib/supabase/client";
-import type { MistakeLog, Note } from "@/lib/types";
+import type { MistakeLog, Note, ProblemLog } from "@/lib/types";
 
 interface MistakesClientProps {
   mistakes: MistakeLog[];
   notes: Note[];
+  problems: ProblemLog[];
 }
 
-export function MistakesClient({ mistakes, notes }: MistakesClientProps) {
+export function MistakesClient({ mistakes, notes, problems }: MistakesClientProps) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [query, setQuery] = useState("");
@@ -60,6 +62,8 @@ export function MistakesClient({ mistakes, notes }: MistakesClientProps) {
       return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
     });
   }, [mistakeType, mistakes, query, resolved, sort, topic]);
+
+  const patterns = useMemo(() => analyzeMistakePatterns(problems, notes, "30d"), [notes, problems]);
 
   async function createMistake() {
     if (!title.trim() || !description.trim()) {
@@ -184,6 +188,35 @@ export function MistakesClient({ mistakes, notes }: MistakesClientProps) {
           </div>
         </section>
       ) : null}
+
+      <section className="mt-6 rounded-lg border border-[#c3c6d0] bg-white p-5">
+        <h2 className="text-lg font-semibold text-[#1a1c1c]">Mistake Pattern Detector</h2>
+        <p className="mt-1 text-sm text-[#43474f]">Patterns from failed and review-later problem logs in the last 30 days.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4">
+            <p className="text-sm font-semibold text-[#1a1c1c]">Recurring categories</p>
+            <ul className="mt-2 grid gap-1 text-sm text-[#43474f]">
+              {patterns.topCategories.length ? patterns.topCategories.map((item) => (
+                <li key={item.label}>{item.label}: {item.count}</li>
+              )) : <li>No weak problem patterns yet.</li>}
+            </ul>
+          </div>
+          <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4">
+            <p className="text-sm font-semibold text-[#1a1c1c]">Weakest topics</p>
+            <ul className="mt-2 grid gap-1 text-sm text-[#43474f]">
+              {patterns.weakestTopics.length ? patterns.weakestTopics.map((item) => (
+                <li key={item.label}>{item.label}: {item.count}</li>
+              )) : <li>No failed/review-later topic data.</li>}
+            </ul>
+          </div>
+          <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4">
+            <p className="text-sm font-semibold text-[#1a1c1c]">Recognition issues</p>
+            <p className="mt-2 text-sm text-[#43474f]">
+              {patterns.recognitionFailures} recognition failures · {patterns.forgottenConditions} forgotten conditions
+            </p>
+          </div>
+        </div>
+      </section>
 
       <section className="mt-6 rounded-lg border border-[#c3c6d0] bg-white p-5">
         <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr_1fr_0.8fr_0.8fr]">

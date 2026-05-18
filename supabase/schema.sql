@@ -40,6 +40,8 @@ create table if not exists public.notes (
   tags text[] default '{}'::text[] not null,
   body_markdown text not null,
   diagram_urls text[] default '{}'::text[] not null,
+  recognition_triggers text[] default '{}'::text[] not null,
+  false_uses text[] default '{}'::text[] not null,
   visibility text not null default 'private',
   is_favorite boolean default false not null,
   is_archived boolean default false not null,
@@ -51,6 +53,8 @@ create table if not exists public.notes (
 
 alter table public.notes add column if not exists visibility text not null default 'private';
 alter table public.notes add column if not exists published_at timestamptz;
+alter table public.notes add column if not exists recognition_triggers text[] default '{}'::text[] not null;
+alter table public.notes add column if not exists false_uses text[] default '{}'::text[] not null;
 
 create table if not exists public.suggestions (
   id uuid primary key default gen_random_uuid(),
@@ -131,12 +135,14 @@ create table if not exists public.problem_logs (
   olympiad text,
   year int,
   problem_number text,
+  topic text,
   difficulty int check (difficulty between 1 and 12),
-  status text not null default 'unsolved',
+  status text not null default 'attempted',
   problem_text text,
   solution_summary text,
   key_idea text,
   mistake_made text,
+  mistake_category text,
   linked_note_ids uuid[] default '{}'::uuid[] not null,
   tags text[] default '{}'::text[] not null,
   created_at timestamptz default now() not null,
@@ -207,6 +213,18 @@ create table if not exists public.note_versions (
   body_markdown text,
   metadata jsonb default '{}'::jsonb not null,
   created_at timestamptz default now() not null
+);
+
+create table if not exists public.revision_packs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  description text,
+  config jsonb not null default '{}'::jsonb,
+  selected_note_ids uuid[] default '{}'::uuid[] not null,
+  selected_problem_ids uuid[] default '{}'::uuid[] not null,
+  created_at timestamptz default now() not null,
+  updated_at timestamptz default now() not null
 );
 
 create table if not exists public.notebook_presets (
@@ -293,6 +311,12 @@ begin
     );
   end if;
 
+  if not exists (select 1 from pg_constraint where conname = 'problem_logs_mistake_category_check' and conrelid = 'public.problem_logs'::regclass) then
+    alter table public.problem_logs add constraint problem_logs_mistake_category_check check (
+      mistake_category is null or mistake_category in ('Did not know theorem', 'Knew theorem but did not recognize it', 'Forgot condition', 'Algebra slip', 'False assumption', 'Weak diagram', 'Bad casework', 'Misread problem', 'Overcomplicated solution', 'Gave up too early', 'Incomplete proof', 'Other')
+    );
+  end if;
+
   if not exists (select 1 from pg_constraint where conname = 'problem_logs_required_text_check' and conrelid = 'public.problem_logs'::regclass) then
     alter table public.problem_logs add constraint problem_logs_required_text_check check (length(trim(title)) > 0);
   end if;
@@ -329,6 +353,10 @@ begin
     alter table public.diagrams add constraint diagrams_required_path_check check (
       length(trim(storage_path)) > 0 and length(trim(filename)) > 0
     );
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'revision_packs_required_name_check' and conrelid = 'public.revision_packs'::regclass) then
+    alter table public.revision_packs add constraint revision_packs_required_name_check check (length(trim(name)) > 0);
   end if;
 end $$;
 
@@ -512,60 +540,11 @@ create trigger suggestions_protect_update
 before update on public.suggestions
 for each row execute function public.protect_suggestion_update();
 
-create or replace function public.inverse_note_link_relation(relation text)
-returns text
-language sql
-immutable
-as $$
-  select case relation
-    when 'generalization' then 'special case'
-    when 'special case' then 'generalization'
-    when 'stronger version' then 'weaker version'
-    when 'weaker version' then 'stronger version'
-    when 'commonly confused' then 'commonly confused'
-    when 'used together' then 'used together'
-    when 'example of' then 'special case'
-    when 'prerequisite' then 'used together'
-    else 'related'
-  end;
-$$;
-
-create or replace function public.ensure_reciprocal_note_link()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.note_links (user_id, source_note_id, target_note_id, relation_type)
-  values (
-    new.user_id,
-    new.target_note_id,
-    new.source_note_id,
-    public.inverse_note_link_relation(new.relation_type)
-  )
-  on conflict (user_id, source_note_id, target_note_id, relation_type) do nothing;
-
-  return new;
-end;
-$$;
-
-create or replace function public.delete_reciprocal_note_link()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  delete from public.note_links
-  where user_id = old.user_id
-    and source_note_id = old.target_note_id
-    and target_note_id = old.source_note_id
-    and relation_type = public.inverse_note_link_relation(old.relation_type);
-
-  return old;
-end;
-$$;
+drop trigger if exists note_links_insert_reciprocal on public.note_links;
+drop trigger if exists note_links_delete_reciprocal on public.note_links;
+drop function if exists public.ensure_reciprocal_note_link();
+drop function if exists public.delete_reciprocal_note_link();
+drop function if exists public.inverse_note_link_relation(text);
 
 create or replace function public.audit_suggestion_created()
 returns trigger
@@ -616,23 +595,9 @@ drop trigger if exists notebook_presets_set_updated_at on public.notebook_preset
 create trigger notebook_presets_set_updated_at before update on public.notebook_presets for each row execute function public.set_updated_at();
 
 drop trigger if exists note_links_insert_reciprocal on public.note_links;
-create trigger note_links_insert_reciprocal
-after insert on public.note_links
-for each row execute function public.ensure_reciprocal_note_link();
-
 drop trigger if exists note_links_delete_reciprocal on public.note_links;
-create trigger note_links_delete_reciprocal
-after delete on public.note_links
-for each row execute function public.delete_reciprocal_note_link();
-
-insert into public.note_links (user_id, source_note_id, target_note_id, relation_type)
-select
-  user_id,
-  target_note_id,
-  source_note_id,
-  public.inverse_note_link_relation(relation_type)
-from public.note_links
-on conflict (user_id, source_note_id, target_note_id, relation_type) do nothing;
+drop trigger if exists revision_packs_set_updated_at on public.revision_packs;
+create trigger revision_packs_set_updated_at before update on public.revision_packs for each row execute function public.set_updated_at();
 
 alter table public.profiles enable row level security;
 alter table public.notes enable row level security;
@@ -648,6 +613,7 @@ alter table public.note_reviews enable row level security;
 alter table public.diagrams enable row level security;
 alter table public.note_versions enable row level security;
 alter table public.notebook_presets enable row level security;
+alter table public.revision_packs enable row level security;
 
 drop policy if exists "Profiles are readable by self or owner" on public.profiles;
 create policy "Profiles are readable by self or owner"
@@ -1006,6 +972,31 @@ on public.notebook_presets for delete
 to authenticated
 using (user_id = (select auth.uid()));
 
+drop policy if exists "Users can select their own revision packs" on public.revision_packs;
+create policy "Users can select their own revision packs"
+on public.revision_packs for select
+to authenticated
+using (user_id = (select auth.uid()));
+
+drop policy if exists "Users can insert their own revision packs" on public.revision_packs;
+create policy "Users can insert their own revision packs"
+on public.revision_packs for insert
+to authenticated
+with check (user_id = (select auth.uid()));
+
+drop policy if exists "Users can update their own revision packs" on public.revision_packs;
+create policy "Users can update their own revision packs"
+on public.revision_packs for update
+to authenticated
+using (user_id = (select auth.uid()))
+with check (user_id = (select auth.uid()));
+
+drop policy if exists "Users can delete their own revision packs" on public.revision_packs;
+create policy "Users can delete their own revision packs"
+on public.revision_packs for delete
+to authenticated
+using (user_id = (select auth.uid()));
+
 create index if not exists profiles_role_idx on public.profiles (role);
 create index if not exists notes_user_id_idx on public.notes (user_id);
 create index if not exists notes_topic_idx on public.notes (topic);
@@ -1015,6 +1006,8 @@ create index if not exists notes_difficulty_idx on public.notes (difficulty);
 create index if not exists notes_updated_at_idx on public.notes (updated_at desc);
 create index if not exists notes_public_slug_idx on public.notes (slug) where visibility = 'public' and is_archived = false;
 create index if not exists notes_tags_gin_idx on public.notes using gin (tags);
+create index if not exists notes_recognition_triggers_gin_idx on public.notes using gin (recognition_triggers);
+create index if not exists notes_false_uses_gin_idx on public.notes using gin (false_uses);
 create index if not exists suggestions_contributor_id_idx on public.suggestions (contributor_id);
 create index if not exists suggestions_target_note_id_idx on public.suggestions (target_note_id);
 create index if not exists suggestions_status_idx on public.suggestions (status);
@@ -1029,6 +1022,8 @@ create index if not exists quick_captures_topic_idx on public.quick_captures (to
 create index if not exists quick_captures_tags_gin_idx on public.quick_captures using gin (tags);
 create index if not exists problem_logs_user_id_idx on public.problem_logs (user_id);
 create index if not exists problem_logs_status_idx on public.problem_logs (status);
+create index if not exists problem_logs_topic_idx on public.problem_logs (topic);
+create index if not exists problem_logs_mistake_category_idx on public.problem_logs (mistake_category);
 create index if not exists problem_logs_olympiad_idx on public.problem_logs (olympiad);
 create index if not exists problem_logs_updated_at_idx on public.problem_logs (updated_at desc);
 create index if not exists problem_logs_tags_gin_idx on public.problem_logs using gin (tags);
@@ -1057,3 +1052,6 @@ create index if not exists notebook_presets_user_id_idx on public.notebook_prese
 create index if not exists notebook_presets_created_at_idx on public.notebook_presets (created_at desc);
 create index if not exists notebook_presets_updated_at_idx on public.notebook_presets (updated_at desc);
 create index if not exists notebook_presets_is_default_idx on public.notebook_presets (is_default);
+create index if not exists revision_packs_user_id_idx on public.revision_packs (user_id);
+create index if not exists revision_packs_created_at_idx on public.revision_packs (created_at desc);
+create index if not exists revision_packs_updated_at_idx on public.revision_packs (updated_at desc);

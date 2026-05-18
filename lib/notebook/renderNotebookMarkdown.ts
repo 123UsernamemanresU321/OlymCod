@@ -64,6 +64,10 @@ function diagramMarkdown(item: NotebookItem) {
   return item.diagrams.map((path) => `![Diagram](${diagramRenderUrl(path)})`).join("\n\n");
 }
 
+function learningList(items: string[]) {
+  return items.map((item) => `- ${item}`).join("\n");
+}
+
 export function getNotebookEntrySections(item: NotebookItem, config: NotebookConfig): NotebookEntrySection[] {
   const sections: NotebookEntrySection[] = [];
   const toggles = config.sectionToggles;
@@ -118,6 +122,13 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
     if (toggles.showExamples) addSection(item, sections, "example");
     if (toggles.showCommonMistakes) addSection(item, sections, firstPresent(item, ["common_mistakes", "traps"]));
     addSection(item, sections, "related");
+  }
+
+  if (toggles.showRecognitionTriggers && item.recognitionTriggers.length && config.detailLevel !== "Statement Mode") {
+    sections.push({ label: "Recognition Triggers", markdown: learningList(item.recognitionTriggers) });
+  }
+  if (toggles.showFalseUses && item.falseUses.length && config.detailLevel !== "Statement Mode") {
+    sections.push({ label: "Common False Uses", markdown: learningList(item.falseUses) });
   }
 
   if (toggles.showProofs) addSection(item, sections, firstPresent(item, ["proof", "derivation"]));

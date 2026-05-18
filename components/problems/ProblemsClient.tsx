@@ -7,7 +7,9 @@ import { Plus } from "lucide-react";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
-import { PROBLEM_STATUSES } from "@/lib/constants/daily";
+import { TopicSelector } from "@/components/notes/TopicSelector";
+import { PROBLEM_MISTAKE_CATEGORIES, PROBLEM_STATUSES } from "@/lib/constants/daily";
+import { MATH_TOPICS, topicIncludes } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, ProblemLog } from "@/lib/types";
 import { parseTags } from "@/lib/utils/tags";
@@ -24,10 +26,14 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("");
   const [difficulty, setDifficulty] = useState("");
+  const [topic, setTopic] = useState("");
+  const [mistakeCategory, setMistakeCategory] = useState("");
   const [olympiad, setOlympiad] = useState("");
   const [linkedNote, setLinkedNote] = useState("");
   const [title, setTitle] = useState("");
   const [source, setSource] = useState("");
+  const [formTopic, setFormTopic] = useState("Number Theory");
+  const [formMistakeCategory, setFormMistakeCategory] = useState("");
   const [problemText, setProblemText] = useState("");
   const [keyIdea, setKeyIdea] = useState("");
   const [tagsText, setTagsText] = useState("");
@@ -41,10 +47,12 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
         problem.title,
         problem.source,
         problem.olympiad,
+        problem.topic,
         problem.problem_text,
         problem.solution_summary,
         problem.key_idea,
         problem.mistake_made,
+        problem.mistake_category,
         problem.tags.join(" ")
       ]
         .filter(Boolean)
@@ -53,11 +61,13 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
       if (normalizedQuery && !haystack.includes(normalizedQuery)) return false;
       if (status && problem.status !== status) return false;
       if (difficulty && problem.difficulty !== Number(difficulty)) return false;
+      if (topic && !topicIncludes(problem.topic, topic)) return false;
+      if (mistakeCategory && problem.mistake_category !== mistakeCategory) return false;
       if (olympiad && !problem.olympiad?.toLowerCase().includes(olympiad.toLowerCase())) return false;
       if (linkedNote && !problem.linked_note_ids.includes(linkedNote)) return false;
       return true;
     });
-  }, [difficulty, linkedNote, olympiad, problems, query, status]);
+  }, [difficulty, linkedNote, mistakeCategory, olympiad, problems, query, status, topic]);
 
   async function createProblem() {
     if (!title.trim()) {
@@ -77,15 +87,19 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
         user_id: user.id,
         title: title.trim(),
         source: source.trim() || null,
-        status: "unsolved",
+        topic: formTopic,
+        status: "attempted",
         problem_text: problemText.trim() || null,
         key_idea: keyIdea.trim() || null,
+        mistake_category: formMistakeCategory || null,
         linked_note_ids: [],
         tags: parseTags(tagsText)
       });
       if (insertError) throw insertError;
       setTitle("");
       setSource("");
+      setFormTopic("Number Theory");
+      setFormMistakeCategory("");
       setProblemText("");
       setKeyIdea("");
       setTagsText("");
@@ -117,10 +131,15 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
             Track where techniques appeared, what worked, and what needs review.
           </p>
         </div>
-        <Button type="button" onClick={() => setShowForm((current) => !current)}>
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          New Problem
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="secondary" onClick={() => setShowForm((current) => !current)}>
+            Quick add
+          </Button>
+          <Button type="button" onClick={() => router.push("/app/problems/new")}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            New Problem
+          </Button>
+        </div>
       </div>
 
       {showForm ? (
@@ -137,6 +156,19 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
                   onChange={(event) => setSource(event.target.value)}
                   placeholder="IMO shortlist, BMO2, textbook"
                 />
+              </Field>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Topic">
+                <TopicSelector value={formTopic} onChange={setFormTopic} />
+              </Field>
+              <Field label="Mistake category">
+                <select className={inputClassName()} value={formMistakeCategory} onChange={(event) => setFormMistakeCategory(event.target.value)}>
+                  <option value="">No category</option>
+                  {PROBLEM_MISTAKE_CATEGORIES.map((item) => (
+                    <option key={item} value={item}>{item}</option>
+                  ))}
+                </select>
               </Field>
             </div>
             <Field label="Problem statement">
@@ -172,7 +204,7 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
       ) : null}
 
       <section className="mt-6 rounded-lg border border-[#c3c6d0] bg-white p-5">
-        <div className="grid gap-3 md:grid-cols-[1.3fr_0.8fr_0.6fr_0.9fr_1fr]">
+        <div className="grid gap-3 md:grid-cols-[1.2fr_0.7fr_0.6fr_0.8fr_0.9fr_1fr]">
           <input
             className={inputClassName()}
             value={query}
@@ -197,6 +229,18 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
               <option key={value} value={value}>
                 {value}
               </option>
+            ))}
+          </select>
+          <select className={inputClassName()} value={topic} onChange={(event) => setTopic(event.target.value)}>
+            <option value="">All topics</option>
+            {MATH_TOPICS.map((item) => (
+              <option key={item} value={item}>{item}</option>
+            ))}
+          </select>
+          <select className={inputClassName()} value={mistakeCategory} onChange={(event) => setMistakeCategory(event.target.value)}>
+            <option value="">Any mistake</option>
+            {PROBLEM_MISTAKE_CATEGORIES.map((item) => (
+              <option key={item} value={item}>{item}</option>
             ))}
           </select>
           <input
@@ -236,11 +280,17 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
                     <Badge tone={problem.status === "failed" ? "red" : problem.status === "mastered" ? "green" : "blue"}>
                       {problem.status.replaceAll("_", " ")}
                     </Badge>
+                    {problem.topic ? <Badge>{problem.topic}</Badge> : null}
                     <DifficultyBadge value={problem.difficulty} />
                   </div>
                 </div>
                 {problem.key_idea ? (
                   <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#43474f]">{problem.key_idea}</p>
+                ) : null}
+                {problem.mistake_category ? (
+                  <p className="mt-2 text-[12px] font-medium text-[#8f1d15]">
+                    Mistake category: {problem.mistake_category}
+                  </p>
                 ) : null}
                 {linkedTitles(problem) ? (
                   <p className="mt-3 text-[12px] font-medium text-[#0e3b69]">

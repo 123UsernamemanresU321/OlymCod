@@ -62,6 +62,8 @@ export interface Note {
   tags: string[];
   body_markdown: string;
   diagram_urls: string[];
+  recognition_triggers: string[];
+  false_uses: string[];
   visibility: NoteVisibility;
   is_favorite: boolean;
   is_archived: boolean;
@@ -81,6 +83,8 @@ export type NoteDraft = Pick<
   | "tags"
   | "body_markdown"
   | "diagram_urls"
+  | "recognition_triggers"
+  | "false_uses"
   | "visibility"
   | "is_favorite"
 >;
@@ -167,6 +171,20 @@ export type ProblemStatus =
   | "review_later"
   | "mastered";
 
+export type ProblemMistakeCategory =
+  | "Did not know theorem"
+  | "Knew theorem but did not recognize it"
+  | "Forgot condition"
+  | "Algebra slip"
+  | "False assumption"
+  | "Weak diagram"
+  | "Bad casework"
+  | "Misread problem"
+  | "Overcomplicated solution"
+  | "Gave up too early"
+  | "Incomplete proof"
+  | "Other";
+
 export interface ProblemLog {
   id: string;
   user_id: string;
@@ -175,12 +193,14 @@ export interface ProblemLog {
   olympiad: string | null;
   year: number | null;
   problem_number: string | null;
+  topic: Topic | string | null;
   difficulty: number | null;
   status: ProblemStatus;
   problem_text: string | null;
   solution_summary: string | null;
   key_idea: string | null;
   mistake_made: string | null;
+  mistake_category: ProblemMistakeCategory | string | null;
   linked_note_ids: string[];
   tags: string[];
   created_at: string;
@@ -288,6 +308,18 @@ export interface NotebookPreset {
   description: string | null;
   config: Record<string, unknown>;
   is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RevisionPack {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  config: Record<string, unknown>;
+  selected_note_ids: string[];
+  selected_problem_ids: string[];
   created_at: string;
   updated_at: string;
 }

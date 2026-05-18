@@ -99,6 +99,8 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
       { id: "problems", group: "Actions", title: "Open Problem Log", href: "/app/problems", preview: "problem log" },
       { id: "mistakes", group: "Actions", title: "Open Mistake Log", href: "/app/mistakes", preview: "mistake log" },
       { id: "review", group: "Actions", title: "Open Review", href: "/app/review-notes", preview: "review due practice" },
+      { id: "revision-pack", group: "Actions", title: "Generate Contest Revision Pack", href: "/app/revision-pack", preview: "before contest revision pack weak notes false uses triggers" },
+      { id: "mastery", group: "Actions", title: "Open Mastery Heatmap", href: "/app/mastery", preview: "mastery heatmap weak topics confidence mistakes" },
       { id: "diagrams", group: "Actions", title: "Open Diagrams", href: "/app/diagrams", preview: "geometry diagram manager" },
       { id: "settings", group: "Actions", title: "Open Settings", href: "/app/settings", preview: "export backup account" }
     ];
@@ -119,7 +121,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
         group: "Notes" as const,
         title: note.title,
         href: `/app/notes/${note.id}`,
-        preview: `${note.topic} ${note.note_type} ${note.description ?? ""} ${note.body_markdown.slice(0, 180)}`,
+        preview: `${note.topic} ${note.note_type} ${note.description ?? ""} ${(note.recognition_triggers ?? []).join(" ")} ${(note.false_uses ?? []).join(" ")} ${note.body_markdown.slice(0, 180)}`,
         tags: note.tags
       })),
       ...problems.map((problem) => ({
@@ -127,7 +129,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
         group: "Problems" as const,
         title: problem.title,
         href: `/app/problems/${problem.id}`,
-        preview: `${problem.status} ${problem.olympiad ?? ""} ${problem.key_idea ?? ""}`,
+        preview: `${problem.status} ${problem.topic ?? ""} ${problem.olympiad ?? ""} ${problem.mistake_category ?? ""} ${problem.key_idea ?? ""}`,
         tags: problem.tags
       })),
       ...mistakes.map((mistake) => ({

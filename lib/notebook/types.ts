@@ -43,6 +43,8 @@ export type NotebookSortOrder =
   | "Difficulty descending"
   | "Review priority";
 
+export type NotebookSelectionMode = "whitelist" | "blacklist";
+
 export type NotebookSectionToggle =
   | "showMetadata"
   | "showTags"
@@ -52,6 +54,8 @@ export type NotebookSectionToggle =
   | "showProofs"
   | "showExamples"
   | "showCommonMistakes"
+  | "showRecognitionTriggers"
+  | "showFalseUses"
   | "showRelatedNotes"
   | "showBacklinks"
   | "showLinkedProblems"
@@ -77,6 +81,8 @@ export interface NotebookPageSettings {
 
 export interface NotebookConfig {
   contentSources: Record<NotebookContentSource, boolean>;
+  selectionMode: NotebookSelectionMode;
+  noteIds: string[];
   topics: string[];
   noteTypes: string[];
   difficultyMin: number;
@@ -84,6 +90,15 @@ export interface NotebookConfig {
   tags: string[];
   reviewStatuses: string[];
   problemStatuses: string[];
+  excludeNoteIds: string[];
+  excludeTopics: string[];
+  excludeNoteTypes: string[];
+  excludeDifficultyMin: number | null;
+  excludeDifficultyMax: number | null;
+  excludeTags: string[];
+  excludeReviewStatuses: string[];
+  excludeProblemStatuses: string[];
+  excludeMastered: boolean;
   detailLevel: NotebookDetailLevel;
   sectionToggles: Record<NotebookSectionToggle, boolean>;
   layoutStyle: NotebookLayoutStyle;
@@ -134,6 +149,8 @@ export interface NotebookItem {
   tags: string[];
   description?: string | null;
   bodyMarkdown?: string | null;
+  recognitionTriggers: string[];
+  falseUses: string[];
   extractedSections: Partial<Record<NotebookSectionKey, string>>;
   diagrams: string[];
   linkedNotes: Array<{ id: string; title: string; relation?: string | null }>;

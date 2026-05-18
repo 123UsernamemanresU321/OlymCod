@@ -95,6 +95,8 @@ function noteItem(
     tags: note.tags ?? [],
     description: note.description,
     bodyMarkdown: note.body_markdown,
+    recognitionTriggers: note.recognition_triggers ?? [],
+    falseUses: note.false_uses ?? [],
     extractedSections: extractNotebookSections(note.body_markdown),
     diagrams: diagramsForNote(note, raw.diagrams),
     linkedNotes: linkedFromNote(note, raw.noteLinks, noteMap),
@@ -112,7 +114,7 @@ function problemItem(problem: ProblemLog, noteMap: Map<string, Note>): NotebookI
     id: problem.id,
     sourceType: "problem",
     title: problem.title,
-    topic: linkedNotes[0]?.title ? noteMap.get(problem.linked_note_ids[0])?.topic : null,
+    topic: problem.topic ?? (linkedNotes[0]?.title ? noteMap.get(problem.linked_note_ids[0])?.topic : null),
     noteType: "Problem Log",
     difficulty: problem.difficulty,
     tags: problem.tags ?? [],
@@ -124,6 +126,8 @@ function problemItem(problem: ProblemLog, noteMap: Map<string, Note>): NotebookI
       solution: problem.solution_summary ?? "",
       mistake: problem.mistake_made ?? ""
     },
+    recognitionTriggers: [],
+    falseUses: problem.mistake_category ? [problem.mistake_category] : [],
     diagrams: [],
     linkedNotes,
     linkedProblems: [],
@@ -146,6 +150,8 @@ function mistakeItem(mistake: MistakeLog, noteMap: Map<string, Note>): NotebookI
     tags: [],
     description: mistake.description,
     bodyMarkdown: [mistake.description, mistake.correct_principle, mistake.example].filter(Boolean).join("\n\n"),
+    recognitionTriggers: [],
+    falseUses: [mistake.description].filter(Boolean),
     extractedSections: {
       mistake: mistake.description,
       correct_principle: mistake.correct_principle ?? "",
@@ -170,6 +176,8 @@ function captureItem(capture: NotebookRawData["captures"][number]): NotebookItem
     tags: capture.tags ?? [],
     description: capture.raw_text,
     bodyMarkdown: capture.raw_text,
+    recognitionTriggers: [],
+    falseUses: [],
     extractedSections: { first_paragraph: capture.raw_text, full: capture.raw_text },
     diagrams: capture.attachment_urls ?? [],
     linkedNotes: [],
@@ -191,6 +199,8 @@ function diagramItem(diagram: Diagram, noteMap: Map<string, Note>): NotebookItem
     tags: [],
     description: note ? `Attached to ${note.title}` : "Unattached diagram",
     bodyMarkdown: `![${diagram.caption || diagram.filename}](${diagramRenderUrl(diagram.storage_path)})`,
+    recognitionTriggers: [],
+    falseUses: [],
     extractedSections: { diagram: `![${diagram.caption || diagram.filename}](${diagramRenderUrl(diagram.storage_path)})` },
     diagrams: [diagram.storage_path],
     linkedNotes: note ? [{ id: note.id, title: note.title, relation: "diagram" }] : [],
@@ -201,13 +211,49 @@ function diagramItem(diagram: Diagram, noteMap: Map<string, Note>): NotebookItem
   };
 }
 
-function matchesConfig(item: NotebookItem, config: NotebookConfig) {
+function matchesWhitelist(item: NotebookItem, config: NotebookConfig) {
+  if (config.noteIds.length && !config.noteIds.includes(item.id)) return false;
   if (!matchesTopics(item.topic, config)) return false;
   if (item.sourceType === "note" && config.noteTypes.length && !config.noteTypes.includes(item.noteType ?? "")) return false;
   if (!matchesDifficulty(item.difficulty, config)) return false;
   if (!matchesTags(item.tags, config)) return false;
   if (!matchesReviewStatus(item.reviewStatus, config)) return false;
   if (item.sourceType === "problem" && !matchesProblemStatus(item.problemStatus, config)) return false;
+  return true;
+}
+
+function arrayIntersects(values: string[], filters: string[]) {
+  if (!filters.length) return false;
+  const normalized = values.map((value) => value.toLowerCase());
+  return filters.some((filter) => normalized.includes(filter.toLowerCase()));
+}
+
+function topicHitsBlacklist(topic: string | null | undefined, config: NotebookConfig) {
+  return config.excludeTopics.some((filter) => topicIncludes(topic ?? "", filter));
+}
+
+function difficultyHitsBlacklist(difficulty: number | null | undefined, config: NotebookConfig) {
+  if (difficulty == null) return false;
+  if (config.excludeDifficultyMin == null || config.excludeDifficultyMax == null) return false;
+  return difficulty >= config.excludeDifficultyMin && difficulty <= config.excludeDifficultyMax;
+}
+
+function matchesBlacklist(item: NotebookItem, config: NotebookConfig) {
+  if (config.excludeNoteIds.includes(item.id)) return false;
+  if (topicHitsBlacklist(item.topic, config)) return false;
+  if (item.sourceType === "note" && config.excludeNoteTypes.includes(item.noteType ?? "")) return false;
+  if (difficultyHitsBlacklist(item.difficulty, config)) return false;
+  if (arrayIntersects(item.tags, config.excludeTags)) return false;
+  if (item.reviewStatus && config.excludeReviewStatuses.includes(item.reviewStatus)) return false;
+  if (config.excludeMastered && item.reviewStatus === "mastered") return false;
+  if (item.sourceType === "problem" && item.problemStatus && config.excludeProblemStatuses.includes(item.problemStatus)) return false;
+  return true;
+}
+
+function matchesConfig(item: NotebookItem, config: NotebookConfig) {
+  const passesSelection =
+    config.selectionMode === "blacklist" ? matchesBlacklist(item, config) : matchesWhitelist(item, config);
+  if (!passesSelection) return false;
   if (config.detailLevel === "Formula Sheet Mode" && !(item.sourceType === "note" && (item.noteType === "Formula" || item.noteType === "Formula Log" || topicIncludes(item.topic ?? "", "Formula Bank")))) return false;
   if (config.detailLevel === "Problem Booklet Mode" && item.sourceType !== "problem") return false;
   return true;

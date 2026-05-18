@@ -8,7 +8,7 @@ import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
 import { NoteReviewActions } from "@/components/notes/NoteReviewActions";
 import { NoteViewActions } from "@/components/notes/NoteViewActions";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
-import { inverseNoteLinkRelation } from "@/lib/constants/daily";
+import { normalizeNoteRelations } from "@/lib/notes/normalizeNoteRelations";
 import { createClient } from "@/lib/supabase/server";
 import type { MistakeLog, Note, NoteLink, NoteReview, ProblemLog } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/utils/notes";
@@ -68,18 +68,11 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
   const mistakes = (mistakesData ?? []) as MistakeLog[];
   const review = reviewData as NoteReview | null;
 
-  const explicitLinks = sourceLinks
-    .map((link) => ({ link, note: allNotes.find((item) => item.id === link.target_note_id) }))
-    .filter((row): row is { link: NoteLink; note: Note } => Boolean(row.note));
-  const explicitlyRelatedNoteIds = new Set(explicitLinks.map(({ note }) => note.id));
-  const backlinkRows = backlinks
-    .flatMap((link) => {
-      const backlinkNote = allNotes.find((item) => item.id === link.source_note_id);
-      return backlinkNote
-        ? [{ link, currentRelation: inverseNoteLinkRelation(link.relation_type), note: backlinkNote }]
-        : [];
-    })
-    .filter((row) => !explicitlyRelatedNoteIds.has(row.note.id));
+  const relationGroups = normalizeNoteRelations({
+    outgoingLinks: sourceLinks,
+    incomingLinks: backlinks,
+    notes: allNotes
+  });
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 lg:grid-cols-[minmax(0,616px)_288px] lg:px-10 lg:py-20">
@@ -109,6 +102,37 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
         </header>
 
         <div className="mt-8">
+          {note.recognition_triggers?.length || note.false_uses?.length ? (
+            <div className="mb-8 grid gap-4">
+              {note.recognition_triggers?.length ? (
+                <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">
+                    Recognition Triggers
+                  </h2>
+                  <p className="mt-1 text-sm text-[#43474f]">Think of this when you see...</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {note.recognition_triggers.map((trigger) => (
+                      <span key={trigger} className="rounded border border-[#c3c6d0] bg-white px-3 py-1 text-sm text-[#1a1c1c]">
+                        {trigger}
+                      </span>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {note.false_uses?.length ? (
+                <section className="rounded-lg border border-[#ffd2cc] bg-[#fff7f5] p-4">
+                  <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[#8f1d15]">
+                    Common False Uses
+                  </h2>
+                  <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#573733]">
+                    {note.false_uses.map((falseUse) => (
+                      <li key={falseUse}>- {falseUse}</li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </div>
+          ) : null}
           <MarkdownPreview markdown={note.body_markdown} />
         </div>
       </article>
@@ -116,7 +140,10 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
       <aside className="grid content-start gap-6">
         <NoteViewActions note={note} />
 
-        <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
+        <section
+          aria-label="Directional related notes including Prerequisites and Used By"
+          className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5"
+        >
           <h2 className="text-lg font-semibold text-[#1a1c1c]">Metadata</h2>
           <div className="mt-4 grid gap-4 text-sm">
             <div className="flex justify-between gap-3">
@@ -148,18 +175,29 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
 
         <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
           <h2 className="text-lg font-semibold text-[#1a1c1c]">Related Notes</h2>
-          <div className="mt-4 grid gap-2">
-            {explicitLinks.length ? (
-              explicitLinks.map(({ link, note: item }) => (
-                <Link key={link.id} href={`/app/notes/${item.id}`} className="rounded p-2 hover:bg-white">
-                  <p className="text-sm font-semibold text-[#1a1c1c]">
-                    <InlineMarkdown text={item.title} />
-                  </p>
-                  <p className="mt-1 text-xs text-[#0e3b69]">{link.relation_type}</p>
-                  {item.description ? (
-                    <InlineMarkdown text={item.description} className="mt-1 line-clamp-2 text-xs leading-5 text-[#43474f]" />
-                  ) : null}
-                </Link>
+          <div className="mt-4 grid gap-5">
+            {relationGroups.length ? (
+              relationGroups.map((group) => (
+                <div key={group.label}>
+                  <h3 className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">
+                    {group.label}
+                  </h3>
+                  <div className="mt-2 grid gap-2">
+                    {group.items.map(({ note: item, relation, direction }) => (
+                      <Link key={`${group.label}-${item.id}`} href={`/app/notes/${item.id}`} className="rounded p-2 hover:bg-white">
+                        <p className="text-sm font-semibold text-[#1a1c1c]">
+                          <InlineMarkdown text={item.title} />
+                        </p>
+                        <p className="mt-1 text-xs text-[#0e3b69]">
+                          {direction === "incoming" ? "linked here as" : "linked as"} {relation}
+                        </p>
+                        {item.description ? (
+                          <InlineMarkdown text={item.description} className="mt-1 line-clamp-2 text-xs leading-5 text-[#43474f]" />
+                        ) : null}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
               ))
             ) : related.length ? (
               related.map((item) => (
@@ -172,22 +210,6 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
               ))
             ) : (
               <p className="text-sm leading-6 text-[#43474f]">Related notes will appear by topic.</p>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
-          <h2 className="text-lg font-semibold text-[#1a1c1c]">Backlinks</h2>
-          <div className="mt-4 grid gap-2">
-            {backlinkRows.length ? (
-              backlinkRows.map(({ link, currentRelation, note: item }) => (
-                <Link key={link.id} href={`/app/notes/${item.id}`} className="rounded p-2 text-sm font-semibold text-[#0e3b69] hover:bg-white">
-                  <InlineMarkdown text={item.title} />
-                  <span className="ml-2 text-xs font-normal text-[#43474f]">({currentRelation})</span>
-                </Link>
-              ))
-            ) : (
-              <p className="text-sm leading-6 text-[#43474f]">No notes link here yet.</p>
             )}
           </div>
         </section>

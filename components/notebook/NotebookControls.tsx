@@ -42,10 +42,46 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
     update({ sectionToggles: { ...config.sectionToggles, [toggle]: checked } });
   }
 
+  function csv(value: string) {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
+
+  const filterVerb = config.selectionMode === "blacklist" ? "Exclude selected" : "Include selected";
+
   return (
     <div className="grid gap-5">
       <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
         <h2 className="text-base font-semibold text-[#1a1c1c]">Content Sources</h2>
+        <div className="mt-3 rounded border border-[#d5d7de] bg-[#f9f9f9] p-3">
+          <p className="text-sm font-semibold text-[#1a1c1c]">Selection Mode</p>
+          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => update({ selectionMode: "whitelist" })}
+              className={cn(
+                "rounded border px-3 py-2 text-sm text-[#43474f]",
+                config.selectionMode === "whitelist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
+              )}
+            >
+              Include only
+            </button>
+            <button
+              type="button"
+              onClick={() => update({ selectionMode: "blacklist" })}
+              className={cn(
+                "rounded border px-3 py-2 text-sm text-[#43474f]",
+                config.selectionMode === "blacklist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
+              )}
+            >
+              Include everything except
+            </button>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-[#43474f]">
+            {config.selectionMode === "blacklist"
+              ? "Start with selected sources, then remove items matching exclusions."
+              : "Start with selected sources, then include only matching filters."}
+          </p>
+        </div>
         <div className="mt-3 grid gap-2">
           {NOTEBOOK_CONTENT_SOURCES.map((source) => (
             <label key={source.key} className="flex items-center gap-3 text-sm text-[#43474f]">
@@ -62,6 +98,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
 
       <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
         <h2 className="text-base font-semibold text-[#1a1c1c]">Filters</h2>
+        <p className="mt-1 text-sm text-[#43474f]">{filterVerb} topics, note types, tags, and statuses.</p>
         <div className="mt-4 grid gap-4">
           <Field label="Topics">
             <div className="flex flex-wrap gap-2">
@@ -168,6 +205,78 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
               ))}
             </div>
           </Field>
+
+          {config.selectionMode === "blacklist" ? (
+            <div className="grid gap-4 rounded border border-[#d5d7de] bg-[#f9f9f9] p-4">
+              <h3 className="text-sm font-semibold text-[#1a1c1c]">Exclusions</h3>
+              <Field label="Exclude topics">
+                <input
+                  className={inputClassName()}
+                  value={config.excludeTopics.join(", ")}
+                  onChange={(event) => update({ excludeTopics: csv(event.target.value) })}
+                  placeholder="Formula Bank, Inbox"
+                />
+              </Field>
+              <Field label="Exclude note types">
+                <input
+                  className={inputClassName()}
+                  value={config.excludeNoteTypes.join(", ")}
+                  onChange={(event) => update({ excludeNoteTypes: csv(event.target.value) })}
+                  placeholder="Formula Log, Inbox"
+                />
+              </Field>
+              <Field label="Exclude tags">
+                <input
+                  className={inputClassName()}
+                  value={config.excludeTags.join(", ")}
+                  onChange={(event) => update({ excludeTags: csv(event.target.value) })}
+                  placeholder="too basic, mastered"
+                />
+              </Field>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Exclude difficulty min">
+                  <input
+                    className={inputClassName()}
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={config.excludeDifficultyMin ?? ""}
+                    onChange={(event) =>
+                      update({ excludeDifficultyMin: event.target.value ? Number(event.target.value) : null })
+                    }
+                  />
+                </Field>
+                <Field label="Exclude difficulty max">
+                  <input
+                    className={inputClassName()}
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={config.excludeDifficultyMax ?? ""}
+                    onChange={(event) =>
+                      update({ excludeDifficultyMax: event.target.value ? Number(event.target.value) : null })
+                    }
+                  />
+                </Field>
+              </div>
+              <Field label="Exclude review statuses">
+                <input
+                  className={inputClassName()}
+                  value={config.excludeReviewStatuses.join(", ")}
+                  onChange={(event) => update({ excludeReviewStatuses: csv(event.target.value) })}
+                  placeholder="mastered, ignored"
+                />
+              </Field>
+              <label className="flex items-center gap-3 text-sm text-[#43474f]">
+                <input
+                  type="checkbox"
+                  checked={config.excludeMastered}
+                  onChange={(event) => update({ excludeMastered: event.target.checked })}
+                />
+                Exclude mastered notes
+              </label>
+            </div>
+          ) : null}
         </div>
       </section>
 

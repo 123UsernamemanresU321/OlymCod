@@ -135,6 +135,8 @@ export const STARTER_NOTES: Array<NoteDraft & { seed_slug: string }> = [
     description:
       "A fundamental result connecting coprime residues, Euler's totient function, and modular exponents.",
     tags: ["modular arithmetic", "phi", "coprime", "exponents"],
+    recognition_triggers: ["large exponent modulo n", "base coprime to composite modulus", "reduce exponent modulo phi(n)"],
+    false_uses: ["Do not use when gcd(a,n) is not 1.", "Do not assume phi(n) is the smallest exponent."],
     body_markdown: `# Euler Phi Theorem
 
 ## Statement
@@ -168,6 +170,8 @@ Since $\\varphi(10)=4$ and $\\gcd(3,10)=1$, we have $3^4 \\equiv 1 \\pmod {10}$.
     difficulty: 3,
     description: "The prime-modulus special case for reducing modular exponents.",
     tags: ["primes", "modular arithmetic", "exponents"],
+    recognition_triggers: ["large exponent modulo prime", "prime modulus and nonzero base"],
+    false_uses: ["Do not use if the modulus is not prime.", "Do not use if p divides the base."],
     body_markdown: `# Fermat's Little Theorem
 
 ## Statement
@@ -193,6 +197,8 @@ Use this for exponent reductions modulo a prime.
     difficulty: 2,
     description: "A counting technique that forces repetition or existence.",
     tags: ["counting", "contradiction", "existence"],
+    recognition_triggers: ["prove two objects share a property", "more objects than boxes", "existence by counting"],
+    false_uses: ["Do not use without a clear set of boxes and objects."],
     body_markdown: `# Pigeonhole Principle
 
 ## Statement
@@ -216,6 +222,8 @@ Use this when a problem asks you to prove that two things must coincide, repeat,
     difficulty: 4,
     description: "A technique for tracking quantities that remain unchanged under operations.",
     tags: ["parity", "operations", "invariant"],
+    recognition_triggers: ["operation repeated many times", "prove impossible final state", "quantity preserved"],
+    false_uses: ["Do not claim invariance before checking every allowed move."],
     body_markdown: `# Invariants
 
 ## Statement
@@ -239,6 +247,8 @@ Use this in operation games, coloring problems, parity problems, and impossible-
     difficulty: 3,
     description: "The arithmetic mean is at least the geometric mean for nonnegative variables.",
     tags: ["inequality", "averages", "positive variables"],
+    recognition_triggers: ["positive variables with fixed sum", "need product bound from sum", "symmetry among nonnegative terms"],
+    false_uses: ["Do not apply directly to negative terms.", "Do not forget equality conditions."],
     body_markdown: `# AM-GM
 
 ## Statement
@@ -262,6 +272,8 @@ Equality holds when all variables are equal.
     difficulty: 5,
     description: "Relates products of lengths from a point through a circle.",
     tags: ["circles", "lengths", "secants", "tangents"],
+    recognition_triggers: ["point outside circle with secants", "products of chord lengths", "tangent and secant from same point"],
+    false_uses: ["Do not ignore directed lengths when points lie on extensions."],
     body_markdown: `# Power of a Point
 
 ## Statement

@@ -10,6 +10,8 @@ const assistModes = [
   "analyze_mistake",
   "past_problem_scaffold",
   "suggest_metadata",
+  "suggest_recognition_triggers",
+  "suggest_false_uses",
   "ask_my_codex",
   "clean_rough_capture",
   "suggest_related_notes",
@@ -26,7 +28,9 @@ const noteContextSchema = z.object({
   difficulty: z.number().int().min(1).max(12).nullable().optional(),
   description: z.string().max(1000).nullable().optional(),
   tags: z.array(z.string().max(60)).max(20).default([]),
-  body_markdown: z.string().max(50000).default("")
+  body_markdown: z.string().max(50000).default(""),
+  recognition_triggers: z.array(z.string().max(120)).max(20).default([]),
+  false_uses: z.array(z.string().max(200)).max(20).default([])
 });
 
 const assistRequestSchema = z.object({
@@ -53,7 +57,9 @@ const assistRequestSchema = z.object({
 const aiResponseSchema = z.object({
   markdown: z.string().default(""),
   description: z.string().nullable().optional(),
-  tags: z.array(z.string()).optional()
+  tags: z.array(z.string()).optional(),
+  recognition_triggers: z.array(z.string()).optional(),
+  false_uses: z.array(z.string()).optional()
 });
 
 type AssistMode = (typeof assistModes)[number];
@@ -88,6 +94,10 @@ function modeInstruction(mode: AssistMode) {
       "Create a past problem writeup scaffold with source, problem statement, observations, solution plan, mistakes, key takeaway, and related techniques.",
     suggest_metadata:
       "Suggest only concise metadata: description and tags. Return markdown as an empty string unless a short note is genuinely needed.",
+    suggest_recognition_triggers:
+      "Suggest 3 to 8 short recognition trigger phrases for this note. These should be contest-problem signals, not full sentences. Return them in recognition_triggers.",
+    suggest_false_uses:
+      "Suggest 3 to 8 common false uses, missing conditions, or traps for this note. Return them in false_uses.",
     ask_my_codex:
       "Answer the owner's question using only the provided Codex notes as context. Cite note titles used and say when the answer is not present.",
     clean_rough_capture:
@@ -128,7 +138,7 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
     `Task: ${modeInstruction(input.mode)}`,
     "",
     "Return one JSON object with this exact shape:",
-    '{"markdown":"Markdown content to preview or insert","description":"optional short note description or null","tags":["optional","tags"]}',
+    '{"markdown":"Markdown content to preview or insert","description":"optional short note description or null","tags":["optional","tags"],"recognition_triggers":["optional trigger phrases"],"false_uses":["optional traps"]}',
     "",
     "Directional note-link semantics:",
     "- relation_type is always from the current note to the candidate note.",
@@ -148,6 +158,8 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
         difficulty: format.usesDifficulty ? input.note.difficulty : null,
         description: input.note.description,
         tags: input.note.tags,
+        recognition_triggers: input.note.recognition_triggers,
+        false_uses: input.note.false_uses,
         template,
         current_markdown: input.note.body_markdown,
         selected_text: input.selectedText,
@@ -259,6 +271,8 @@ export async function POST(request: Request) {
     markdown: output.markdown,
     description: output.description ?? null,
     tags: (output.tags ?? []).map((tag) => tag.trim()).filter(Boolean).slice(0, 12),
+    recognition_triggers: (output.recognition_triggers ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8),
+    false_uses: (output.false_uses ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8),
     model: config.model
   });
 }

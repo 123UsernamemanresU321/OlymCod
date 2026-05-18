@@ -6,6 +6,8 @@ Olympiad Codex is a private owner-edited Olympiad Mathematics knowledge base wit
 
 Part 2 adds the daily-use layer: quick capture, inbox conversion, problem logs, mistake logs, explicit backlinks, light review scheduling, a diagram manager, version history, local draft preservation, command search, and AI actions that behave like a personal Olympiad librarian.
 
+Part 3 adds recognition triggers, common false uses, stronger problem/mistake pattern tracking, notebook whitelist/blacklist selection, contest revision packs, a mastery heatmap, and directional note-link display.
+
 ## Stack
 
 - Next.js App Router
@@ -28,6 +30,7 @@ Part 2 adds the daily-use layer: quick capture, inbox conversion, problem logs, 
 The configured owner email is:
 
 ```text
+erichuang.shangjing@outlook.com
 ```
 
 When this user logs in, `public.ensure_current_profile()` assigns the `owner` role.
@@ -90,10 +93,13 @@ This creates:
 - `diagrams`
 - `note_versions`
 - `notebook_presets`
+- `revision_packs`
 - private `note-diagrams` and `suggestion-diagrams` buckets
 - RLS policies for owner-only official note editing and contributor-only suggestions
 
-After pulling Part 2 changes, run either the full `supabase/schema.sql` or the focused migration `supabase/migrations/20260514_part2_daily_use.sql` in the Supabase SQL Editor. For Notebook Builder presets, also run `supabase/migrations/20260517000100_notebook_presets.sql` if you are applying migrations manually. These files are written with `create table if not exists`, `drop policy if exists`, and idempotent triggers so they can be rerun safely.
+After pulling Part 2 changes, run either the full `supabase/schema.sql` or the focused migration `supabase/migrations/20260514_part2_daily_use.sql` in the Supabase SQL Editor. For Notebook Builder presets, also run `supabase/migrations/20260517000100_notebook_presets.sql` if you are applying migrations manually.
+
+After pulling Part 3 changes, run `supabase/migrations/20260518000100_part3_learning_system.sql` or rerun the full schema. This adds `notes.recognition_triggers`, `notes.false_uses`, `problem_logs.topic`, `problem_logs.mistake_category`, `revision_packs`, and drops the old reciprocal note-link triggers. These files are written with `create table if not exists`, `add column if not exists`, `drop policy if exists`, and idempotent triggers so they can be rerun safely.
 
 ## RLS Model
 
@@ -124,11 +130,13 @@ Owner pages:
 - `/app/problems`
 - `/app/problems/[id]`
 - `/app/mistakes`
+- `/app/mastery`
 - `/app/review-notes`
 - `/app/notebook`
 - `/app/diagrams`
 - `/app/review`
 - `/app/review/[id]`
+- `/app/revision-pack`
 - `/app/users`
 - `/app/settings`
 
@@ -183,19 +191,45 @@ Open `/app/capture`, choose **Convert to Full Note**, then pick a template:
 
 The converter prefills title, topic, tags, and Markdown body, then creates a private official note and marks the capture as converted.
 
+### Recognition Triggers And Common False Uses
+
+Every note can store two structured lists:
+
+- `recognition_triggers`: short phrases that describe when the theorem, lemma, formula, or technique should come to mind.
+- `false_uses`: traps, missing conditions, or situations where the idea should not be applied.
+
+These appear on note pages, can be edited in the note metadata panel, are searchable from the notes library/command palette, and can be included in Notebook Builder exports. The owner-only AI assistant has **Suggest Recognition Triggers** and **Suggest False Uses** modes. AI suggestions are drafts only; they are not saved until applied.
+
 ### Problem Log
 
-Open `/app/problems`. Use it to store contest source, status, problem text, solution summary, key idea, mistake made, tags, and linked notes. The detail page can link notes, create a mistake entry from the problem, or create a technique note from the problem.
+Open `/app/problems`. Use it to store contest source, topic, status, problem text, solution summary, key idea, mistake made, mistake category, tags, and linked notes. Dedicated routes `/app/problems/new` and `/app/problems/[id]/edit` expose the full form. The detail page can link notes, create a mistake entry from the problem, create a technique note from the problem, mark it review-later/mastered, or ask AI to analyze the mistake.
+
+Mistake categories include:
+
+- `Did not know theorem`
+- `Knew theorem but did not recognize it`
+- `Forgot condition`
+- `Algebra slip`
+- `False assumption`
+- `Weak diagram`
+- `Bad casework`
+- `Misread problem`
+- `Overcomplicated solution`
+- `Gave up too early`
+- `Incomplete proof`
+- `Other`
 
 ### Mistake Log
 
 Open `/app/mistakes`. Track repeated errors by topic, type, severity, correct principle, and resolved status. Mistakes can link back to notes and source problems.
 
+The top of `/app/mistakes` includes a **Mistake Pattern Detector**. It groups failed and review-later problem logs by mistake category, topic, recognition failures, forgotten conditions, and notes linked to repeated failures. This analysis is deterministic and does not require AI.
+
 ### Note Links And Backlinks
 
-Saved note edit pages include a **Linked Notes** panel. Add relation types like `prerequisite`, `commonly confused`, or `used together`. Note view pages show related notes, backlinks, linked problems, and linked mistakes.
+Saved note edit pages include a **Linked Notes** panel. Add relation types like `prerequisite`, `commonly confused`, `used together`, `generalization`, or `special case`. Note view pages normalize outgoing and incoming links into directional groups such as **Prerequisites**, **Used By**, **Generalizations**, **Special Cases**, **Commonly Confused**, and **Related Notes**.
 
-Directional links are always labeled from the page you are viewing to the other note, and reciprocal links are created automatically. For example, an Euler Phi Theorem note should link to Fermat's Little Theorem as `special case`; the Fermat's Little Theorem note should link back to Euler Phi Theorem as `generalization`. `stronger version` reverses to `weaker version`; symmetric relations like `related`, `commonly confused`, and `used together` mirror themselves.
+Only one directional row is stored in `note_links`. Reverse labels are computed for display. For example, if Ceva's Theorem links to Area of Triangle as `prerequisite`, Ceva shows Area of Triangle only under **Prerequisites**. Area of Triangle shows Ceva only under **Used By**. It is not duplicated under `used together` or `prerequisite`.
 
 ### Light Review
 
@@ -256,11 +290,16 @@ The builder can include:
 - diagrams
 - notes due for review
 
+Selection mode controls how filters behave:
+
+- **Include only**: include matching topics, note types, tags, difficulties, review statuses, and selected note IDs.
+- **Include everything except**: start with the selected content sources, then remove excluded topics, note types, tags, difficulty bands, review statuses, mastered notes, or explicit note IDs.
+
 Detail levels control how much appears:
 
 - `Index Mode`: title, metadata, tags.
 - `Statement Mode`: statement, formula, core idea, or key relation only.
-- `Compact Revision Mode`: statement/core idea, when to use it, and common mistakes.
+- `Compact Revision Mode`: statement/core idea, when to use it, common mistakes, and optionally recognition triggers/false uses.
 - `Standard Notebook Mode`: statement, use cases, intuition, examples, mistakes, related items, and diagrams.
 - `Full Detail Mode`: complete Markdown bodies plus linked problems, mistakes, reviews, and diagrams.
 - `Formula Sheet Mode`: compact formula, conditions, and use case.
@@ -273,6 +312,9 @@ Common workflows:
 - Formula sheet: load **Formula Sheet**; it includes formula notes and notes tagged by the Formula Bank topic.
 - Problem booklet: load **Problem Review Booklet**, then enable or disable problem statements and solution summaries.
 - Weak-topic revision pack: load **Weak Topics Review** to focus on `learning` and `needs_practice` review statuses.
+- False uses sheet: load **False Uses Sheet** to make a trap checklist.
+- Recognition trigger sheet: load **Recognition Trigger Sheet** to practice choosing techniques from problem cues.
+- All except mastered: use blacklist mode to exclude `mastered` and `ignored` notes.
 
 Presets:
 
@@ -293,6 +335,38 @@ Notebook Preview, Print View, and PDF:
 
 Notebook AI helpers are optional and owner-only. `POST /api/ai/notebook-assist` can suggest a preset from a goal, identify missing sections, or draft a cover summary. AI output is previewed first and never changes notebook content unless you apply it manually.
 
+## Contest Revision Pack
+
+Open `/app/revision-pack` before a contest. Choose timing, focus topics, pack style, and whether to include weak notes, failed problems, common false uses, recognition triggers, formulae, diagrams, recent notes, or higher-difficulty notes.
+
+The generator is deterministic first:
+
+- `+40` for `needs_practice`
+- `+30` for `learning`
+- `+25` when linked to a failed problem
+- `+20` when linked to a review-later problem
+- bonuses for triggers, false uses, formulae, geometry diagrams, contest-range difficulty, and recent updates
+- penalties for mastered/ignored notes or overly basic notes before a near contest
+
+Actions:
+
+- export the generated pack as Markdown through the Notebook export API
+- save it as a Notebook preset
+- save a `revision_packs` row for backup/reference
+
+## Mastery Heatmap
+
+Open `/app/mastery` for a topic-level heatmap. Rows are core topics and columns include total notes, mastered notes, needs-practice/learning notes, failed/review-later problems, unresolved mistakes, average confidence, and a score.
+
+Labels:
+
+- `0-25`: Weak
+- `26-50`: Developing
+- `51-75`: Good
+- `76-100`: Strong
+
+The dashboard shows a compact Mastery Heatmap card and a Mistake Pattern card without adding heavy charting or clutter.
+
 PDF limitations:
 
 - Very large exports may take time to render; the builder preview starts with the first 50 items and warns above 300 items. The print route renders the full selected notebook.
@@ -304,7 +378,7 @@ PDF limitations:
 
 ## DeepSeek AI Writing Assistant
 
-The owner note editor includes an AI panel for drafting and improving notes. It can create starter drafts, fill missing sections, improve the selected section, analyze mistakes, scaffold past problem notes, suggest descriptions/tags, ask your Codex using existing notes as context, clean rough captures, suggest related notes, generate recall questions, find common mistakes, and turn problems into technique drafts.
+The owner note editor includes an AI panel for drafting and improving notes. It can create starter drafts, fill missing sections, improve the selected section, analyze mistakes, scaffold past problem notes, suggest descriptions/tags, suggest recognition triggers, suggest false uses, ask your Codex using existing notes as context, clean rough captures, suggest related notes, generate recall questions, find common mistakes, and turn problems into technique drafts.
 
 AI requests go through `POST /api/ai/note-assist`, which requires the logged-in `owner` role. The browser never receives the DeepSeek key, and AI output is never auto-saved. Use the preview actions to insert, append, replace the draft body, or apply metadata.
 
@@ -451,6 +525,8 @@ If no profile exists yet, log in once with the owner email, then run the update 
 - Keep RLS enabled on all public tables.
 - Keep Storage buckets private.
 - Every daily-use table has `user_id` and RLS policies that restrict rows to the owner of the row or the owner role.
+- `revision_packs` and Notebook presets are user-owned rows with RLS.
+- Notebook exports and revision-pack exports use the current user's data only.
 - AI output is draft-only; it does not overwrite notes unless the owner clicks an apply action.
 - Raw HTML is not enabled in Markdown rendering.
 - Diagram uploads reject unknown file types and files over 5 MB.
@@ -458,7 +534,8 @@ If no profile exists yet, log in once with the owner email, then run the update 
 
 ## Troubleshooting
 
-- If `/app/capture`, `/app/problems`, `/app/mistakes`, `/app/review-notes`, or `/app/diagrams` shows empty data after deploy, rerun `supabase/schema.sql`.
+- If `/app/capture`, `/app/problems`, `/app/mistakes`, `/app/review-notes`, `/app/revision-pack`, `/app/mastery`, or `/app/diagrams` shows empty data after deploy, rerun `supabase/schema.sql`.
+- If `supabase db push` reports an old duplicate migration version, repair the migration history first, then pull/apply the schema so local and remote migration tables agree.
 - If diagram previews fail, confirm the `note-diagrams` bucket exists and `supabase/storage-policies.sql` has been applied.
 - If AI actions fail with `Missing DEEPSEEK_API_KEY`, add the server-only DeepSeek variables locally and in Vercel.
 - If tags appear to disappear while typing, make sure you are on the latest build; tags are entered as comma-separated text and saved as a Postgres `text[]`.

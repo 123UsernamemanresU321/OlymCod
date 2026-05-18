@@ -1,6 +1,6 @@
 import { DashboardClient } from "@/components/notes/DashboardClient";
 import { createClient } from "@/lib/supabase/server";
-import type { Note, NoteReview, SiteSettings, Suggestion } from "@/lib/types";
+import type { MistakeLog, Note, NoteReview, ProblemLog, SiteSettings, Suggestion } from "@/lib/types";
 import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
@@ -13,11 +13,20 @@ export default async function DashboardPage() {
 
   if (!user) redirect("/login");
 
-  const [{ data }, { data: suggestionsData }, { data: settingsData }, { data: reviewsData }] = await Promise.all([
+  const [
+    { data },
+    { data: suggestionsData },
+    { data: settingsData },
+    { data: reviewsData },
+    { data: problemsData },
+    { data: mistakesData }
+  ] = await Promise.all([
     supabase.from("notes").select("*").eq("is_archived", false).order("updated_at", { ascending: false }),
     supabase.from("suggestions").select("*").order("created_at", { ascending: false }).limit(8),
     supabase.from("site_settings").select("*").eq("id", "main").single(),
-    supabase.from("note_reviews").select("*").order("next_review_at", { ascending: true })
+    supabase.from("note_reviews").select("*").order("next_review_at", { ascending: true }),
+    supabase.from("problem_logs").select("*").order("updated_at", { ascending: false }),
+    supabase.from("mistake_logs").select("*").order("updated_at", { ascending: false })
   ]);
 
   return (
@@ -25,6 +34,8 @@ export default async function DashboardPage() {
       notes={(data ?? []) as Note[]}
       suggestions={(suggestionsData ?? []) as Suggestion[]}
       reviews={(reviewsData ?? []) as NoteReview[]}
+      problems={(problemsData ?? []) as ProblemLog[]}
+      mistakes={(mistakesData ?? []) as MistakeLog[]}
       settings={settingsData as SiteSettings}
     />
   );

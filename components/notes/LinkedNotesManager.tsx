@@ -7,7 +7,7 @@ import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { Button } from "@/components/ui/Button";
 import { inputClassName } from "@/components/ui/Field";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
-import { NOTE_LINK_RELATIONS, inverseNoteLinkRelation } from "@/lib/constants/daily";
+import { NOTE_LINK_RELATIONS } from "@/lib/constants/daily";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteDraft, NoteLink } from "@/lib/types";
 
@@ -52,6 +52,13 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
     [links, notes]
   );
 
+  function relationLabel(value: string) {
+    if (value === "prerequisite") return "prerequisite (target is needed before this note)";
+    if (value === "generalization") return "generalization (target is broader)";
+    if (value === "special case") return "special case (target is narrower)";
+    return value;
+  }
+
   async function addLink() {
     if (!noteId || !targetId) return;
     setBusy(true);
@@ -73,15 +80,6 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
         .select("*")
         .single();
       if (error) throw error;
-      await supabase.from("note_links").upsert(
-        {
-          user_id: user.id,
-          source_note_id: targetId,
-          target_note_id: noteId,
-          relation_type: inverseNoteLinkRelation(relation)
-        },
-        { onConflict: "user_id,source_note_id,target_note_id,relation_type" }
-      );
       setLinks((current) => [...current, data as NoteLink]);
       setTargetId("");
     } catch (linkError) {
@@ -92,20 +90,8 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
   }
 
   async function removeLink(linkId: string) {
-    const link = links.find((item) => item.id === linkId);
     const supabase = createClient();
     await supabase.from("note_links").delete().eq("id", linkId);
-    if (link) {
-      await supabase
-        .from("note_links")
-        .delete()
-        .match({
-          user_id: link.user_id,
-          source_note_id: link.target_note_id,
-          target_note_id: link.source_note_id,
-          relation_type: inverseNoteLinkRelation(link.relation_type)
-        });
-    }
     setLinks((current) => current.filter((link) => link.id !== linkId));
   }
 
@@ -139,7 +125,9 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-[#1a1c1c]">Linked Notes</h3>
-          <p className="mt-1 text-sm text-[#43474f]">Add prerequisites, confused pairs, and used-together links.</p>
+          <p className="mt-1 text-sm text-[#43474f]">
+            Add prerequisite for this note, confused pairs, special cases, or notes used together. Reverse labels are computed on the other note page.
+          </p>
         </div>
         <Button type="button" variant="secondary" onClick={() => void suggestRelated()} disabled={!noteId || busy}>
           <Wand2 className="h-4 w-4" aria-hidden="true" />
@@ -185,7 +173,7 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
         <select className={inputClassName()} value={relation} onChange={(event) => setRelation(event.target.value)} disabled={!noteId}>
           {NOTE_LINK_RELATIONS.map((item) => (
             <option key={item} value={item}>
-              {item}
+              {relationLabel(item)}
             </option>
           ))}
         </select>

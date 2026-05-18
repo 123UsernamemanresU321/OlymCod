@@ -2,6 +2,7 @@ import type {
   CaptureType,
   MistakeType,
   NoteLinkRelation,
+  ProblemMistakeCategory,
   ProblemStatus,
   ReviewStatus,
   Topic
@@ -38,6 +39,21 @@ export const PROBLEM_STATUSES: ProblemStatus[] = [
   "failed",
   "review_later",
   "mastered"
+];
+
+export const PROBLEM_MISTAKE_CATEGORIES: ProblemMistakeCategory[] = [
+  "Did not know theorem",
+  "Knew theorem but did not recognize it",
+  "Forgot condition",
+  "Algebra slip",
+  "False assumption",
+  "Weak diagram",
+  "Bad casework",
+  "Misread problem",
+  "Overcomplicated solution",
+  "Gave up too early",
+  "Incomplete proof",
+  "Other"
 ];
 
 export const MISTAKE_TYPES: MistakeType[] = [

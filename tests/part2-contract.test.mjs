@@ -61,26 +61,25 @@ test("front page and app shell expose login, command palette, and quick capture"
   assert.match(shell, /Diagrams/);
 });
 
-test("note links are reciprocal and command palette overlays above app chrome", () => {
+test("note links are directional and command palette overlays above app chrome", () => {
   const daily = read("../lib/constants/daily.ts");
   const linkedNotes = read("../components/notes/LinkedNotesManager.tsx");
   const noteView = read("../app/app/notes/[id]/page.tsx");
   const commandPalette = read("../components/command/CommandPalette.tsx");
   const schema = read("../supabase/schema.sql");
-  const reciprocalMigration = read("../supabase/migrations/20260515_reciprocal_note_links.sql");
 
   assert.match(daily, /inverseNoteLinkRelation/);
   assert.match(daily, /generalization.*special case/s);
   assert.match(daily, /special case.*generalization/s);
-  assert.match(linkedNotes, /inverseNoteLinkRelation/);
-  assert.match(schema, /ensure_reciprocal_note_link/);
-  assert.match(schema, /delete_reciprocal_note_link/);
-  assert.match(schema, /public\.inverse_note_link_relation\(relation_type\)/);
-  assert.match(reciprocalMigration, /note_links_insert_reciprocal/);
-  assert.match(reciprocalMigration, /on conflict \(user_id, source_note_id, target_note_id, relation_type\) do nothing/);
-  assert.match(noteView, /currentRelation: inverseNoteLinkRelation/);
-  assert.match(noteView, /explicitlyRelatedNoteIds/);
-  assert.match(noteView, /!explicitlyRelatedNoteIds\.has\(row\.note\.id\)/);
+  assert.doesNotMatch(linkedNotes, /upsert\(/);
+  assert.doesNotMatch(linkedNotes, /inverseNoteLinkRelation/);
+  assert.doesNotMatch(schema, /create trigger note_links_insert_reciprocal/);
+  assert.doesNotMatch(schema, /create trigger note_links_delete_reciprocal/);
+  assert.match(schema, /drop trigger if exists note_links_insert_reciprocal/);
+  assert.match(schema, /drop trigger if exists note_links_delete_reciprocal/);
+  assert.match(noteView, /normalizeNoteRelations/);
+  assert.match(noteView, /relationGroups/);
+  assert.doesNotMatch(noteView, /currentRelation: inverseNoteLinkRelation/);
   assert.match(commandPalette, /createPortal/);
   assert.match(commandPalette, /z-\[1000\]/);
 });
