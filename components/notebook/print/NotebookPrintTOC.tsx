@@ -1,4 +1,5 @@
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import type { NotebookConfig, NotebookItem } from "@/lib/notebook/types";
 
 interface NotebookPrintTOCProps {
@@ -7,7 +8,7 @@ interface NotebookPrintTOCProps {
 }
 
 export function NotebookPrintTOC({ config, items }: NotebookPrintTOCProps) {
-  if (!config.pageSettings.includeTableOfContents && !config.sectionToggles.showTableOfContents) return null;
+  if (!config.pageSettings.includeTableOfContents || !notebookSectionEnabled(config, "showTableOfContents")) return null;
 
   const grouped = Array.from(
     items.reduce((map, item) => {

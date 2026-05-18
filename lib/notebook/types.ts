@@ -45,15 +45,25 @@ export type NotebookSortOrder =
 
 export type NotebookSelectionMode = "whitelist" | "blacklist";
 
+export type NotebookSectionSelectionMode = "whitelist" | "blacklist";
+
 export type NotebookSectionToggle =
   | "showMetadata"
   | "showTags"
   | "showDifficulty"
   | "showDescriptions"
   | "showStatements"
+  | "showWhenToUse"
+  | "showSigns"
+  | "showIntuition"
+  | "showConditions"
+  | "showHowToRecognize"
   | "showProofs"
   | "showExamples"
   | "showCommonMistakes"
+  | "showDiagramTraps"
+  | "showWhyItHappens"
+  | "showHowToAvoid"
   | "showRecognitionTriggers"
   | "showFalseUses"
   | "showRelatedNotes"
@@ -64,6 +74,9 @@ export type NotebookSectionToggle =
   | "showProblemStatements"
   | "showSolutionSummaries"
   | "showSourceReferences"
+  | "showKeyIdeas"
+  | "showCorrectPrinciples"
+  | "showProblemApplications"
   | "showDates"
   | "showReviewStatus"
   | "pageBreakBetweenTopics"
@@ -100,6 +113,7 @@ export interface NotebookConfig {
   excludeProblemStatuses: string[];
   excludeMastered: boolean;
   detailLevel: NotebookDetailLevel;
+  sectionSelectionMode: NotebookSectionSelectionMode;
   sectionToggles: Record<NotebookSectionToggle, boolean>;
   layoutStyle: NotebookLayoutStyle;
   sortOrder: NotebookSortOrder;

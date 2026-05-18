@@ -54,9 +54,17 @@ export const NOTEBOOK_SECTION_TOGGLES: Array<{ key: NotebookSectionToggle; label
   { key: "showDifficulty", label: "Show difficulty" },
   { key: "showDescriptions", label: "Show descriptions" },
   { key: "showStatements", label: "Show statements" },
+  { key: "showWhenToUse", label: "Show when to use" },
+  { key: "showSigns", label: "Show recognition signs" },
+  { key: "showIntuition", label: "Show intuition" },
+  { key: "showConditions", label: "Show conditions" },
+  { key: "showHowToRecognize", label: "Show how to recognize it" },
   { key: "showProofs", label: "Show proofs" },
   { key: "showExamples", label: "Show examples" },
   { key: "showCommonMistakes", label: "Show common mistakes" },
+  { key: "showDiagramTraps", label: "Show diagram traps" },
+  { key: "showWhyItHappens", label: "Show why it happens" },
+  { key: "showHowToAvoid", label: "Show how to avoid it" },
   { key: "showRecognitionTriggers", label: "Show recognition triggers" },
   { key: "showFalseUses", label: "Show common false uses" },
   { key: "showRelatedNotes", label: "Show related notes" },
@@ -67,6 +75,9 @@ export const NOTEBOOK_SECTION_TOGGLES: Array<{ key: NotebookSectionToggle; label
   { key: "showProblemStatements", label: "Show problem statements" },
   { key: "showSolutionSummaries", label: "Show solution summaries" },
   { key: "showSourceReferences", label: "Show source references" },
+  { key: "showKeyIdeas", label: "Show key ideas" },
+  { key: "showCorrectPrinciples", label: "Show correct principles" },
+  { key: "showProblemApplications", label: "Show problems where this appears" },
   { key: "showDates", label: "Show dates" },
   { key: "showReviewStatus", label: "Show review status" },
   { key: "pageBreakBetweenTopics", label: "Page breaks between topics" },
@@ -79,9 +90,17 @@ const defaultSectionToggles: NotebookConfig["sectionToggles"] = {
   showDifficulty: true,
   showDescriptions: true,
   showStatements: true,
+  showWhenToUse: true,
+  showSigns: true,
+  showIntuition: true,
+  showConditions: true,
+  showHowToRecognize: true,
   showProofs: true,
   showExamples: true,
   showCommonMistakes: true,
+  showDiagramTraps: true,
+  showWhyItHappens: true,
+  showHowToAvoid: true,
   showRecognitionTriggers: true,
   showFalseUses: true,
   showRelatedNotes: true,
@@ -92,6 +111,9 @@ const defaultSectionToggles: NotebookConfig["sectionToggles"] = {
   showProblemStatements: true,
   showSolutionSummaries: true,
   showSourceReferences: true,
+  showKeyIdeas: true,
+  showCorrectPrinciples: true,
+  showProblemApplications: true,
   showDates: false,
   showReviewStatus: true,
   pageBreakBetweenTopics: false,
@@ -133,6 +155,7 @@ export const DEFAULT_NOTEBOOK_CONFIG: NotebookConfig = {
   excludeProblemStatuses: [],
   excludeMastered: false,
   detailLevel: "Standard Notebook Mode",
+  sectionSelectionMode: "whitelist",
   sectionToggles: defaultSectionToggles,
   layoutStyle: "Clean Notebook",
   sortOrder: "Topic then type",
@@ -173,6 +196,7 @@ export function normalizeNotebookConfig(input: unknown): NotebookConfig {
     reviewStatuses: Array.isArray(value.reviewStatuses) ? value.reviewStatuses.filter(Boolean).map(String) : [],
     problemStatuses: Array.isArray(value.problemStatuses) ? value.problemStatuses.filter(Boolean).map(String) : [],
     selectionMode: value.selectionMode === "blacklist" ? "blacklist" : "whitelist",
+    sectionSelectionMode: value.sectionSelectionMode === "blacklist" ? "blacklist" : "whitelist",
     noteIds: Array.isArray(value.noteIds) ? value.noteIds.filter(Boolean).map(String) : [],
     excludeNoteIds: Array.isArray(value.excludeNoteIds) ? value.excludeNoteIds.filter(Boolean).map(String) : [],
     excludeTopics: Array.isArray(value.excludeTopics) ? value.excludeTopics.filter(Boolean).map(String) : [],
@@ -186,6 +210,27 @@ export function normalizeNotebookConfig(input: unknown): NotebookConfig {
     difficultyMin: Math.min(12, Math.max(1, Number(value.difficultyMin ?? 1))),
     difficultyMax: Math.min(12, Math.max(1, Number(value.difficultyMax ?? 12)))
   });
+}
+
+export function notebookSectionEnabled(
+  config: Pick<NotebookConfig, "sectionSelectionMode" | "sectionToggles">,
+  key: NotebookSectionToggle
+) {
+  return config.sectionSelectionMode === "blacklist" ? !config.sectionToggles[key] : config.sectionToggles[key];
+}
+
+export function invertNotebookSectionToggles(toggles: NotebookConfig["sectionToggles"]) {
+  return NOTEBOOK_SECTION_TOGGLES.reduce(
+    (next, toggle) => ({ ...next, [toggle.key]: !toggles[toggle.key] }),
+    {} as NotebookConfig["sectionToggles"]
+  );
+}
+
+export function makeNotebookSectionToggles(value: boolean) {
+  return NOTEBOOK_SECTION_TOGGLES.reduce(
+    (next, toggle) => ({ ...next, [toggle.key]: value }),
+    {} as NotebookConfig["sectionToggles"]
+  );
 }
 
 export const BUILT_IN_NOTEBOOK_PRESETS: NotebookPresetDefinition[] = [

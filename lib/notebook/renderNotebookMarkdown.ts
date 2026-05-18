@@ -1,8 +1,10 @@
 import { diagramRenderUrl } from "@/lib/utils/diagrams";
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import type {
   NotebookConfig,
   NotebookEntrySection,
   NotebookItem,
+  NotebookSectionToggle,
   NotebookSectionKey
 } from "@/lib/notebook/types";
 
@@ -70,18 +72,18 @@ function learningList(items: string[]) {
 
 export function getNotebookEntrySections(item: NotebookItem, config: NotebookConfig): NotebookEntrySection[] {
   const sections: NotebookEntrySection[] = [];
-  const toggles = config.sectionToggles;
+  const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
 
   if (config.detailLevel === "Index Mode") return sections;
 
   if (item.sourceType === "problem") {
-    if (config.detailLevel === "Problem Booklet Mode" && toggles.showProblemStatements) {
+    if (config.detailLevel === "Problem Booklet Mode" && show("showProblemStatements")) {
       addSection(item, sections, "first_paragraph", "Problem Statement");
     }
-    addSection(item, sections, "key_idea", "Key Idea");
-    if (toggles.showSolutionSummaries) addSection(item, sections, "solution", "Solution Summary");
-    if (toggles.showCommonMistakes) addSection(item, sections, "mistake", "Mistake Made");
-    if (toggles.showRelatedNotes && item.linkedNotes.length) {
+    if (show("showKeyIdeas")) addSection(item, sections, "key_idea", "Key Idea");
+    if (show("showSolutionSummaries")) addSection(item, sections, "solution", "Solution Summary");
+    if (show("showCommonMistakes")) addSection(item, sections, "mistake", "Mistake Made");
+    if (show("showRelatedNotes") && item.linkedNotes.length) {
       sections.push({ label: "Linked Techniques", markdown: linkedList(item.linkedNotes) });
     }
     return sections;
@@ -89,9 +91,9 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
 
   if (item.sourceType === "mistake") {
     addSection(item, sections, "mistake", "Mistake");
-    addSection(item, sections, "correct_principle", "Correct Principle");
-    if (toggles.showExamples) addSection(item, sections, "example", "Example");
-    if (toggles.showRelatedNotes && item.linkedNotes.length) {
+    if (show("showCorrectPrinciples")) addSection(item, sections, "correct_principle", "Correct Principle");
+    if (show("showExamples")) addSection(item, sections, "example", "Example");
+    if (show("showRelatedNotes") && item.linkedNotes.length) {
       sections.push({ label: "Linked Notes", markdown: linkedList(item.linkedNotes) });
     }
     return sections;
@@ -105,43 +107,52 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
   if (config.detailLevel === "Full Detail Mode") {
     if (item.bodyMarkdown) sections.push({ label: "Full Note", markdown: item.bodyMarkdown });
   } else if (config.detailLevel === "Formula Sheet Mode") {
-    addSection(item, sections, firstPresent(item, ["formula", "statement", "first_paragraph"]), "Formula");
-    addSection(item, sections, "conditions");
-    addSection(item, sections, "when_to_use", "Use Case");
+    if (show("showStatements")) addSection(item, sections, firstPresent(item, ["formula", "statement", "first_paragraph"]), "Formula");
+    if (show("showConditions")) addSection(item, sections, "conditions");
+    if (show("showWhenToUse")) addSection(item, sections, "when_to_use", "Use Case");
   } else if (config.detailLevel === "Statement Mode") {
-    addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]));
+    if (show("showStatements")) {
+      addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]));
+    }
   } else if (config.detailLevel === "Compact Revision Mode") {
-    if (toggles.showStatements) addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "first_paragraph"]));
-    addSection(item, sections, "when_to_use");
-    if (toggles.showCommonMistakes) addSection(item, sections, "common_mistakes");
-    addSection(item, sections, "conditions");
+    if (show("showStatements")) addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "first_paragraph"]));
+    if (show("showWhenToUse")) addSection(item, sections, "when_to_use");
+    if (show("showSigns")) addSection(item, sections, "signs");
+    if (show("showCommonMistakes")) addSection(item, sections, "common_mistakes");
+    if (show("showConditions")) addSection(item, sections, "conditions");
   } else {
-    if (toggles.showStatements) addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]));
-    addSection(item, sections, "when_to_use");
-    addSection(item, sections, "intuition");
-    if (toggles.showExamples) addSection(item, sections, "example");
-    if (toggles.showCommonMistakes) addSection(item, sections, firstPresent(item, ["common_mistakes", "traps"]));
-    addSection(item, sections, "related");
+    if (show("showStatements")) addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]));
+    if (show("showWhenToUse")) addSection(item, sections, "when_to_use");
+    if (show("showSigns")) addSection(item, sections, "signs");
+    if (show("showIntuition")) addSection(item, sections, "intuition");
+    if (show("showHowToRecognize")) addSection(item, sections, "how_to_recognize");
+    if (show("showExamples")) addSection(item, sections, "example");
+    if (show("showCommonMistakes")) addSection(item, sections, "common_mistakes");
+    if (show("showDiagramTraps")) addSection(item, sections, "traps", "Diagram Traps");
+    if (show("showWhyItHappens")) addSection(item, sections, "why_it_happens");
+    if (show("showHowToAvoid")) addSection(item, sections, "how_to_avoid");
+    if (show("showProblemApplications")) addSection(item, sections, "problems");
+    if (show("showRelatedNotes")) addSection(item, sections, "related");
   }
 
-  if (toggles.showRecognitionTriggers && item.recognitionTriggers.length && config.detailLevel !== "Statement Mode") {
+  if (show("showRecognitionTriggers") && item.recognitionTriggers.length && config.detailLevel !== "Statement Mode") {
     sections.push({ label: "Recognition Triggers", markdown: learningList(item.recognitionTriggers) });
   }
-  if (toggles.showFalseUses && item.falseUses.length && config.detailLevel !== "Statement Mode") {
+  if (show("showFalseUses") && item.falseUses.length && config.detailLevel !== "Statement Mode") {
     sections.push({ label: "Common False Uses", markdown: learningList(item.falseUses) });
   }
 
-  if (toggles.showProofs) addSection(item, sections, firstPresent(item, ["proof", "derivation"]));
-  if (toggles.showDiagrams && item.diagrams.length && config.detailLevel !== "Full Detail Mode") {
+  if (show("showProofs")) addSection(item, sections, firstPresent(item, ["proof", "derivation"]));
+  if (show("showDiagrams") && item.diagrams.length && config.detailLevel !== "Full Detail Mode") {
     sections.push({ label: "Diagrams", markdown: diagramMarkdown(item) });
   }
-  if (toggles.showRelatedNotes && item.linkedNotes.length) {
+  if (show("showRelatedNotes") && item.linkedNotes.length) {
     sections.push({ label: "Related Notes", markdown: linkedList(item.linkedNotes) });
   }
-  if (toggles.showLinkedProblems && item.linkedProblems.length) {
+  if (show("showLinkedProblems") && item.linkedProblems.length) {
     sections.push({ label: "Linked Problems", markdown: linkedList(item.linkedProblems) });
   }
-  if (toggles.showLinkedMistakes && item.linkedMistakes.length) {
+  if (show("showLinkedMistakes") && item.linkedMistakes.length) {
     sections.push({ label: "Linked Mistakes", markdown: linkedList(item.linkedMistakes) });
   }
 
@@ -149,18 +160,20 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
 }
 
 function metadataLine(item: NotebookItem, config: NotebookConfig) {
+  const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
   const parts = [
-    config.sectionToggles.showMetadata ? item.topic : null,
-    config.sectionToggles.showMetadata ? item.noteType : null,
-    config.sectionToggles.showDifficulty && item.difficulty ? `Difficulty ${item.difficulty}` : null,
-    config.sectionToggles.showReviewStatus && item.reviewStatus ? `Review ${item.reviewStatus}` : null,
+    show("showMetadata") ? item.topic : null,
+    show("showMetadata") ? item.noteType : null,
+    show("showDifficulty") && item.difficulty ? `Difficulty ${item.difficulty}` : null,
+    show("showReviewStatus") && item.reviewStatus ? `Review ${item.reviewStatus}` : null,
     item.problemStatus ? `Status ${item.problemStatus}` : null,
-    config.sectionToggles.showDates && item.updatedAt ? `Updated ${item.updatedAt.slice(0, 10)}` : null
+    show("showDates") && item.updatedAt ? `Updated ${item.updatedAt.slice(0, 10)}` : null
   ].filter(Boolean);
   return parts.length ? `_${parts.join(" · ")}_` : "";
 }
 
 export function renderNotebookMarkdown(items: NotebookItem[], config: NotebookConfig) {
+  const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
   const lines = [
     `# ${config.coverTitle || "Olympiad Codex Notebook Export"}`,
     "",
@@ -181,9 +194,9 @@ export function renderNotebookMarkdown(items: NotebookItem[], config: NotebookCo
     lines.push(`### ${item.title}`);
     const meta = metadataLine(item, config);
     if (meta) lines.push("", meta);
-    if (config.sectionToggles.showDescriptions && item.description) lines.push("", item.description);
-    if (config.sectionToggles.showTags && item.tags.length) lines.push("", `Tags: ${item.tags.join(", ")}`);
-    if (config.sectionToggles.showSourceReferences && item.sourceReference) lines.push("", `Source: ${item.sourceReference}`);
+    if (show("showDescriptions") && item.description) lines.push("", item.description);
+    if (show("showTags") && item.tags.length) lines.push("", `Tags: ${item.tags.join(", ")}`);
+    if (show("showSourceReferences") && item.sourceReference) lines.push("", `Source: ${item.sourceReference}`);
 
     for (const section of getNotebookEntrySections(item, config)) {
       lines.push("", `#### ${section.label}`, "", section.markdown);

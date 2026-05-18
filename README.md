@@ -30,7 +30,7 @@ Part 3 adds recognition triggers, common false uses, stronger problem/mistake pa
 The configured owner email is:
 
 ```text
-erichuang.shangjing@outlook.com
+EMAIL
 ```
 
 When this user logs in, `public.ensure_current_profile()` assigns the `owner` role.
@@ -231,6 +231,8 @@ Saved note edit pages include a **Linked Notes** panel. Add relation types like 
 
 Only one directional row is stored in `note_links`. Reverse labels are computed for display. For example, if Ceva's Theorem links to Area of Triangle as `prerequisite`, Ceva shows Area of Triangle only under **Prerequisites**. Area of Triangle shows Ceva only under **Used By**. It is not duplicated under `used together` or `prerequisite`.
 
+The linked-note selector has a search input above the note dropdown. Search by title, topic, type, description, or tag to find the note you want to link without scrolling through the full library.
+
 ### Light Review
 
 Open `/app/review-notes`. Reviews are deliberately simple:
@@ -294,6 +296,13 @@ Selection mode controls how filters behave:
 
 - **Include only**: include matching topics, note types, tags, difficulties, review statuses, and selected note IDs.
 - **Include everything except**: start with the selected content sources, then remove excluded topics, note types, tags, difficulty bands, review statuses, mastered notes, or explicit note IDs.
+
+The builder controls are compact collapsible panels so the filter list does not dominate the preview. Section controls also have their own mode:
+
+- **Show selected**: only checked metadata/content sections appear.
+- **Hide selected**: start with every notebook section and hide only checked sections.
+
+Section selection includes statements, when-to-use notes, recognition signs, intuition, conditions, how-to-recognize sections, proofs, examples, common mistakes, diagram traps, why-it-happens/how-to-avoid sections, recognition triggers, common false uses, related notes, backlinks, linked problems, linked mistakes, diagrams, problem applications, problem statements, solution summaries, source references, key ideas, correct principles, dates, review status, topic page breaks, and the table of contents.
 
 Detail levels control how much appears:
 

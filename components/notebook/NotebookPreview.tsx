@@ -2,6 +2,7 @@ import { NotebookCover } from "@/components/notebook/NotebookCover";
 import { NotebookEntry } from "@/components/notebook/NotebookEntry";
 import { NotebookTOC } from "@/components/notebook/NotebookTOC";
 import { Button } from "@/components/ui/Button";
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import { cn } from "@/lib/utils/cn";
 import type { NotebookConfig, NotebookItem } from "@/lib/notebook/types";
 
@@ -34,6 +35,7 @@ export function NotebookPreview({
   );
 
   const columnClass = config.pageSettings.columns === "two" ? "xl:grid-cols-2" : "grid-cols-1";
+  const shouldBreakTopics = notebookSectionEnabled(config, "pageBreakBetweenTopics");
 
   if (!items.length) {
     return (
@@ -73,7 +75,7 @@ export function NotebookPreview({
             key={topic}
             className={cn(
               "notebook-topic-section",
-              index > 0 && config.sectionToggles.pageBreakBetweenTopics && "notebook-page-break"
+              index > 0 && shouldBreakTopics && "notebook-page-break"
             )}
           >
             <div className="mb-4 border-b border-[#c3c6d0] pb-2">

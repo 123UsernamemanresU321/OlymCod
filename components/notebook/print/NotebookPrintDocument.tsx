@@ -1,6 +1,7 @@
 import { NotebookPrintCover } from "@/components/notebook/print/NotebookPrintCover";
 import { NotebookPrintEntry } from "@/components/notebook/print/NotebookPrintEntry";
 import { NotebookPrintTOC } from "@/components/notebook/print/NotebookPrintTOC";
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import { cn } from "@/lib/utils/cn";
 import type { NotebookConfig, NotebookItem } from "@/lib/notebook/types";
 
@@ -23,7 +24,7 @@ function groupByTopic(items: NotebookItem[]) {
 
 export function NotebookPrintDocument({ config, items, itemCount, warning }: NotebookPrintDocumentProps) {
   const grouped = groupByTopic(items);
-  const shouldBreakTopics = config.pageSettings.startEachTopicOnNewPage || config.sectionToggles.pageBreakBetweenTopics;
+  const shouldBreakTopics = config.pageSettings.startEachTopicOnNewPage || notebookSectionEnabled(config, "pageBreakBetweenTopics");
   const isFormulaSheet = config.detailLevel === "Formula Sheet Mode" || config.layoutStyle === "Formula Sheet";
 
   if (!items.length) {

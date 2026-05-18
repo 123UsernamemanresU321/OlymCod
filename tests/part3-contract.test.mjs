@@ -39,6 +39,9 @@ test("directional note relations are normalized without duplicate prerequisite/b
   assert.match(normalizer, /priority/);
   assert.match(normalizer, /incomingRelationDisplay/);
   assert.match(linkedNotes, /Add prerequisite for this note/);
+  assert.match(linkedNotes, /noteSearch/);
+  assert.match(linkedNotes, /availableNotes/);
+  assert.match(linkedNotes, /Search notes by title, topic, type, or tag/);
   assert.doesNotMatch(linkedNotes, /upsert\(/);
   assert.match(noteView, /normalizeNoteRelations/);
   assert.match(noteView, /relationGroups/);
@@ -96,16 +99,28 @@ test("notebook supports whitelist and blacklist modes plus Part 3 notebook secti
   const renderer = read("../lib/notebook/renderNotebookMarkdown.ts");
 
   assert.match(types, /selectionMode/);
+  assert.match(types, /sectionSelectionMode/);
   assert.match(types, /excludeTopics/);
   assert.match(types, /noteIds/);
+  assert.match(types, /showWhenToUse/);
+  assert.match(types, /showHowToRecognize/);
+  assert.match(types, /showIntuition/);
+  assert.match(types, /showConditions/);
+  assert.match(types, /showDiagramTraps/);
+  assert.match(types, /showProblemApplications/);
   assert.match(types, /showRecognitionTriggers/);
   assert.match(types, /showFalseUses/);
+  assert.match(defaults, /notebookSectionEnabled/);
   assert.match(defaults, /All Except Mastered/);
   assert.match(defaults, /False Uses Sheet/);
   assert.match(defaults, /Recognition Trigger Sheet/);
   assert.match(controls, /Include only/);
   assert.match(controls, /Include everything except/);
+  assert.match(controls, /Show selected/);
+  assert.match(controls, /Hide selected/);
+  assert.match(controls, /<details/);
   assert.match(builder, /matchesBlacklist/);
+  assert.match(renderer, /notebookSectionEnabled/);
   assert.match(renderer, /Recognition Triggers/);
   assert.match(renderer, /Common False Uses/);
 });

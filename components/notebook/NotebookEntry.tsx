@@ -1,6 +1,7 @@
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { NotebookSection } from "@/components/notebook/NotebookSection";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import { getNotebookEntrySections } from "@/lib/notebook/renderNotebookMarkdown";
 import type { NotebookConfig, NotebookItem } from "@/lib/notebook/types";
 
@@ -11,17 +12,18 @@ interface NotebookEntryProps {
 
 export function NotebookEntry({ item, config }: NotebookEntryProps) {
   const sections = getNotebookEntrySections(item, config);
+  const show = (key: keyof NotebookConfig["sectionToggles"]) => notebookSectionEnabled(config, key);
 
   return (
     <article className="notebook-entry rounded-lg border border-[#d5d7de] bg-white p-5 shadow-sm print:break-inside-avoid print:border-[#d0d0d0] print:shadow-none">
       <header>
         <div className="flex flex-wrap items-center gap-2 text-[12px]">
-          {config.sectionToggles.showMetadata && item.topic ? <Badge tone="blue">{item.topic}</Badge> : null}
-          {config.sectionToggles.showMetadata && item.noteType ? <Badge>{item.noteType}</Badge> : null}
-          {config.sectionToggles.showDifficulty ? (
+          {show("showMetadata") && item.topic ? <Badge tone="blue">{item.topic}</Badge> : null}
+          {show("showMetadata") && item.noteType ? <Badge>{item.noteType}</Badge> : null}
+          {show("showDifficulty") ? (
             <DifficultyBadge value={item.difficulty ?? null} noteType={item.noteType} />
           ) : null}
-          {config.sectionToggles.showReviewStatus && item.reviewStatus ? (
+          {show("showReviewStatus") && item.reviewStatus ? (
             <Badge tone="green">{item.reviewStatus.replaceAll("_", " ")}</Badge>
           ) : null}
           {item.problemStatus ? <Badge>{item.problemStatus.replaceAll("_", " ")}</Badge> : null}
@@ -31,15 +33,15 @@ export function NotebookEntry({ item, config }: NotebookEntryProps) {
           <InlineMarkdown text={item.title} />
         </h3>
 
-        {config.sectionToggles.showDescriptions && item.description ? (
+        {show("showDescriptions") && item.description ? (
           <InlineMarkdown text={item.description} className="mt-2 block text-sm leading-6 text-[#43474f]" />
         ) : null}
 
-        {config.sectionToggles.showSourceReferences && item.sourceReference ? (
+        {show("showSourceReferences") && item.sourceReference ? (
           <p className="mt-2 text-sm text-[#43474f]">Source: {item.sourceReference}</p>
         ) : null}
 
-        {config.sectionToggles.showTags && item.tags.length ? (
+        {show("showTags") && item.tags.length ? (
           <div className="mt-3 flex flex-wrap gap-2">
             {item.tags.map((tag) => (
               <Badge key={tag}>{tag}</Badge>

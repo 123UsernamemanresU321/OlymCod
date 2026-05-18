@@ -9,7 +9,9 @@ import {
   NOTEBOOK_REVIEW_STATUSES,
   NOTEBOOK_SECTION_TOGGLES,
   NOTEBOOK_SORT_ORDERS,
-  NOTEBOOK_TOPIC_OPTIONS
+  NOTEBOOK_TOPIC_OPTIONS,
+  invertNotebookSectionToggles,
+  makeNotebookSectionToggles
 } from "@/lib/notebook/defaultNotebookConfig";
 import type { NotebookConfig, NotebookContentSource, NotebookSectionToggle } from "@/lib/notebook/types";
 import { Field, inputClassName } from "@/components/ui/Field";
@@ -24,6 +26,13 @@ interface NotebookControlsProps {
 
 function toggleValue(values: string[], value: string) {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+
+function sectionToggleLabel(label: string, mode: NotebookConfig["sectionSelectionMode"]) {
+  if (mode === "whitelist") return label;
+  if (label.startsWith("Show ")) return label.replace("Show ", "Hide ");
+  if (label.startsWith("Page breaks")) return "Suppress page breaks between topics";
+  return label;
 }
 
 export function NotebookControls({ config, availableTopics, availableTags, onChange }: NotebookControlsProps) {
@@ -42,16 +51,52 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
     update({ sectionToggles: { ...config.sectionToggles, [toggle]: checked } });
   }
 
+  function updateSectionSelectionMode(mode: NotebookConfig["sectionSelectionMode"]) {
+    if (config.sectionSelectionMode === mode) return;
+    update({ sectionSelectionMode: mode, sectionToggles: invertNotebookSectionToggles(config.sectionToggles) });
+  }
+
+  function setAllSections(value: boolean) {
+    update({ sectionToggles: makeNotebookSectionToggles(value) });
+  }
+
   function csv(value: string) {
     return value.split(",").map((item) => item.trim()).filter(Boolean);
   }
 
   const filterVerb = config.selectionMode === "blacklist" ? "Exclude selected" : "Include selected";
+  const selectedSources = NOTEBOOK_CONTENT_SOURCES.filter((source) => config.contentSources[source.key]).length;
+  const filterCount =
+    config.topics.length +
+    config.noteTypes.length +
+    config.tags.length +
+    config.reviewStatuses.length +
+    config.problemStatuses.length;
+  const exclusionCount =
+    config.excludeTopics.length +
+    config.excludeNoteTypes.length +
+    config.excludeTags.length +
+    config.excludeReviewStatuses.length +
+    config.excludeProblemStatuses.length +
+    config.excludeNoteIds.length +
+    Number(Boolean(config.excludeDifficultyMin && config.excludeDifficultyMax)) +
+    Number(config.excludeMastered);
+  const activeFilterCount = config.selectionMode === "blacklist" ? exclusionCount : filterCount;
+  const sectionVerb = config.sectionSelectionMode === "blacklist" ? "Hide selected" : "Show selected";
+  const activeSectionCount = Object.values(config.sectionToggles).filter(Boolean).length;
 
   return (
-    <div className="grid gap-5">
-      <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-        <h2 className="text-base font-semibold text-[#1a1c1c]">Content Sources</h2>
+    <div className="grid gap-3">
+      <details className="group rounded-lg border border-[#c3c6d0] bg-white" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span className="block text-sm font-semibold text-[#1a1c1c]">Content Sources</span>
+            <span className="text-xs text-[#5d6470]">{selectedSources} sources selected</span>
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
+          <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
+        </summary>
+        <div className="border-t border-[#e2e4ea] px-4 pb-4 pt-3">
         <div className="mt-3 rounded border border-[#d5d7de] bg-[#f9f9f9] p-3">
           <p className="text-sm font-semibold text-[#1a1c1c]">Selection Mode</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -94,12 +139,21 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
             </label>
           ))}
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-        <h2 className="text-base font-semibold text-[#1a1c1c]">Filters</h2>
-        <p className="mt-1 text-sm text-[#43474f]">{filterVerb} topics, note types, tags, and statuses.</p>
-        <div className="mt-4 grid gap-4">
+      <details className="group rounded-lg border border-[#c3c6d0] bg-white">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span className="block text-sm font-semibold text-[#1a1c1c]">Filters</span>
+            <span className="text-xs text-[#5d6470]">
+              {filterVerb} · {activeFilterCount || "no"} active {config.selectionMode === "blacklist" ? "exclusions" : "filters"}
+            </span>
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
+          <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
+        </summary>
+        <div className="grid gap-4 border-t border-[#e2e4ea] px-4 pb-4 pt-3">
           <Field label="Topics">
             <div className="flex flex-wrap gap-2">
               {topics.map((topic) => (
@@ -278,10 +332,10 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
             </div>
           ) : null}
         </div>
-      </section>
+      </details>
 
       <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-        <h2 className="text-base font-semibold text-[#1a1c1c]">Detail Level</h2>
+        <h2 className="text-sm font-semibold text-[#1a1c1c]">Detail Level</h2>
         <select
           className={inputClassName("mt-3")}
           value={config.detailLevel}
@@ -293,8 +347,48 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
         </select>
       </section>
 
-      <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-        <h2 className="text-base font-semibold text-[#1a1c1c]">Section Toggles</h2>
+      <details className="group rounded-lg border border-[#c3c6d0] bg-white">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span className="block text-sm font-semibold text-[#1a1c1c]">Sections</span>
+            <span className="text-xs text-[#5d6470]">
+              {sectionVerb} · {activeSectionCount} selected
+            </span>
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
+          <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
+        </summary>
+        <div className="border-t border-[#e2e4ea] px-4 pb-4 pt-3">
+          <div className="grid gap-2 rounded border border-[#d5d7de] bg-[#f9f9f9] p-3 sm:grid-cols-2">
+            <button
+              type="button"
+              onClick={() => updateSectionSelectionMode("whitelist")}
+              className={cn(
+                "rounded border px-3 py-2 text-sm text-[#43474f]",
+                config.sectionSelectionMode === "whitelist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
+              )}
+            >
+              Show selected
+            </button>
+            <button
+              type="button"
+              onClick={() => updateSectionSelectionMode("blacklist")}
+              className={cn(
+                "rounded border px-3 py-2 text-sm text-[#43474f]",
+                config.sectionSelectionMode === "blacklist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
+              )}
+            >
+              Hide selected
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" onClick={() => setAllSections(true)} className="rounded border border-[#c3c6d0] px-2.5 py-1.5 text-xs font-semibold text-[#43474f]">
+              {config.sectionSelectionMode === "blacklist" ? "Hide all" : "Show all"}
+            </button>
+            <button type="button" onClick={() => setAllSections(false)} className="rounded border border-[#c3c6d0] px-2.5 py-1.5 text-xs font-semibold text-[#43474f]">
+              {config.sectionSelectionMode === "blacklist" ? "Hide none" : "Show none"}
+            </button>
+          </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {NOTEBOOK_SECTION_TOGGLES.map((toggle) => (
             <label key={toggle.key} className="flex items-center gap-3 text-sm text-[#43474f]">
@@ -303,14 +397,23 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 checked={config.sectionToggles[toggle.key]}
                 onChange={(event) => updateToggle(toggle.key, event.target.checked)}
               />
-              {toggle.label}
+              {sectionToggleLabel(toggle.label, config.sectionSelectionMode)}
             </label>
           ))}
         </div>
-      </section>
+        </div>
+      </details>
 
-      <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-        <h2 className="text-base font-semibold text-[#1a1c1c]">Layout And Page</h2>
+      <details className="group rounded-lg border border-[#c3c6d0] bg-white">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span className="block text-sm font-semibold text-[#1a1c1c]">Layout And Page</span>
+            <span className="text-xs text-[#5d6470]">{config.layoutStyle} · {config.sortOrder}</span>
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
+          <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
+        </summary>
+        <div className="border-t border-[#e2e4ea] px-4 pb-4 pt-3">
         <div className="mt-4 grid gap-3">
           <Field label="Layout Style">
             <select
@@ -397,7 +500,8 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
             </Field>
           </div>
         </div>
-      </section>
+        </div>
+      </details>
     </div>
   );
 }

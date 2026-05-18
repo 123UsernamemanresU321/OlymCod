@@ -1,3 +1,4 @@
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import type { NotebookConfig, NotebookItem } from "@/lib/notebook/types";
 
 interface NotebookTOCProps {
@@ -6,7 +7,7 @@ interface NotebookTOCProps {
 }
 
 export function NotebookTOC({ config, items }: NotebookTOCProps) {
-  if (!config.pageSettings.includeTableOfContents && !config.sectionToggles.showTableOfContents) return null;
+  if (!config.pageSettings.includeTableOfContents || !notebookSectionEnabled(config, "showTableOfContents")) return null;
   const grouped = Array.from(
     items.reduce((map, item) => {
       const topic = item.topic || "Unsorted";

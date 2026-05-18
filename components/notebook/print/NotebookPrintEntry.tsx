@@ -1,8 +1,9 @@
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { NotebookPrintSection } from "@/components/notebook/print/NotebookPrintSection";
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import { getNotebookEntrySections } from "@/lib/notebook/renderNotebookMarkdown";
 import { cn } from "@/lib/utils/cn";
-import type { NotebookConfig, NotebookItem } from "@/lib/notebook/types";
+import type { NotebookConfig, NotebookItem, NotebookSectionToggle } from "@/lib/notebook/types";
 
 interface NotebookPrintEntryProps {
   item: NotebookItem;
@@ -25,14 +26,15 @@ function estimatedEntryLength(item: NotebookItem) {
 }
 
 function metadataParts(item: NotebookItem, config: NotebookConfig) {
+  const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
   return [
-    config.sectionToggles.showMetadata ? item.topic : null,
-    config.sectionToggles.showMetadata ? item.noteType : null,
-    config.sectionToggles.showDifficulty && item.difficulty ? `Difficulty ${item.difficulty}` : null,
-    config.sectionToggles.showReviewStatus && item.reviewStatus ? `Review ${item.reviewStatus.replaceAll("_", " ")}` : null,
+    show("showMetadata") ? item.topic : null,
+    show("showMetadata") ? item.noteType : null,
+    show("showDifficulty") && item.difficulty ? `Difficulty ${item.difficulty}` : null,
+    show("showReviewStatus") && item.reviewStatus ? `Review ${item.reviewStatus.replaceAll("_", " ")}` : null,
     item.problemStatus ? `Status ${item.problemStatus.replaceAll("_", " ")}` : null,
-    config.sectionToggles.showSourceReferences && item.sourceReference ? item.sourceReference : null,
-    config.sectionToggles.showDates && item.updatedAt ? `Updated ${item.updatedAt.slice(0, 10)}` : null
+    show("showSourceReferences") && item.sourceReference ? item.sourceReference : null,
+    show("showDates") && item.updatedAt ? `Updated ${item.updatedAt.slice(0, 10)}` : null
   ].filter(Boolean);
 }
 
@@ -40,6 +42,7 @@ export function NotebookPrintEntry({ item, config }: NotebookPrintEntryProps) {
   const sections = getNotebookEntrySections(item, config);
   const longEntry = estimatedEntryLength(item) > 3200 || sections.length > 7 || config.detailLevel === "Full Detail Mode";
   const parts = metadataParts(item, config);
+  const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
 
   return (
     <article
@@ -54,14 +57,14 @@ export function NotebookPrintEntry({ item, config }: NotebookPrintEntryProps) {
         <h2>
           <InlineMarkdown text={item.title} />
         </h2>
-        {parts.length || (config.sectionToggles.showTags && item.tags.length) ? (
+        {parts.length || (show("showTags") && item.tags.length) ? (
           <p className="print-metadata">
-            {[...parts, config.sectionToggles.showTags && item.tags.length ? `Tags: ${item.tags.join(", ")}` : null]
+            {[...parts, show("showTags") && item.tags.length ? `Tags: ${item.tags.join(", ")}` : null]
               .filter(Boolean)
               .join(" · ")}
           </p>
         ) : null}
-        {config.sectionToggles.showDescriptions && item.description ? (
+        {show("showDescriptions") && item.description ? (
           <InlineMarkdown text={item.description} className="print-description" />
         ) : null}
       </header>

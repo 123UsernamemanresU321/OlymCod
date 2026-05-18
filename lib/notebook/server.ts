@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildNotebookItems } from "@/lib/notebook/buildNotebookItems";
-import type { NotebookConfig, NotebookRawData } from "@/lib/notebook/types";
+import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
+import type { NotebookConfig, NotebookRawData, NotebookSectionToggle } from "@/lib/notebook/types";
 import type { Diagram, MistakeLog, Note, NoteLink, NoteReview, ProblemLog, QuickCapture } from "@/lib/types";
 
 export async function loadNotebookRawData(
@@ -8,17 +9,18 @@ export async function loadNotebookRawData(
   userId: string,
   config: NotebookConfig
 ): Promise<NotebookRawData> {
+  const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
   const wantsProblems =
     config.contentSources.problemLogs ||
     config.detailLevel === "Problem Booklet Mode" ||
-    config.sectionToggles.showLinkedProblems;
-  const wantsMistakes = config.contentSources.mistakeLogs || config.sectionToggles.showLinkedMistakes;
+    show("showLinkedProblems");
+  const wantsMistakes = config.contentSources.mistakeLogs || show("showLinkedMistakes");
   const wantsCaptures = config.contentSources.quickCaptures;
   const wantsReviews =
     config.contentSources.reviewDueNotes ||
     config.reviewStatuses.length > 0 ||
-    config.sectionToggles.showReviewStatus;
-  const wantsDiagrams = config.contentSources.diagrams || config.sectionToggles.showDiagrams;
+    show("showReviewStatus");
+  const wantsDiagrams = config.contentSources.diagrams || show("showDiagrams");
 
   const [
     notesResult,

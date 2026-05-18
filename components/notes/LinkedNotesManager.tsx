@@ -20,6 +20,7 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
   const [notes, setNotes] = useState<Note[]>([]);
   const [links, setLinks] = useState<NoteLink[]>([]);
   const [targetId, setTargetId] = useState("");
+  const [noteSearch, setNoteSearch] = useState("");
   const [relation, setRelation] = useState("related");
   const [suggestion, setSuggestion] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,6 +53,30 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
     [links, notes]
   );
 
+  const availableNotes = useMemo(() => {
+    const linkedTargetIds = new Set(links.map((link) => link.target_note_id));
+    const query = noteSearch.trim().toLowerCase();
+    const matchesSearch = (note: Note) => {
+      if (!query) return true;
+      return [
+        note.title,
+        note.description,
+        note.topic,
+        note.note_type,
+        ...(note.tags ?? [])
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    };
+    const filtered = notes
+      .filter((note) => note.id !== noteId && !linkedTargetIds.has(note.id) && matchesSearch(note))
+      .slice(0, 30);
+    const selected = targetId ? notes.find((note) => note.id === targetId) : null;
+    return selected && !filtered.some((note) => note.id === selected.id) ? [selected, ...filtered] : filtered;
+  }, [links, noteId, noteSearch, notes, targetId]);
+
   function relationLabel(value: string) {
     if (value === "prerequisite") return "prerequisite (target is needed before this note)";
     if (value === "generalization") return "generalization (target is broader)";
@@ -82,6 +107,7 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
       if (error) throw error;
       setLinks((current) => [...current, data as NoteLink]);
       setTargetId("");
+      setNoteSearch("");
     } catch (linkError) {
       setError(linkError instanceof Error ? linkError.message : "Could not add link.");
     } finally {
@@ -160,16 +186,23 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
       </div>
 
       <div className="mt-4 grid gap-2 sm:grid-cols-[1fr_0.8fr_auto]">
-        <select className={inputClassName()} value={targetId} onChange={(event) => setTargetId(event.target.value)} disabled={!noteId}>
-          <option value="">Choose a note</option>
-          {notes
-            .filter((note) => note.id !== noteId && !links.some((link) => link.target_note_id === note.id))
-            .map((note) => (
+        <div className="grid gap-2">
+          <input
+            className={inputClassName()}
+            value={noteSearch}
+            onChange={(event) => setNoteSearch(event.target.value)}
+            placeholder="Search notes by title, topic, type, or tag"
+            disabled={!noteId}
+          />
+          <select className={inputClassName()} value={targetId} onChange={(event) => setTargetId(event.target.value)} disabled={!noteId}>
+            <option value="">{noteSearch ? `Choose from ${availableNotes.length} matches` : "Choose a note"}</option>
+            {availableNotes.map((note) => (
               <option key={note.id} value={note.id}>
-                {note.title}
+                {note.title} {note.topic ? `- ${note.topic}` : ""}
               </option>
             ))}
-        </select>
+          </select>
+        </div>
         <select className={inputClassName()} value={relation} onChange={(event) => setRelation(event.target.value)} disabled={!noteId}>
           {NOTE_LINK_RELATIONS.map((item) => (
             <option key={item} value={item}>
