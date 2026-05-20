@@ -12,6 +12,8 @@ export interface MasteryRow {
   reviewLaterProblems: number;
   mistakeCount: number;
   averageConfidence: number | null;
+  averageConceptLevel: number | null;
+  averageProblemDifficulty: number | null;
   score: number;
   label: "Weak" | "Developing" | "Good" | "Strong" | "Unknown";
 }
@@ -59,6 +61,14 @@ export function calculateMastery({
     const averageConfidence = topicReviews.length
       ? topicReviews.reduce((sum, review) => sum + review.confidence, 0) / topicReviews.length
       : null;
+    const conceptLevels = topicNotes.flatMap((note) => note.difficulty ? [note.difficulty] : []);
+    const problemDifficulties = topicProblems.flatMap((problem) => problem.difficulty ? [problem.difficulty] : []);
+    const averageConceptLevel = conceptLevels.length
+      ? conceptLevels.reduce((sum, value) => sum + value, 0) / conceptLevels.length
+      : null;
+    const averageProblemDifficulty = problemDifficulties.length
+      ? problemDifficulties.reduce((sum, value) => sum + value, 0) / problemDifficulties.length
+      : null;
 
     const score = clampScore(
       50 +
@@ -83,6 +93,8 @@ export function calculateMastery({
       reviewLaterProblems,
       mistakeCount: topicMistakes.length,
       averageConfidence,
+      averageConceptLevel,
+      averageProblemDifficulty,
       score,
       label: scoreLabel(score, hasData)
     };

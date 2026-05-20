@@ -179,7 +179,7 @@ export function DiagramUpload({ noteId, paths, onChange, onInsertMarkdown }: Dia
           <input
             className="sr-only"
             type="file"
-            accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg"
+            accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
             disabled={uploading || !noteId}
             onChange={(event) => {
               const file = event.target.files?.[0];

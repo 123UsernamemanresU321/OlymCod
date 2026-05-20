@@ -286,7 +286,10 @@ export interface Diagram {
   filename: string;
   mime_type: string | null;
   size_bytes: number | null;
+  title: string | null;
   caption: string | null;
+  alt_text: string | null;
+  tags: string[];
   created_at: string;
   updated_at: string;
 }

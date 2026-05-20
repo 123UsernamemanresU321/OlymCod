@@ -281,7 +281,7 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
                       {problem.status.replaceAll("_", " ")}
                     </Badge>
                     {problem.topic ? <Badge>{problem.topic}</Badge> : null}
-                    <DifficultyBadge value={problem.difficulty} />
+                    <DifficultyBadge value={problem.difficulty} kind="problem" />
                   </div>
                 </div>
                 {problem.key_idea ? (

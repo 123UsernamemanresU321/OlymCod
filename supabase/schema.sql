@@ -199,7 +199,10 @@ create table if not exists public.diagrams (
   filename text not null,
   mime_type text,
   size_bytes int,
+  title text,
   caption text,
+  alt_text text,
+  tags text[] default '{}'::text[] not null,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null,
   unique (user_id, storage_path)

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { CheckCircle2, Circle, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { getCriteriaForNoteType } from "@/lib/note-quality/getCriteriaForNoteType";
 import type { Note, NoteDraft } from "@/lib/types";
 
 interface NoteQualityPanelProps {
@@ -12,29 +13,11 @@ interface NoteQualityPanelProps {
   onAppendMarkdown?: (markdown: string) => void;
 }
 
-function hasSection(body: string, names: string[]) {
-  const normalized = body.toLowerCase();
-  return names.some((name) => normalized.includes(`## ${name.toLowerCase()}`));
-}
-
 export function NoteQualityPanel({ note = null, draft = null, onAppendMarkdown }: NoteQualityPanelProps) {
   const [suggestion, setSuggestion] = useState("");
   const [busy, setBusy] = useState(false);
   const source = draft ?? note;
-  const checks = useMemo(() => {
-    const body = source?.body_markdown ?? "";
-    return [
-      { label: "Statement/Core idea", ok: hasSection(body, ["Statement", "Core idea", "Formula", "Claim"]) },
-      { label: "When to use it", ok: hasSection(body, ["When to use it", "Trigger", "Signs this technique may work"]) },
-      { label: "Intuition", ok: hasSection(body, ["Intuition", "Why it works", "Why it helps"]) },
-      { label: "Example", ok: hasSection(body, ["Example", "Mini example", "Worked example", "Quick example"]) },
-      { label: "Common mistakes", ok: hasSection(body, ["Common mistakes", "Mistakes to avoid", "Common diagram traps"]) },
-      { label: "Related techniques", ok: hasSection(body, ["Related techniques", "Related formulae", "Related results"]) },
-      { label: "Problems where this appears", ok: hasSection(body, ["Problems where this appears", "Related problems"]) },
-      { label: "Tags", ok: Boolean(source?.tags?.length) },
-      { label: "Difficulty", ok: source?.difficulty !== null || source?.note_type === "Formula" || source?.note_type === "Formula Log" }
-    ];
-  }, [source]);
+  const quality = useMemo(() => (source ? getCriteriaForNoteType(source) : null), [source]);
 
   async function improve() {
     if (!source) return;
@@ -67,7 +50,9 @@ export function NoteQualityPanel({ note = null, draft = null, onAppendMarkdown }
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-[#1a1c1c]">Note Quality</h2>
-          <p className="mt-1 text-sm text-[#43474f]">A small checklist to avoid shallow formula dumps.</p>
+          <p className="mt-1 text-sm text-[#43474f]">
+            Type-specific checklist · {quality?.completionPercent ?? 0}% complete · {quality?.requiredCompleted ?? 0}/{quality?.requiredTotal ?? 0} required.
+          </p>
         </div>
         <Button type="button" variant="secondary" onClick={() => void improve()} disabled={busy}>
           <Wand2 className="h-4 w-4" aria-hidden="true" />
@@ -75,14 +60,20 @@ export function NoteQualityPanel({ note = null, draft = null, onAppendMarkdown }
         </Button>
       </div>
       <div className="mt-4 grid gap-2">
-        {checks.map((check) => (
-          <div key={check.label} className="flex items-center gap-2 text-sm text-[#43474f]">
-            {check.ok ? (
+        {quality?.criteria.map((check) => (
+          <div key={check.id} className="flex items-start gap-2 text-sm text-[#43474f]">
+            {check.completed ? (
               <CheckCircle2 className="h-4 w-4 text-[#1d5a35]" aria-hidden="true" />
             ) : (
               <Circle className="h-4 w-4 text-[#8f1d15]" aria-hidden="true" />
             )}
-            {check.label}
+            <span>
+              <span className="font-medium text-[#1a1c1c]">{check.label}</span>
+              <span className="ml-2 rounded border border-[#d5d7de] px-1.5 py-0.5 text-[11px] uppercase tracking-[0.08em]">
+                {check.importance}
+              </span>
+              <span className="block text-xs leading-5 text-[#5d6470]">{check.source}</span>
+            </span>
           </div>
         ))}
       </div>

@@ -205,7 +205,7 @@ ${problem.mistake_made ?? ""}
             <Badge tone="blue">{problem.status.replaceAll("_", " ")}</Badge>
             {problem.topic ? <Badge>{problem.topic}</Badge> : null}
             {problem.mistake_category ? <Badge tone="red">{problem.mistake_category}</Badge> : null}
-            <DifficultyBadge value={problem.difficulty} />
+            <DifficultyBadge value={problem.difficulty} kind="problem" />
           </div>
         </div>
 

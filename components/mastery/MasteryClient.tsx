@@ -57,6 +57,8 @@ export function MasteryClient({ notes, reviews, problems, mistakes }: MasteryCli
               <th className="px-4 py-3">Failed Problems</th>
               <th className="px-4 py-3">Mistakes</th>
               <th className="px-4 py-3">Avg Confidence</th>
+              <th className="px-4 py-3">Avg Concept Level</th>
+              <th className="px-4 py-3">Avg Problem Difficulty</th>
             </tr>
           </thead>
           <tbody>
@@ -74,6 +76,8 @@ export function MasteryClient({ notes, reviews, problems, mistakes }: MasteryCli
                 <td className="px-4 py-3">{row.failedProblems + row.reviewLaterProblems}</td>
                 <td className="px-4 py-3">{row.mistakeCount}</td>
                 <td className="px-4 py-3">{row.averageConfidence ? row.averageConfidence.toFixed(1) : "n/a"}</td>
+                <td className="px-4 py-3">{row.averageConceptLevel ? row.averageConceptLevel.toFixed(1) : "n/a"}</td>
+                <td className="px-4 py-3">{row.averageProblemDifficulty ? row.averageProblemDifficulty.toFixed(1) : "n/a"}</td>
               </tr>
             ))}
           </tbody>

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Calculator, Dices, FileText, Flame, Inbox, Plus, Search, ShieldCheck, Shapes, Sigma, Target } from "lucide-react";
+import { BookOpen, Calculator, Dices, FileText, Flame, Image as ImageIcon, Inbox, Network, Plus, Search, ShieldCheck, Shapes, Sigma, Table2, Target } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
@@ -134,6 +134,26 @@ export function DashboardClient({ notes, suggestions, reviews, problems, mistake
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
+        <Link href="/app/notebook" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <BookOpen className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Notebook Builder</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">Build printable theorem sheets, formula sheets, and revision packs.</p>
+        </Link>
+        <Link href="/app/graph" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <Network className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Note Graph</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">Visualize prerequisites, special cases, and commonly confused notes.</p>
+        </Link>
+        <Link href="/app/media" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <ImageIcon className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Media Library</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">Manage diagrams, captions, alt text, and reusable media assets.</p>
+        </Link>
+        <Link href="/app/manage" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <Table2 className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Manage Notes</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">Bulk edit topics, tags, concept levels, visibility, and archived state.</p>
+        </Link>
         <Link href="/app/revision-pack" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
           <Target className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
           <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Generate Contest Revision Pack</h2>

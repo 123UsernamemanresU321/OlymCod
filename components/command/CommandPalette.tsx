@@ -6,13 +6,13 @@ import { BookOpen, Command, FileText, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
-import type { MistakeLog, Note, ProblemLog, QuickCapture } from "@/lib/types";
+import type { Diagram, MistakeLog, Note, ProblemLog, QuickCapture } from "@/lib/types";
 import { inputClassName } from "@/components/ui/Field";
 
 type ResultItem = {
   id: string;
   title: string;
-  group: "Notes" | "Problems" | "Mistakes" | "Captures" | "Actions" | "Topics";
+  group: "Notes" | "Problems" | "Mistakes" | "Captures" | "Media" | "Actions" | "Topics";
   href: string;
   preview?: string | null;
   tags?: string[];
@@ -56,6 +56,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
   const [problems, setProblems] = useState<ProblemLog[]>([]);
   const [mistakes, setMistakes] = useState<MistakeLog[]>([]);
   const [captures, setCaptures] = useState<QuickCapture[]>([]);
+  const [media, setMedia] = useState<Diagram[]>([]);
 
   useEffect(() => {
     if (!enableShortcut) return;
@@ -74,17 +75,23 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
     let cancelled = false;
     async function load() {
       const supabase = createClient();
-      const [notesResult, problemsResult, mistakesResult, capturesResult] = await Promise.all([
-        supabase.from("notes").select("*").eq("is_archived", false).order("updated_at", { ascending: false }).limit(50),
-        supabase.from("problem_logs").select("*").order("updated_at", { ascending: false }).limit(30),
-        supabase.from("mistake_logs").select("*").order("updated_at", { ascending: false }).limit(30),
-        supabase.from("quick_captures").select("*").eq("is_archived", false).order("created_at", { ascending: false }).limit(30)
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const [notesResult, problemsResult, mistakesResult, capturesResult, mediaResult] = await Promise.all([
+        supabase.from("notes").select("*").eq("user_id", user.id).eq("is_archived", false).order("updated_at", { ascending: false }).limit(50),
+        supabase.from("problem_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
+        supabase.from("mistake_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
+        supabase.from("quick_captures").select("*").eq("user_id", user.id).eq("is_archived", false).order("created_at", { ascending: false }).limit(30),
+        supabase.from("diagrams").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30)
       ]);
       if (cancelled) return;
       setNotes((notesResult.data ?? []) as Note[]);
       setProblems((problemsResult.data ?? []) as ProblemLog[]);
       setMistakes((mistakesResult.data ?? []) as MistakeLog[]);
       setCaptures((capturesResult.data ?? []) as QuickCapture[]);
+      setMedia((mediaResult.data ?? []) as Diagram[]);
     }
     void load();
     return () => {
@@ -101,7 +108,9 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
       { id: "review", group: "Actions", title: "Open Review", href: "/app/review-notes", preview: "review due practice" },
       { id: "revision-pack", group: "Actions", title: "Generate Contest Revision Pack", href: "/app/revision-pack", preview: "before contest revision pack weak notes false uses triggers" },
       { id: "mastery", group: "Actions", title: "Open Mastery Heatmap", href: "/app/mastery", preview: "mastery heatmap weak topics confidence mistakes" },
-      { id: "diagrams", group: "Actions", title: "Open Diagrams", href: "/app/diagrams", preview: "geometry diagram manager" },
+      { id: "graph", group: "Actions", title: "Open Note Graph", href: "/app/graph", preview: "visual relationships prerequisites links" },
+      { id: "manage", group: "Actions", title: "Open Bulk Metadata Manager", href: "/app/manage", preview: "bulk edit tags topics concept level visibility" },
+      { id: "media", group: "Actions", title: "Open Media Library", href: "/app/media", preview: "geometry diagram media manager" },
       { id: "settings", group: "Actions", title: "Open Settings", href: "/app/settings", preview: "export backup account" }
     ];
 
@@ -147,13 +156,21 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
         href: `/app/capture?convert=${capture.id}`,
         preview: `${capture.capture_type} ${capture.topic_guess ?? ""} ${capture.raw_text}`,
         tags: capture.tags
+      })),
+      ...media.map((asset) => ({
+        id: asset.id,
+        group: "Media" as const,
+        title: asset.title || asset.caption || asset.filename,
+        href: "/app/media",
+        preview: `${asset.filename} ${asset.caption ?? ""} ${asset.alt_text ?? ""}`,
+        tags: asset.tags ?? []
       }))
     ];
 
     return items.filter((item) => matches(item, query)).slice(0, 24);
-  }, [captures, mistakes, notes, problems, query]);
+  }, [captures, media, mistakes, notes, problems, query]);
 
-  const groups = ["Actions", "Notes", "Problems", "Mistakes", "Captures", "Topics"] as const;
+  const groups = ["Actions", "Notes", "Problems", "Mistakes", "Captures", "Media", "Topics"] as const;
 
   function openResult(href: string) {
     setOpen(false);

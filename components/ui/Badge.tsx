@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils/cn";
-import { DIFFICULTY_LABELS } from "@/lib/constants/notes";
+import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS } from "@/lib/constants/notes";
 import { noteTypeUsesDifficulty } from "@/lib/constants/note-formats";
 
 interface BadgeProps {
@@ -25,13 +25,24 @@ export function Badge({ children, tone = "default", className }: BadgeProps) {
   );
 }
 
-export function DifficultyBadge({ value, noteType }: { value: number | null; noteType?: string | null }) {
+export function DifficultyBadge({
+  value,
+  noteType,
+  kind = "concept"
+}: {
+  value: number | null;
+  noteType?: string | null;
+  kind?: "concept" | "problem";
+}) {
   if (noteType && !noteTypeUsesDifficulty(noteType)) return null;
-  if (!value) return <Badge>Difficulty unset</Badge>;
+  if (!value) return <Badge>{kind === "problem" ? "Problem difficulty unset" : "Concept level unset"}</Badge>;
+
+  const labels = kind === "problem" ? PROBLEM_DIFFICULTY_LABELS : CONCEPT_LEVEL_LABELS;
+  const prefix = kind === "problem" ? "Problem difficulty" : "Concept level";
 
   return (
     <Badge tone={value >= 9 ? "red" : value >= 5 ? "blue" : "green"}>
-      {value}. {DIFFICULTY_LABELS[value]}
+      {prefix} {value}. {labels[value]}
     </Badge>
   );
 }

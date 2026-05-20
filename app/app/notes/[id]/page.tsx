@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { DiagramGallery } from "@/components/diagrams/DiagramGallery";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
 import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
 import { NoteReviewActions } from "@/components/notes/NoteReviewActions";
 import { NoteViewActions } from "@/components/notes/NoteViewActions";
@@ -104,33 +105,12 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
         <div className="mt-8">
           {note.recognition_triggers?.length || note.false_uses?.length ? (
             <div className="mb-8 grid gap-4">
-              {note.recognition_triggers?.length ? (
-                <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">
-                    Recognition Triggers
-                  </h2>
-                  <p className="mt-1 text-sm text-[#43474f]">Think of this when you see...</p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {note.recognition_triggers.map((trigger) => (
-                      <span key={trigger} className="rounded border border-[#c3c6d0] bg-white px-3 py-1 text-sm text-[#1a1c1c]">
-                        {trigger}
-                      </span>
-                    ))}
-                  </div>
-                </section>
-              ) : null}
-              {note.false_uses?.length ? (
-                <section className="rounded-lg border border-[#ffd2cc] bg-[#fff7f5] p-4">
-                  <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-[#8f1d15]">
-                    Common False Uses
-                  </h2>
-                  <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#573733]">
-                    {note.false_uses.map((falseUse) => (
-                      <li key={falseUse}>- {falseUse}</li>
-                    ))}
-                  </ul>
-                </section>
-              ) : null}
+              <LearningMetadataList
+                title="Recognition Triggers"
+                description="Think of this when you see..."
+                items={note.recognition_triggers ?? []}
+              />
+              <LearningMetadataList title="Common False Uses" items={note.false_uses ?? []} tone="red" />
             </div>
           ) : null}
           <MarkdownPreview markdown={note.body_markdown} />

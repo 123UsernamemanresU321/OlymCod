@@ -6,6 +6,7 @@ import { Download, Save } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
+import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
 import { TopicSelector } from "@/components/notes/TopicSelector";
 import { buildRevisionPack, type RevisionPackOptions } from "@/lib/revision/buildRevisionPack";
 import { DEFAULT_NOTEBOOK_CONFIG } from "@/lib/notebook/defaultNotebookConfig";
@@ -186,7 +187,7 @@ export function RevisionPackClient({ notes, reviews, problems, mistakes }: Revis
             ["includeRecognitionTriggers", "Recognition triggers"],
             ["includeFormulae", "Formulae"],
             ["includeGeometryDiagrams", "Geometry diagrams"],
-            ["includeHighDifficulty", "High difficulty notes"]
+            ["includeHighDifficulty", "High concept-level notes"]
           ].map(([key, label]) => (
             <label key={key} className="flex items-center gap-3 text-sm text-[#43474f]">
               <input
@@ -241,6 +242,14 @@ export function RevisionPackClient({ notes, reviews, problems, mistakes }: Revis
                   </div>
                 </div>
                 <p className="mt-2 text-xs text-[#43474f]">{reasons.join(" · ")}</p>
+                <div className="mt-3 grid gap-2">
+                  {options.includeRecognitionTriggers ? (
+                    <LearningMetadataList title="Recognition Triggers" items={note.recognition_triggers ?? []} compact />
+                  ) : null}
+                  {options.includeFalseUses ? (
+                    <LearningMetadataList title="Common False Uses" items={note.false_uses ?? []} tone="red" compact />
+                  ) : null}
+                </div>
               </Link>
             ))}
           </div>

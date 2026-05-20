@@ -3,6 +3,7 @@
 import { Sparkles } from "lucide-react";
 import { useState } from "react";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
 import type { NoteDraft } from "@/lib/types";
@@ -44,6 +45,14 @@ type AIResult = {
   tags: string[];
   recognition_triggers: string[];
   false_uses: string[];
+  link_suggestions: Array<{
+    targetNoteId: string;
+    targetTitle: string;
+    relationType: string;
+    reason: string;
+    confidence: number;
+  }>;
+  possible_new_notes: Array<{ title: string; reason?: string }>;
   model?: string;
 };
 
@@ -199,6 +208,8 @@ export function AIWritingAssistant({
         tags: Array.isArray(payload.tags) ? payload.tags : [],
         recognition_triggers: Array.isArray(payload.recognition_triggers) ? payload.recognition_triggers : [],
         false_uses: Array.isArray(payload.false_uses) ? payload.false_uses : [],
+        link_suggestions: Array.isArray(payload.link_suggestions) ? payload.link_suggestions : [],
+        possible_new_notes: Array.isArray(payload.possible_new_notes) ? payload.possible_new_notes : [],
         model: payload.model
       });
     } catch (generateError) {
@@ -289,14 +300,14 @@ export function AIWritingAssistant({
               {result.tags.length ? (
                 <p className="mt-2 text-sm text-[#43474f]">Tags: {result.tags.join(", ")}</p>
               ) : null}
-              {result.recognition_triggers.length ? (
-                <p className="mt-2 text-sm text-[#43474f]">
-                  Recognition triggers: {result.recognition_triggers.join(", ")}
-                </p>
-              ) : null}
-              {result.false_uses.length ? (
-                <p className="mt-2 text-sm text-[#43474f]">False uses: {result.false_uses.join(", ")}</p>
-              ) : null}
+              <div className="mt-3 grid gap-3">
+                <LearningMetadataList
+                  title="Recognition triggers"
+                  items={result.recognition_triggers}
+                  compact
+                />
+                <LearningMetadataList title="False uses" items={result.false_uses} tone="red" compact />
+              </div>
             </div>
           ) : null}
 
@@ -306,6 +317,46 @@ export function AIWritingAssistant({
               <div className="mt-4 rounded border border-[#d5d7de] bg-white p-4">
                 <MarkdownPreview markdown={result.markdown} />
               </div>
+            </div>
+          ) : null}
+
+          {result.link_suggestions.length || result.possible_new_notes.length ? (
+            <div className="rounded border border-[#c3c6d0] bg-[#f9f9f9] p-4">
+              <p className="text-sm font-semibold text-[#1a1c1c]">Structured link suggestions</p>
+              <p className="mt-1 text-sm leading-6 text-[#43474f]">
+                Related-note AI returns link candidates only. Add them from the Linked Notes panel so the relationship stays directional.
+              </p>
+              {result.link_suggestions.length ? (
+                <div className="mt-3 grid gap-2">
+                  {result.link_suggestions.map((suggestion) => (
+                    <article key={`${suggestion.targetNoteId}-${suggestion.relationType}`} className="rounded border border-[#d5d7de] bg-white p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-[#1a1c1c]">{suggestion.targetTitle}</span>
+                        <span className="rounded border border-[#d5d7de] px-2 py-0.5 text-[11px] uppercase tracking-[0.08em] text-[#43474f]">
+                          {suggestion.relationType}
+                        </span>
+                        <span className="text-xs text-[#646974]">
+                          {Math.round(suggestion.confidence * 100)}% confidence
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm leading-6 text-[#43474f]">{suggestion.reason}</p>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
+              {result.possible_new_notes.length ? (
+                <div className="mt-3 rounded border border-dashed border-[#c3c6d0] bg-white p-3 text-sm text-[#43474f]">
+                  <p className="font-medium text-[#1a1c1c]">Possible new notes</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {result.possible_new_notes.map((item) => (
+                      <li key={item.title}>
+                        {item.title}
+                        {item.reason ? ` - ${item.reason}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

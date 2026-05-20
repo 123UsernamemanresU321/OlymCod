@@ -191,7 +191,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Min Difficulty">
+            <Field label="Min Level">
               <input
                 className={inputClassName()}
                 type="number"
@@ -201,7 +201,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 onChange={(event) => update({ difficultyMin: Number(event.target.value) })}
               />
             </Field>
-            <Field label="Max Difficulty">
+            <Field label="Max Level">
               <input
                 className={inputClassName()}
                 type="number"
@@ -288,7 +288,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 />
               </Field>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Exclude difficulty min">
+                <Field label="Exclude level min">
                   <input
                     className={inputClassName()}
                     type="number"
@@ -300,7 +300,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                     }
                   />
                 </Field>
-                <Field label="Exclude difficulty max">
+                <Field label="Exclude level max">
                   <input
                     className={inputClassName()}
                     type="number"

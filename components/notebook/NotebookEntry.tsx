@@ -21,7 +21,11 @@ export function NotebookEntry({ item, config }: NotebookEntryProps) {
           {show("showMetadata") && item.topic ? <Badge tone="blue">{item.topic}</Badge> : null}
           {show("showMetadata") && item.noteType ? <Badge>{item.noteType}</Badge> : null}
           {show("showDifficulty") ? (
-            <DifficultyBadge value={item.difficulty ?? null} noteType={item.noteType} />
+            <DifficultyBadge
+              value={item.difficulty ?? null}
+              noteType={item.noteType}
+              kind={item.sourceType === "problem" ? "problem" : "concept"}
+            />
           ) : null}
           {show("showReviewStatus") && item.reviewStatus ? (
             <Badge tone="green">{item.reviewStatus.replaceAll("_", " ")}</Badge>

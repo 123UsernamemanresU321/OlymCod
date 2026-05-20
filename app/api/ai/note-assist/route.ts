@@ -33,6 +33,17 @@ const noteContextSchema = z.object({
   false_uses: z.array(z.string().max(200)).max(20).default([])
 });
 
+const allowedRelationTypes = [
+  "prerequisite",
+  "related",
+  "used together",
+  "commonly confused",
+  "stronger version",
+  "weaker version",
+  "generalization",
+  "special case"
+] as const;
+
 const assistRequestSchema = z.object({
   mode: z.enum(assistModes),
   instruction: z.string().max(4000).default(""),
@@ -42,6 +53,7 @@ const assistRequestSchema = z.object({
   codexNotes: z
     .array(
       z.object({
+        id: z.string().optional(),
         title: z.string(),
         topic: z.string().nullable().optional(),
         note_type: z.string().nullable().optional(),
@@ -59,7 +71,19 @@ const aiResponseSchema = z.object({
   description: z.string().nullable().optional(),
   tags: z.array(z.string()).optional(),
   recognition_triggers: z.array(z.string()).optional(),
-  false_uses: z.array(z.string()).optional()
+  false_uses: z.array(z.string()).optional(),
+  link_suggestions: z
+    .array(
+      z.object({
+        targetNoteId: z.string().optional(),
+        targetTitle: z.string(),
+        relationType: z.enum(allowedRelationTypes),
+        reason: z.string(),
+        confidence: z.number().min(0).max(1).optional()
+      })
+    )
+    .optional(),
+  possible_new_notes: z.array(z.object({ title: z.string(), reason: z.string().optional() })).optional()
 });
 
 type AssistMode = (typeof assistModes)[number];
@@ -103,7 +127,7 @@ function modeInstruction(mode: AssistMode) {
     clean_rough_capture:
       "Turn a messy quick capture into a structured note draft. Keep uncertain claims clearly marked.",
     suggest_related_notes:
-      "Suggest possible note links using only provided existing note titles. The relation type must describe how the suggested note relates to the current note from the current note's page. Example: on an Euler Phi Theorem note, suggest Fermat's Little Theorem as 'special case'; on a Fermat's Little Theorem note, suggest Euler Phi Theorem as 'generalization'. Include relation type and a short reason for each.",
+      "Suggest possible note links using only provided existing note IDs and titles. Return link_suggestions only. Do not write or rewrite note Markdown.",
     generate_recall_questions:
       "Generate 3 to 5 recall questions that test whether the owner understands this note. Include concise answer hints.",
     find_common_mistakes:
@@ -134,11 +158,16 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
   const format = getNoteFormat(input.note.note_type);
   const template = buildNoteTemplate(input.note.note_type, input.note.title || "[Title]");
 
+  const responseShape =
+    input.mode === "suggest_related_notes"
+      ? '{"markdown":"","link_suggestions":[{"targetNoteId":"existing note id only","targetTitle":"existing title only","relationType":"prerequisite|related|used together|commonly confused|stronger version|weaker version|generalization|special case","reason":"short reason","confidence":0.0}],"possible_new_notes":[{"title":"optional non-existing note title","reason":"why it might be useful"}]}'
+      : '{"markdown":"Markdown content to preview or insert","description":"optional short note description or null","tags":["optional","tags"],"recognition_triggers":["optional trigger phrases"],"false_uses":["optional traps"]}';
+
   return [
     `Task: ${modeInstruction(input.mode)}`,
     "",
     "Return one JSON object with this exact shape:",
-    '{"markdown":"Markdown content to preview or insert","description":"optional short note description or null","tags":["optional","tags"],"recognition_triggers":["optional trigger phrases"],"false_uses":["optional traps"]}',
+    responseShape,
     "",
     "Directional note-link semantics:",
     "- relation_type is always from the current note to the candidate note.",
@@ -146,7 +175,9 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
     "- If the candidate is broader than the current note, use 'generalization'.",
     "- Example: current note Euler Phi Theorem -> candidate Fermat's Little Theorem = 'special case'.",
     "- Example: current note Fermat's Little Theorem -> candidate Euler Phi Theorem = 'generalization'.",
-    "- Other allowed relation types include: related, prerequisite, stronger version, weaker version, commonly confused, used together, example of.",
+    "- Allowed relation types: prerequisite, related, used together, commonly confused, stronger version, weaker version, generalization, special case.",
+    "- Never invent targetNoteId. If a useful note does not exist, put it under possible_new_notes instead.",
+    "- For suggest_related_notes, markdown must be an empty string.",
     "",
     "Note context:",
     JSON.stringify(
@@ -155,7 +186,7 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
         topic: input.note.topic,
         note_type: input.note.note_type,
         note_type_description: format.description,
-        difficulty: format.usesDifficulty ? input.note.difficulty : null,
+        concept_level: format.usesDifficulty ? input.note.difficulty : null,
         description: input.note.description,
         tags: input.note.tags,
         recognition_triggers: input.note.recognition_triggers,
@@ -203,11 +234,13 @@ export async function POST(request: Request) {
   if (contextHungryModes.includes(parsed.data.mode) && !parsed.data.codexNotes?.length) {
     const { data: notesData } = await supabase
       .from("notes")
-      .select("title, topic, note_type, tags, description, body_markdown")
+      .select("id, title, topic, note_type, tags, description, body_markdown")
+      .eq("user_id", user.id)
       .eq("is_archived", false)
       .order("updated_at", { ascending: false })
       .limit(35);
     parsed.data.codexNotes = (notesData ?? []).map((note) => ({
+      id: String(note.id),
       title: String(note.title),
       topic: note.topic,
       note_type: note.note_type,
@@ -267,12 +300,34 @@ export async function POST(request: Request) {
   }
 
   const output = parseAssistantContent(content);
+  const noteById = new Map((parsed.data.codexNotes ?? []).flatMap((note) => (note.id ? [[note.id, note]] : [])));
+  const noteByTitle = new Map((parsed.data.codexNotes ?? []).map((note) => [note.title.toLowerCase(), note]));
+  const linkSuggestions = (output.link_suggestions ?? [])
+    .flatMap((suggestion) => {
+      const matched =
+        (suggestion.targetNoteId ? noteById.get(suggestion.targetNoteId) : undefined) ??
+        noteByTitle.get(suggestion.targetTitle.toLowerCase());
+      if (!matched?.id) return [];
+      return [
+        {
+          targetNoteId: matched.id,
+          targetTitle: matched.title,
+          relationType: suggestion.relationType,
+          reason: suggestion.reason.trim(),
+          confidence: Math.max(0, Math.min(1, suggestion.confidence ?? 0.75))
+        }
+      ];
+    })
+    .slice(0, 8);
+
   return NextResponse.json({
-    markdown: output.markdown,
+    markdown: parsed.data.mode === "suggest_related_notes" ? "" : output.markdown,
     description: output.description ?? null,
     tags: (output.tags ?? []).map((tag) => tag.trim()).filter(Boolean).slice(0, 12),
     recognition_triggers: (output.recognition_triggers ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8),
     false_uses: (output.false_uses ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8),
+    link_suggestions: parsed.data.mode === "suggest_related_notes" ? linkSuggestions : [],
+    possible_new_notes: parsed.data.mode === "suggest_related_notes" ? (output.possible_new_notes ?? []).slice(0, 5) : [],
     model: config.model
   });
 }

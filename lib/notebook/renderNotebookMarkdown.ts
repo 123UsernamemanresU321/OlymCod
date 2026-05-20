@@ -1,5 +1,6 @@
 import { diagramRenderUrl } from "@/lib/utils/diagrams";
 import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
+import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS } from "@/lib/constants/notes";
 import type {
   NotebookConfig,
   NotebookEntrySection,
@@ -161,10 +162,18 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
 
 function metadataLine(item: NotebookItem, config: NotebookConfig) {
   const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
+  const difficultyLabel =
+    item.sourceType === "problem"
+      ? item.difficulty
+        ? `Problem Difficulty ${item.difficulty}. ${PROBLEM_DIFFICULTY_LABELS[item.difficulty]}`
+        : null
+      : item.difficulty
+        ? `Concept Level ${item.difficulty}. ${CONCEPT_LEVEL_LABELS[item.difficulty]}`
+        : null;
   const parts = [
     show("showMetadata") ? item.topic : null,
     show("showMetadata") ? item.noteType : null,
-    show("showDifficulty") && item.difficulty ? `Difficulty ${item.difficulty}` : null,
+    show("showDifficulty") ? difficultyLabel : null,
     show("showReviewStatus") && item.reviewStatus ? `Review ${item.reviewStatus}` : null,
     item.problemStatus ? `Status ${item.problemStatus}` : null,
     show("showDates") && item.updatedAt ? `Updated ${item.updatedAt.slice(0, 10)}` : null

@@ -1,6 +1,7 @@
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { NotebookPrintSection } from "@/components/notebook/print/NotebookPrintSection";
 import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
+import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS } from "@/lib/constants/notes";
 import { getNotebookEntrySections } from "@/lib/notebook/renderNotebookMarkdown";
 import { cn } from "@/lib/utils/cn";
 import type { NotebookConfig, NotebookItem, NotebookSectionToggle } from "@/lib/notebook/types";
@@ -27,10 +28,18 @@ function estimatedEntryLength(item: NotebookItem) {
 
 function metadataParts(item: NotebookItem, config: NotebookConfig) {
   const show = (key: NotebookSectionToggle) => notebookSectionEnabled(config, key);
+  const difficultyLabel =
+    item.sourceType === "problem"
+      ? item.difficulty
+        ? `Problem Difficulty ${item.difficulty}. ${PROBLEM_DIFFICULTY_LABELS[item.difficulty]}`
+        : null
+      : item.difficulty
+        ? `Concept Level ${item.difficulty}. ${CONCEPT_LEVEL_LABELS[item.difficulty]}`
+        : null;
   return [
     show("showMetadata") ? item.topic : null,
     show("showMetadata") ? item.noteType : null,
-    show("showDifficulty") && item.difficulty ? `Difficulty ${item.difficulty}` : null,
+    show("showDifficulty") ? difficultyLabel : null,
     show("showReviewStatus") && item.reviewStatus ? `Review ${item.reviewStatus.replaceAll("_", " ")}` : null,
     item.problemStatus ? `Status ${item.problemStatus.replaceAll("_", " ")}` : null,
     show("showSourceReferences") && item.sourceReference ? item.sourceReference : null,

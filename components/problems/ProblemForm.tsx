@@ -124,7 +124,7 @@ export function ProblemForm({ initialProblem = null, notes }: ProblemFormProps) 
           <Field label="Problem number">
             <input className={inputClassName()} value={problemNumber} onChange={(event) => setProblemNumber(event.target.value)} />
           </Field>
-          <Field label="Difficulty">
+          <Field label="Problem Difficulty">
             <input className={inputClassName()} type="number" min={1} max={12} value={difficulty} onChange={(event) => setDifficulty(event.target.value)} />
           </Field>
           <Field label="Status">

@@ -107,7 +107,7 @@ export const SUGGESTION_STATUSES: SuggestionStatus[] = [
 
 export const OWNER_EMAIL = "erichuang.shangjing@outlook.com";
 
-export const DIFFICULTY_LABELS: Record<number, string> = {
+export const PROBLEM_DIFFICULTY_LABELS: Record<number, string> = {
   1: "Basic",
   2: "BMO1 / AMO lower",
   3: "AMO / BMO2 lower",
@@ -121,6 +121,23 @@ export const DIFFICULTY_LABELS: Record<number, string> = {
   11: "Very hard shortlist",
   12: "Extreme"
 };
+
+export const CONCEPT_LEVEL_LABELS: Record<number, string> = {
+  1: "Basic fact",
+  2: "Direct-use tool",
+  3: "Condition-aware tool",
+  4: "Multi-step application",
+  5: "Pattern-recognition tool",
+  6: "Structural tool",
+  7: "Multi-technique connector",
+  8: "Abstract general principle",
+  9: "High-risk tool",
+  10: "Advanced olympiad concept",
+  11: "Deep framework",
+  12: "Rare/specialist tool"
+};
+
+export const DIFFICULTY_LABELS = PROBLEM_DIFFICULTY_LABELS;
 
 export const DEFAULT_NOTE_TEMPLATE = buildNoteTemplate("Theorem", "[Title]");
 

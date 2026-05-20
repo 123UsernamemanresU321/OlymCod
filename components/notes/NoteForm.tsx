@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { DiagramUpload } from "@/components/diagrams/DiagramUpload";
 import { EditorToolbar } from "@/components/editor/EditorToolbar";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
+import { SectionEditor } from "@/components/editor/SectionEditor";
 import { AIWritingAssistant } from "@/components/notes/AIWritingAssistant";
+import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
 import { LinkedNotesManager } from "@/components/notes/LinkedNotesManager";
 import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
 import { TopicSelector } from "@/components/notes/TopicSelector";
@@ -95,6 +97,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [mobileTab, setMobileTab] = useState<"edit" | "preview" | "metadata">("edit");
+  const [editorMode, setEditorMode] = useState<"raw" | "sections">("raw");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [localDraftStatus, setLocalDraftStatus] = useState("Local draft ready");
 
@@ -315,7 +318,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         const { error: updateError } = await supabase
           .from("notes")
           .update(payload)
-          .eq("id", savedId);
+          .eq("id", savedId)
+          .eq("user_id", user.id);
 
         if (updateError) throw updateError;
       } else {
@@ -371,7 +375,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       const { error: deleteError } = await supabase
         .from("notes")
         .delete()
-        .eq("id", savedId);
+        .eq("id", savedId)
+        .eq("user_id", user.id);
 
       if (deleteError) throw deleteError;
 
@@ -492,7 +497,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                   </select>
                 </Field>
                 {format.usesDifficulty ? (
-                  <Field label="Difficulty (1-12)">
+                  <Field label="Concept Level (1-12)">
                     <input
                       className={inputClassName()}
                       type="number"
@@ -591,17 +596,46 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
           </div>
 
           <div className={cn("mt-6", mobileTab !== "edit" && "hidden lg:block")}>
-            <EditorToolbar onInsert={insertMarkdown} />
-            <textarea
-              ref={textareaRef}
-              className="codex-scrollbar mt-0 min-h-[560px] w-full resize-y border border-t-0 border-[#c3c6d0] bg-white p-4 font-mono text-sm leading-7 text-[#1a1c1c] outline-none focus:ring-2 focus:ring-[#a5c8ff]"
-              value={draft.body_markdown}
-              onChange={(event) => {
-                setBodyUsesTemplate(false);
-                updateDraft({ body_markdown: event.target.value });
-              }}
-              placeholder="Write Markdown and LaTeX here..."
-            />
+            <div className="mb-3 inline-flex rounded border border-[#c3c6d0] bg-white p-1">
+              {(["raw", "sections"] as const).map((modeValue) => (
+                <button
+                  key={modeValue}
+                  type="button"
+                  className={cn(
+                    "rounded px-3 py-1.5 text-sm font-medium capitalize text-[#43474f]",
+                    editorMode === modeValue && "bg-[#dbeafe] text-[#0e3b69]"
+                  )}
+                  onClick={() => setEditorMode(modeValue)}
+                >
+                  {modeValue === "raw" ? "Raw Markdown" : "Section Editor"}
+                </button>
+              ))}
+            </div>
+            {editorMode === "raw" ? (
+              <>
+                <EditorToolbar onInsert={insertMarkdown} />
+                <textarea
+                  ref={textareaRef}
+                  className="codex-scrollbar mt-0 min-h-[560px] w-full resize-y border border-t-0 border-[#c3c6d0] bg-white p-4 font-mono text-sm leading-7 text-[#1a1c1c] outline-none focus:ring-2 focus:ring-[#a5c8ff]"
+                  value={draft.body_markdown}
+                  onChange={(event) => {
+                    setBodyUsesTemplate(false);
+                    updateDraft({ body_markdown: event.target.value });
+                  }}
+                  placeholder="Write Markdown and LaTeX here..."
+                />
+              </>
+            ) : (
+              <SectionEditor
+                markdown={draft.body_markdown}
+                noteType={draft.note_type}
+                title={draft.title}
+                onChange={(body_markdown) => {
+                  setBodyUsesTemplate(false);
+                  updateDraft({ body_markdown });
+                }}
+              />
+            )}
           </div>
 
           <AIWritingAssistant
@@ -644,6 +678,15 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
           </div>
           <div className="rounded-lg border border-[#c3c6d0] bg-white p-6">
             <MarkdownPreview markdown={draft.body_markdown} />
+            <div className="mt-6 grid gap-4">
+              <LearningMetadataList
+                title="Recognition Triggers"
+                description="Metadata preview"
+                items={draft.recognition_triggers}
+                compact
+              />
+              <LearningMetadataList title="Common False Uses" items={draft.false_uses} tone="red" compact />
+            </div>
           </div>
         </section>
       </div>

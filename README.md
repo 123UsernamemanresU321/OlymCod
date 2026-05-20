@@ -6,7 +6,7 @@ Olympiad Codex is a private owner-edited Olympiad Mathematics knowledge base wit
 
 Part 2 adds the daily-use layer: quick capture, inbox conversion, problem logs, mistake logs, explicit backlinks, light review scheduling, a diagram manager, version history, local draft preservation, command search, and AI actions that behave like a personal Olympiad librarian.
 
-Part 3 adds recognition triggers, common false uses, stronger problem/mistake pattern tracking, notebook whitelist/blacklist selection, contest revision packs, a mastery heatmap, and directional note-link display.
+Part 3 adds recognition triggers, common false uses, stronger problem/mistake pattern tracking, notebook whitelist/blacklist selection, contest revision packs, a mastery heatmap, and directional note-link display. The Part 3 extension adds LaTeX-rendered learning metadata, type-specific Note Quality criteria, concept-level labeling for notes, structured AI link suggestions, a math snippet palette, a Section Editor, a visual note graph, a bulk metadata manager, and a reusable media library.
 
 ## Stack
 
@@ -30,7 +30,6 @@ Part 3 adds recognition triggers, common false uses, stronger problem/mistake pa
 The configured owner email is:
 
 ```text
-EMAIL
 ```
 
 When this user logs in, `public.ensure_current_profile()` assigns the `owner` role.
@@ -99,7 +98,15 @@ This creates:
 
 After pulling Part 2 changes, run either the full `supabase/schema.sql` or the focused migration `supabase/migrations/20260514_part2_daily_use.sql` in the Supabase SQL Editor. For Notebook Builder presets, also run `supabase/migrations/20260517000100_notebook_presets.sql` if you are applying migrations manually.
 
-After pulling Part 3 changes, run `supabase/migrations/20260518000100_part3_learning_system.sql` or rerun the full schema. This adds `notes.recognition_triggers`, `notes.false_uses`, `problem_logs.topic`, `problem_logs.mistake_category`, `revision_packs`, and drops the old reciprocal note-link triggers. These files are written with `create table if not exists`, `add column if not exists`, `drop policy if exists`, and idempotent triggers so they can be rerun safely.
+After pulling Part 3 changes, run `supabase/migrations/20260518000100_part3_learning_system.sql` or rerun the full schema. This adds `notes.recognition_triggers`, `notes.false_uses`, `problem_logs.topic`, `problem_logs.mistake_category`, `revision_packs`, and drops the old reciprocal note-link triggers.
+
+After pulling the Part 3 extension, also run:
+
+```text
+supabase/migrations/20260520000100_part3_extensions.sql
+```
+
+This safely upgrades the existing `diagrams` table into the media-library backing table by adding `title`, `alt_text`, and `tags`. These files are written with `create table if not exists`, `add column if not exists`, `drop policy if exists`, and idempotent triggers so they can be rerun safely.
 
 ## RLS Model
 
@@ -134,6 +141,9 @@ Owner pages:
 - `/app/review-notes`
 - `/app/notebook`
 - `/app/diagrams`
+- `/app/media`
+- `/app/graph`
+- `/app/manage`
 - `/app/review`
 - `/app/review/[id]`
 - `/app/revision-pack`
@@ -200,6 +210,33 @@ Every note can store two structured lists:
 
 These appear on note pages, can be edited in the note metadata panel, are searchable from the notes library/command palette, and can be included in Notebook Builder exports. The owner-only AI assistant has **Suggest Recognition Triggers** and **Suggest False Uses** modes. AI suggestions are drafts only; they are not saved until applied.
 
+Recognition triggers and common false uses are rendered through the same safe Markdown/KaTeX pipeline as note bodies. Inline `$...$`, block `$$...$$`, `\(...\)`, and `\[...\]` math works on the note page, editor preview, Notebook preview/print/export, revision packs, and AI metadata previews. Raw HTML is still not enabled.
+
+### Concept Level vs Problem Difficulty
+
+Official notes use **Concept Level**, not contest-placement difficulty. The stored `notes.difficulty` field is kept for compatibility, but note UI labels it as a 1-12 concept-complexity scale:
+
+- `1`: Basic fact
+- `2`: Direct-use tool
+- `3`: Condition-aware tool
+- `4`: Multi-step application
+- `5`: Pattern-recognition tool
+- `6`: Structural tool
+- `7`: Multi-technique connector
+- `8`: Abstract general principle
+- `9`: High-risk tool
+- `10`: Advanced olympiad concept
+- `11`: Deep framework
+- `12`: Rare/specialist tool
+
+Problem logs still use **Problem Difficulty** with the contest-style BMO/AMO/PAMO/IMO scale. Notebook Builder, Revision Pack, Mastery Heatmap, note cards, and problem cards distinguish these labels.
+
+### Type-Specific Note Quality
+
+The Note Quality panel adapts to the note type. Theorems and lemmas look for statements, conditions, proof/proof sketch, examples, use cases, mistakes, and related notes. Techniques emphasize core idea, recognition triggers, example patterns, failure cases, and related notes. Formula notes emphasize formula, variables, conditions, use case, example, and related formulae, and do not require a concept level. Geometry notes require configuration, diagram, key relation, recognition cues, traps, and related notes.
+
+`false_uses.length > 0` satisfies the Common Mistakes/Traps criterion, so you do not need to duplicate false uses inside Markdown. `recognition_triggers.length > 0` satisfies Recognition/When-to-use criteria where that note type uses them. The panel shows source explanations such as “Common mistakes covered through Common False Uses metadata.”
+
 ### Problem Log
 
 Open `/app/problems`. Use it to store contest source, topic, status, problem text, solution summary, key idea, mistake made, mistake category, tags, and linked notes. Dedicated routes `/app/problems/new` and `/app/problems/[id]/edit` expose the full form. The detail page can link notes, create a mistake entry from the problem, create a technique note from the problem, mark it review-later/mastered, or ask AI to analyze the mistake.
@@ -233,6 +270,40 @@ Only one directional row is stored in `note_links`. Reverse labels are computed 
 
 The linked-note selector has a search input above the note dropdown. Search by title, topic, type, description, or tag to find the note you want to link without scrolling through the full library.
 
+The **Suggest Related Notes** AI action returns structured note-link suggestions only:
+
+```json
+{
+  "targetNoteId": "existing-note-id",
+  "targetTitle": "Area of Triangle",
+  "relationType": "prerequisite",
+  "reason": "Ceva often uses area ratios in its proof.",
+  "confidence": 0.91
+}
+```
+
+It does not rewrite the note body, append a related-notes section to Markdown, or create links automatically. The app filters suggestions to existing note IDs. Non-existing title ideas are shown separately as possible new notes.
+
+### Math Snippet Palette
+
+The Markdown editor toolbar includes **Snippets** for common olympiad LaTeX. Use `Cmd/Ctrl + M` to open it quickly. Built-in categories include Number Theory, Geometry, Algebra, Inequalities, and Proof. Clicking a snippet inserts it at the cursor; wrapper snippets such as `$...$`, `\frac{}{}`, and `\boxed{}` wrap selected text when useful.
+
+### Structured Section Editor
+
+The note editor has a **Raw Markdown / Section Editor** toggle. Section Editor parses Markdown headings into collapsible blocks, lets you rename sections, move sections up/down, delete sections with confirmation, and add sections from note-type templates. The saved content remains plain `body_markdown`, so exports, search, version history, and Markdown rendering continue to work normally.
+
+### Visual Note Graph
+
+Open `/app/graph` to view a dependency-free SVG relationship map of current-user notes and note links. Filter by topic, note type, relation type, or search text. Prerequisite edges are directional, and clicking a node opens the note.
+
+### Bulk Metadata Manager
+
+Open `/app/manage` for a table view of notes. Select filtered notes and bulk edit topic, note type, concept level, tags, archive state, favorite state, or delete. Bulk delete requires typing `DELETE`. Filters help find missing metadata, missing recognition triggers, missing common false uses, or notes below an 80% quality score.
+
+### Media Library
+
+Open `/app/media` for reusable diagrams and media assets. The media library uses the existing `diagrams` table with additional title, alt text, and tag metadata. It supports grid/list views, search by filename/title/caption/alt/tags, SVG/PNG/JPG/JPEG/WEBP upload, attach/detach from notes, caption and alt text edits, Markdown copy, and safe deletion. `/app/diagrams` remains as a compatibility diagram manager entry.
+
 ### Light Review
 
 Open `/app/review-notes`. Reviews are deliberately simple:
@@ -255,7 +326,7 @@ Use `Cmd/Ctrl + K` or the mobile command button. It searches notes, problem logs
 
 ### Diagram Manager
 
-Open `/app/diagrams`. Upload SVG/PNG/JPG/JPEG diagrams, attach them to notes, copy Markdown image syntax, remove diagrams from notes, or delete unused diagrams. Files stay in the private `note-diagrams` bucket and previews use signed URLs.
+Open `/app/diagrams` or `/app/media`. Upload SVG/PNG/JPG/JPEG/WEBP diagrams, attach them to notes, copy Markdown image syntax, remove diagrams from notes, or delete unused diagrams. Files stay in the private `note-diagrams` bucket and previews use signed URLs.
 
 In the note editor, save the note once, upload a diagram in the Geometry diagrams panel, then click **Insert in Markdown** on the uploaded diagram card. The app inserts Markdown like:
 
@@ -303,6 +374,8 @@ The builder controls are compact collapsible panels so the filter list does not 
 - **Hide selected**: start with every notebook section and hide only checked sections.
 
 Section selection includes statements, when-to-use notes, recognition signs, intuition, conditions, how-to-recognize sections, proofs, examples, common mistakes, diagram traps, why-it-happens/how-to-avoid sections, recognition triggers, common false uses, related notes, backlinks, linked problems, linked mistakes, diagrams, problem applications, problem statements, solution summaries, source references, key ideas, correct principles, dates, review status, topic page breaks, and the table of contents.
+
+Notebook metadata distinguishes **Concept Level** for note items from **Problem Difficulty** for problem-log items. Recognition triggers and common false uses render LaTeX in preview and print because they are emitted as Markdown sections and passed through the shared safe KaTeX renderer.
 
 Detail levels control how much appears:
 
@@ -354,7 +427,7 @@ The generator is deterministic first:
 - `+30` for `learning`
 - `+25` when linked to a failed problem
 - `+20` when linked to a review-later problem
-- bonuses for triggers, false uses, formulae, geometry diagrams, contest-range difficulty, and recent updates
+- bonuses for triggers, false uses, formulae, geometry diagrams, mid-range concept levels, and recent updates
 - penalties for mastered/ignored notes or overly basic notes before a near contest
 
 Actions:
@@ -365,7 +438,7 @@ Actions:
 
 ## Mastery Heatmap
 
-Open `/app/mastery` for a topic-level heatmap. Rows are core topics and columns include total notes, mastered notes, needs-practice/learning notes, failed/review-later problems, unresolved mistakes, average confidence, and a score.
+Open `/app/mastery` for a topic-level heatmap. Rows are core topics and columns include total notes, mastered notes, needs-practice/learning notes, failed/review-later problems, unresolved mistakes, average confidence, average note Concept Level, average Problem Difficulty, and a score.
 
 Labels:
 
@@ -388,6 +461,8 @@ PDF limitations:
 ## DeepSeek AI Writing Assistant
 
 The owner note editor includes an AI panel for drafting and improving notes. It can create starter drafts, fill missing sections, improve the selected section, analyze mistakes, scaffold past problem notes, suggest descriptions/tags, suggest recognition triggers, suggest false uses, ask your Codex using existing notes as context, clean rough captures, suggest related notes, generate recall questions, find common mistakes, and turn problems into technique drafts.
+
+For **Suggest Related Notes**, the AI route is constrained to return structured `link_suggestions` only. Existing-note suggestions can be added from the Linked Notes panel; possible non-existing note ideas are shown separately. This mode never returns a full rewritten document and never modifies `body_markdown`.
 
 AI requests go through `POST /api/ai/note-assist`, which requires the logged-in `owner` role. The browser never receives the DeepSeek key, and AI output is never auto-saved. Use the preview actions to insert, append, replace the draft body, or apply metadata.
 
@@ -424,16 +499,16 @@ Topics use a compact chip picker instead of a long combination dropdown. You can
 
 Current official note types:
 
-- `Theorem`: statement, conditions, intuition, proof sketch, examples, mistakes, related techniques.
+- `Theorem`: statement, conditions, intuition, proof sketch, examples, mistakes, related techniques, concept level.
 - `Lemma`: claim, setup, proof, example use, mistakes, related results.
 - `Technique`: triggers, core idea, application steps, example, mistakes, variations.
-- `Formula`: formula, variables, conditions, when to use it, quick example; no difficulty field.
-- `Formula Log`: compact formula recall entry; no difficulty field.
+- `Formula`: formula, variables, conditions, when to use it, quick example; no concept level field.
+- `Formula Log`: compact formula recall entry; no concept level field.
 - `Trick`: narrow move, trigger, why it works, example, mistakes.
 - `Common Mistake`: wrong idea, warning signs, correction, fix, example.
 - `Problem Pattern`: recurring structure, trigger phrases, strategy, worked example, variations.
 - `Past Problem`: source, problem statement, first observations, solution, mistakes, key takeaway.
-- `Definition`: definition, notation, examples, non-examples; no difficulty field.
+- `Definition`: definition, notation, examples, non-examples; no concept level field.
 - `Example`: worked example with goal, solution, key move, mistakes, generalization.
 - `Inbox`: rough capture before converting to a full note.
 
@@ -444,6 +519,7 @@ Accepted diagram types:
 - SVG
 - PNG
 - JPG/JPEG
+- WEBP
 
 File size limit: 5 MB.
 
@@ -459,7 +535,7 @@ If $\gcd(a,n)=1$, then
 $$a^{\varphi(n)} \equiv 1 \pmod n.$$
 ```
 
-The Markdown editor toolbar includes a LaTeX command dropdown for common wrappers and symbols such as `$...$`, `$$...$$`, `\frac{}`, `\sqrt{}`, `\begin{aligned}`, `\binom{}`, `\mathbb{}`, congruences, angle notation, parallel, and perpendicular.
+The Markdown editor toolbar includes a LaTeX command dropdown and a Snippets palette for common wrappers and symbols such as `$...$`, `$$...$$`, `\frac{}`, `\sqrt{}`, `\begin{aligned}`, `\binom{}`, `\mathbb{}`, congruences, angle notation, parallel, and perpendicular. Use `Cmd/Ctrl + M` to open the snippet palette from the editor.
 
 The renderer accepts both standard Codex delimiters and DeepSeek-style delimiters:
 
@@ -535,15 +611,17 @@ If no profile exists yet, log in once with the owner email, then run the update 
 - Keep Storage buckets private.
 - Every daily-use table has `user_id` and RLS policies that restrict rows to the owner of the row or the owner role.
 - `revision_packs` and Notebook presets are user-owned rows with RLS.
+- Media-library rows are stored in `diagrams`, scoped by `user_id`, and the Part 3 extension migration only adds safe metadata columns.
 - Notebook exports and revision-pack exports use the current user's data only.
 - AI output is draft-only; it does not overwrite notes unless the owner clicks an apply action.
+- AI related-note suggestions are filtered to existing current-user notes before they become addable links.
 - Raw HTML is not enabled in Markdown rendering.
 - Diagram uploads reject unknown file types and files over 5 MB.
 - Add production rate limiting or CAPTCHA before opening contribution mode broadly.
 
 ## Troubleshooting
 
-- If `/app/capture`, `/app/problems`, `/app/mistakes`, `/app/review-notes`, `/app/revision-pack`, `/app/mastery`, or `/app/diagrams` shows empty data after deploy, rerun `supabase/schema.sql`.
+- If `/app/capture`, `/app/problems`, `/app/mistakes`, `/app/review-notes`, `/app/revision-pack`, `/app/mastery`, `/app/graph`, `/app/manage`, `/app/media`, or `/app/diagrams` shows empty data after deploy, rerun `supabase/schema.sql`.
 - If `supabase db push` reports an old duplicate migration version, repair the migration history first, then pull/apply the schema so local and remote migration tables agree.
 - If diagram previews fail, confirm the `note-diagrams` bucket exists and `supabase/storage-policies.sql` has been applied.
 - If AI actions fail with `Missing DEEPSEEK_API_KEY`, add the server-only DeepSeek variables locally and in Vercel.
