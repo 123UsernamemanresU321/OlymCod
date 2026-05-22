@@ -112,6 +112,34 @@ a {
   margin: 0.35rem 0;
 }
 
+.note-view-compact .codex-prose {
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.note-view-compact article {
+  padding: 1.25rem;
+}
+
+.note-view-focus aside {
+  display: none;
+}
+
+.note-view-focus > div:last-child {
+  max-width: 780px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.note-view-focus article {
+  border: 0;
+  box-shadow: none;
+}
+
+.note-view-split > div:last-child {
+  max-width: 1400px;
+  grid-template-columns: minmax(0, 1fr) 420px;
+}
+
 .codex-prose ul,
 .codex-prose ol {
   margin: 0.75rem 0 0.75rem 1.5rem;

@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Calculator, Dices, FileText, Flame, Image as ImageIcon, Inbox, Network, Plus, Search, ShieldCheck, Shapes, Sigma, Table2, Target } from "lucide-react";
+import { BookOpen, Calculator, Dices, FileText, Flame, Image as ImageIcon, Inbox, Network, NotebookTabs, Plus, Search, ShieldCheck, Shapes, Sigma, Table2, Target } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
@@ -134,6 +134,11 @@ export function DashboardClient({ notes, suggestions, reviews, problems, mistake
       </section>
 
       <section className="grid gap-4 lg:grid-cols-3">
+        <Link href="/app/workspace" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
+          <NotebookTabs className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Workspace</h2>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">Edit one note while referencing linked notes side by side.</p>
+        </Link>
         <Link href="/app/notebook" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
           <BookOpen className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
           <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Notebook Builder</h2>
@@ -175,6 +180,20 @@ export function DashboardClient({ notes, suggestions, reviews, problems, mistake
               : "Patterns appear once problems are marked failed or review later."}
           </p>
         </Link>
+      </section>
+
+      <section className="flex flex-wrap gap-2 rounded-lg border border-[#c3c6d0] bg-white p-4 text-sm">
+        {[
+          ["/app/templates", "Templates"],
+          ["/app/import", "Import"],
+          ["/app/taxonomy", "Taxonomy"],
+          ["/app/views", "Saved Views"],
+          ["/app/merge", "Merge Notes"]
+        ].map(([href, label]) => (
+          <Link key={href} href={href} className="rounded border border-[#c3c6d0] px-3 py-2 font-medium text-[#0e3b69] hover:bg-[#eef4ff]">
+            {label}
+          </Link>
+        ))}
       </section>
 
       <section>

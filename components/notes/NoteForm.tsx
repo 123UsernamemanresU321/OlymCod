@@ -11,6 +11,8 @@ import { AIWritingAssistant } from "@/components/notes/AIWritingAssistant";
 import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
 import { LinkedNotesManager } from "@/components/notes/LinkedNotesManager";
 import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
+import { NoteOutline } from "@/components/notes/NoteOutline";
+import { NoteSplitTool } from "@/components/notes/NoteSplitTool";
 import { TopicSelector } from "@/components/notes/TopicSelector";
 import { VersionHistory } from "@/components/notes/VersionHistory";
 import { Button } from "@/components/ui/Button";
@@ -20,7 +22,8 @@ import { Toast } from "@/components/ui/Toast";
 import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
 import { NOTE_TYPES } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
-import type { Note, NoteDraft, ToastKind } from "@/lib/types";
+import { allTemplates, BUILT_IN_NOTE_TEMPLATES } from "@/lib/templates/noteTemplates";
+import type { Note, NoteDraft, NoteTemplate, ToastKind } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
 import { parseTags } from "@/lib/utils/tags";
 import { titleToSlug } from "@/lib/utils/slug";
@@ -98,10 +101,13 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [mobileTab, setMobileTab] = useState<"edit" | "preview" | "metadata">("edit");
   const [editorMode, setEditorMode] = useState<"raw" | "sections">("raw");
+  const [templates, setTemplates] = useState<NoteTemplate[]>(BUILT_IN_NOTE_TEMPLATES);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(BUILT_IN_NOTE_TEMPLATES[0]?.id ?? "");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [localDraftStatus, setLocalDraftStatus] = useState("Local draft ready");
 
   const format = useMemo(() => getNoteFormat(draft.note_type), [draft.note_type]);
+  const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0] ?? null;
 
   function updateDraft(update: Partial<NoteDraft>) {
     setDraft((current) => ({ ...current, ...update }));
@@ -120,6 +126,19 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     }, 1800);
     return () => window.clearTimeout(timer);
   }, [dirty, draft, falseUsesText, recognitionText, savedId, tagsText]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadTemplates() {
+      const supabase = createClient();
+      const { data } = await supabase.from("note_templates").select("*").order("updated_at", { ascending: false });
+      if (!cancelled) setTemplates(allTemplates((data ?? []) as NoteTemplate[]));
+    }
+    void loadTemplates();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleTitleChange(title: string) {
     const update: Partial<NoteDraft> = { title };
@@ -164,6 +183,53 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     setBodyUsesTemplate(true);
   }
 
+  function applySelectedTemplate() {
+    if (!selectedTemplate) return;
+    const hasBody = draft.body_markdown.trim().length > 0;
+    if (hasBody && !bodyUsesTemplate && !window.confirm("Apply this template and replace the current Markdown body?")) {
+      return;
+    }
+    updateDraft({
+      note_type: selectedTemplate.note_type,
+      topic: selectedTemplate.topic ?? draft.topic,
+      body_markdown: selectedTemplate.template_markdown.replaceAll("[Title]", draft.title || "[Title]"),
+      recognition_triggers: selectedTemplate.default_recognition_triggers,
+      false_uses: selectedTemplate.default_false_uses,
+      tags: selectedTemplate.default_tags.length ? selectedTemplate.default_tags : draft.tags
+    });
+    setRecognitionText(selectedTemplate.default_recognition_triggers.join("\n"));
+    setFalseUsesText(selectedTemplate.default_false_uses.join("\n"));
+    if (selectedTemplate.default_tags.length) setTagsText(selectedTemplate.default_tags.join(", "));
+    setBodyUsesTemplate(true);
+  }
+
+  async function saveCurrentAsTemplate() {
+    const name = window.prompt("Template name", `${draft.title || draft.note_type} structure`);
+    if (!name) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setToast({ kind: "error", title: "Template not saved", message: "You must be logged in." });
+      return;
+    }
+    const { error: templateError } = await supabase.from("note_templates").insert({
+      user_id: user.id,
+      name,
+      description: `Created from ${draft.title || "current note"}`,
+      note_type: draft.note_type,
+      topic: draft.topic,
+      template_markdown: draft.body_markdown,
+      default_recognition_triggers: draft.recognition_triggers,
+      default_false_uses: draft.false_uses,
+      default_tags: draft.tags
+    });
+    setToast(
+      templateError
+        ? { kind: "error", title: "Template not saved", message: templateError.message }
+        : { kind: "success", title: "Template saved", message: "Open Templates to edit or duplicate it." }
+    );
+  }
+
   function insertMarkdown(before: string, after = "") {
     const textarea = textareaRef.current;
     if (!textarea) {
@@ -188,6 +254,16 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     const textarea = textareaRef.current;
     if (!textarea) return "";
     return draft.body_markdown.slice(textarea.selectionStart, textarea.selectionEnd);
+  }
+
+  function jumpEditorToHeading(title: string) {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const match = draft.body_markdown.match(new RegExp(`^#{1,6}\\s+${title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "m"));
+    if (!match || match.index === undefined) return;
+    textarea.focus();
+    textarea.selectionStart = match.index;
+    textarea.selectionEnd = match.index + match[0].length;
   }
 
   function insertGeneratedMarkdown(markdown: string) {
@@ -297,24 +373,51 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
 
       let targetId = savedId;
       if (savedId) {
-        await supabase.from("note_versions").insert({
-          user_id: user.id,
-          note_id: savedId,
-          title: initialNote?.title ?? draft.title,
-          body_markdown: initialNote?.body_markdown ?? draft.body_markdown,
-          metadata: {
-            slug: initialNote?.slug ?? draft.slug,
-            topic: initialNote?.topic ?? draft.topic,
-            note_type: initialNote?.note_type ?? draft.note_type,
-            difficulty: initialNote?.difficulty ?? draft.difficulty,
-            description: initialNote?.description ?? draft.description,
-            tags: initialNote?.tags ?? draft.tags,
-            recognition_triggers: initialNote?.recognition_triggers ?? draft.recognition_triggers,
-            false_uses: initialNote?.false_uses ?? draft.false_uses,
-            visibility: initialNote?.visibility ?? draft.visibility,
-            is_favorite: initialNote?.is_favorite ?? draft.is_favorite
-          }
-        });
+        const { data: currentNote } = await supabase.from("notes").select("*").eq("id", savedId).eq("user_id", user.id).maybeSingle();
+        if (currentNote && JSON.stringify({
+          title: currentNote.title,
+          body_markdown: currentNote.body_markdown,
+          topic: currentNote.topic,
+          note_type: currentNote.note_type,
+          difficulty: currentNote.difficulty,
+          description: currentNote.description,
+          tags: currentNote.tags,
+          recognition_triggers: currentNote.recognition_triggers,
+          false_uses: currentNote.false_uses,
+          visibility: currentNote.visibility,
+          is_favorite: currentNote.is_favorite
+        }) !== JSON.stringify({
+          title: payload.title,
+          body_markdown: payload.body_markdown,
+          topic: payload.topic,
+          note_type: payload.note_type,
+          difficulty: payload.difficulty,
+          description: payload.description,
+          tags: payload.tags,
+          recognition_triggers: payload.recognition_triggers,
+          false_uses: payload.false_uses,
+          visibility: payload.visibility,
+          is_favorite: payload.is_favorite
+        })) {
+          await supabase.from("note_versions").insert({
+            user_id: user.id,
+            note_id: savedId,
+            title: currentNote.title,
+            body_markdown: currentNote.body_markdown,
+            metadata: {
+              slug: currentNote.slug,
+              topic: currentNote.topic,
+              note_type: currentNote.note_type,
+              difficulty: currentNote.difficulty,
+              description: currentNote.description,
+              tags: currentNote.tags,
+              recognition_triggers: currentNote.recognition_triggers,
+              false_uses: currentNote.false_uses,
+              visibility: currentNote.visibility,
+              is_favorite: currentNote.is_favorite
+            }
+          });
+        }
         const { error: updateError } = await supabase
           .from("notes")
           .update(payload)
@@ -582,20 +685,40 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                 Favorite note
               </label>
               <div className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="grid gap-3">
                   <div>
                     <p className="text-sm font-semibold text-[#1a1c1c]">{format.label} format</p>
                     <p className="mt-1 text-sm leading-6 text-[#43474f]">{format.description}</p>
                   </div>
-                  <Button type="button" variant="secondary" onClick={applyCurrentTemplate}>
-                    Apply {format.label} template
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto]">
+                    <select className={inputClassName()} value={selectedTemplateId} onChange={(event) => setSelectedTemplateId(event.target.value)}>
+                      {templates.map((template) => (
+                        <option key={template.id} value={template.id}>{template.name}</option>
+                      ))}
+                    </select>
+                    <Button type="button" variant="secondary" onClick={applySelectedTemplate}>Apply selected</Button>
+                    <Button type="button" variant="secondary" onClick={applyCurrentTemplate}>
+                      Apply {format.label} default
+                    </Button>
+                  </div>
+                  <Button type="button" variant="secondary" onClick={() => void saveCurrentAsTemplate()}>
+                    Save current note as template
                   </Button>
+                  {selectedTemplate ? (
+                    <details className="rounded border border-[#d5d7de] bg-white p-3 text-sm text-[#43474f]">
+                      <summary className="cursor-pointer font-medium text-[#0e3b69]">Preview template</summary>
+                      <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap font-mono text-xs">{selectedTemplate.template_markdown}</pre>
+                    </details>
+                  ) : null}
                 </div>
               </div>
             </div>
           </div>
 
           <div className={cn("mt-6", mobileTab !== "edit" && "hidden lg:block")}>
+            <div className="mb-3">
+              <NoteOutline markdown={draft.body_markdown} compact onSelectHeading={jumpEditorToHeading} />
+            </div>
             <div className="mb-3 inline-flex rounded border border-[#c3c6d0] bg-white p-1">
               {(["raw", "sections"] as const).map((modeValue) => (
                 <button
@@ -662,7 +785,24 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
           <div className="mt-6 grid gap-6">
             <LinkedNotesManager noteId={savedId} draft={draft} />
             <NoteQualityPanel draft={draft} onAppendMarkdown={appendGeneratedMarkdown} />
-            <VersionHistory noteId={savedId} />
+            <VersionHistory
+              noteId={savedId}
+              currentTitle={draft.title}
+              currentBody={draft.body_markdown}
+              currentMetadata={{
+                slug: draft.slug,
+                topic: draft.topic,
+                note_type: draft.note_type,
+                difficulty: draft.difficulty,
+                description: draft.description,
+                tags: draft.tags,
+                recognition_triggers: draft.recognition_triggers,
+                false_uses: draft.false_uses,
+                visibility: draft.visibility,
+                is_favorite: draft.is_favorite
+              }}
+            />
+            {initialNote ? <NoteSplitTool note={initialNote} /> : null}
           </div>
         </section>
 

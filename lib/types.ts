@@ -326,3 +326,30 @@ export interface RevisionPack {
   created_at: string;
   updated_at: string;
 }
+
+export interface NoteTemplate {
+  id: string;
+  user_id: string | null;
+  name: string;
+  description: string | null;
+  note_type: NoteType | string;
+  topic: Topic | string | null;
+  template_markdown: string;
+  default_recognition_triggers: string[];
+  default_false_uses: string[];
+  default_tags: string[];
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface SavedView {
+  id: string;
+  user_id: string;
+  name: string;
+  description: string | null;
+  target_page: "notes" | "manage" | string;
+  config: Record<string, unknown>;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}

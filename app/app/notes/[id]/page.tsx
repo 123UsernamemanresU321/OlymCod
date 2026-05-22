@@ -7,7 +7,11 @@ import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
 import { NoteQualityPanel } from "@/components/notes/NoteQualityPanel";
 import { NoteReviewActions } from "@/components/notes/NoteReviewActions";
+import { NoteOutline } from "@/components/notes/NoteOutline";
+import { NoteSplitTool } from "@/components/notes/NoteSplitTool";
 import { NoteViewActions } from "@/components/notes/NoteViewActions";
+import { NoteViewModeShell } from "@/components/notes/NoteViewModeShell";
+import { VersionHistory } from "@/components/notes/VersionHistory";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { normalizeNoteRelations } from "@/lib/notes/normalizeNoteRelations";
 import { createClient } from "@/lib/supabase/server";
@@ -29,6 +33,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
     .from("notes")
     .select("*")
     .eq("id", id)
+    .eq("user_id", user.id)
     .single();
 
   if (!noteData) notFound();
@@ -43,13 +48,13 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
     { data: mistakesData },
     { data: reviewData }
   ] = await Promise.all([
-    supabase.from("notes").select("*").eq("is_archived", false).eq("topic", note.topic).neq("id", note.id).limit(3),
-    supabase.from("notes").select("*").eq("is_archived", false).order("title", { ascending: true }),
-    supabase.from("note_links").select("*").eq("source_note_id", note.id),
-    supabase.from("note_links").select("*").eq("target_note_id", note.id),
-    supabase.from("problem_logs").select("*").contains("linked_note_ids", [note.id]).order("updated_at", { ascending: false }).limit(8),
-    supabase.from("mistake_logs").select("*").contains("linked_note_ids", [note.id]).order("updated_at", { ascending: false }).limit(8),
-    supabase.from("note_reviews").select("*").eq("note_id", note.id).maybeSingle()
+    supabase.from("notes").select("*").eq("user_id", user.id).eq("is_archived", false).eq("topic", note.topic).neq("id", note.id).limit(3),
+    supabase.from("notes").select("*").eq("user_id", user.id).eq("is_archived", false).order("title", { ascending: true }),
+    supabase.from("note_links").select("*").eq("user_id", user.id).eq("source_note_id", note.id),
+    supabase.from("note_links").select("*").eq("user_id", user.id).eq("target_note_id", note.id),
+    supabase.from("problem_logs").select("*").eq("user_id", user.id).contains("linked_note_ids", [note.id]).order("updated_at", { ascending: false }).limit(8),
+    supabase.from("mistake_logs").select("*").eq("user_id", user.id).contains("linked_note_ids", [note.id]).order("updated_at", { ascending: false }).limit(8),
+    supabase.from("note_reviews").select("*").eq("user_id", user.id).eq("note_id", note.id).maybeSingle()
   ]);
 
   const { data: signedData } = note.diagram_urls.length
@@ -76,6 +81,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
   });
 
   return (
+    <NoteViewModeShell>
     <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 lg:grid-cols-[minmax(0,616px)_288px] lg:px-10 lg:py-20">
       <article className="rounded-lg border border-[#c3c6d0] bg-white p-6 lg:p-10">
         <nav className="mb-6 flex items-center gap-2 text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
@@ -119,6 +125,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
 
       <aside className="grid content-start gap-6">
         <NoteViewActions note={note} />
+        <NoteOutline markdown={note.body_markdown} compact />
 
         <section
           aria-label="Directional related notes including Prerequisites and Used By"
@@ -152,6 +159,24 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
         <NoteReviewActions note={note} review={review} />
 
         <NoteQualityPanel note={note} />
+        <VersionHistory
+          noteId={note.id}
+          currentTitle={note.title}
+          currentBody={note.body_markdown}
+          currentMetadata={{
+            slug: note.slug,
+            topic: note.topic,
+            note_type: note.note_type,
+            difficulty: note.difficulty,
+            description: note.description,
+            tags: note.tags,
+            recognition_triggers: note.recognition_triggers,
+            false_uses: note.false_uses,
+            visibility: note.visibility,
+            is_favorite: note.is_favorite
+          }}
+        />
+        <NoteSplitTool note={note} />
 
         <section className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-5">
           <h2 className="text-lg font-semibold text-[#1a1c1c]">Related Notes</h2>
@@ -227,5 +252,6 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
         </section>
       </aside>
     </div>
+    </NoteViewModeShell>
   );
 }

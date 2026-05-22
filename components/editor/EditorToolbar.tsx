@@ -45,6 +45,7 @@ const snippetGroups = [
   {
     category: "Number Theory",
     snippets: [
+      { label: "Embed note", before: "[[note:", after: "]]" },
       { label: "\\gcd(a,b)", before: "\\gcd(a,b)" },
       { label: "a \\equiv b \\pmod n", before: "a \\equiv b \\pmod n" },
       { label: "\\varphi(n)", before: "\\varphi(n)" },

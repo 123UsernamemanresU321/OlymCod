@@ -6,13 +6,13 @@ import { BookOpen, Command, FileText, Search, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
-import type { Diagram, MistakeLog, Note, ProblemLog, QuickCapture } from "@/lib/types";
+import type { Diagram, MistakeLog, Note, NoteTemplate, ProblemLog, QuickCapture, SavedView } from "@/lib/types";
 import { inputClassName } from "@/components/ui/Field";
 
 type ResultItem = {
   id: string;
   title: string;
-  group: "Notes" | "Problems" | "Mistakes" | "Captures" | "Media" | "Actions" | "Topics";
+  group: "Notes" | "Problems" | "Mistakes" | "Captures" | "Media" | "Templates" | "Views" | "Actions" | "Topics";
   href: string;
   preview?: string | null;
   tags?: string[];
@@ -57,6 +57,8 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
   const [mistakes, setMistakes] = useState<MistakeLog[]>([]);
   const [captures, setCaptures] = useState<QuickCapture[]>([]);
   const [media, setMedia] = useState<Diagram[]>([]);
+  const [templates, setTemplates] = useState<NoteTemplate[]>([]);
+  const [views, setViews] = useState<SavedView[]>([]);
 
   useEffect(() => {
     if (!enableShortcut) return;
@@ -79,12 +81,14 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
         data: { user }
       } = await supabase.auth.getUser();
       if (!user) return;
-      const [notesResult, problemsResult, mistakesResult, capturesResult, mediaResult] = await Promise.all([
+      const [notesResult, problemsResult, mistakesResult, capturesResult, mediaResult, templatesResult, viewsResult] = await Promise.all([
         supabase.from("notes").select("*").eq("user_id", user.id).eq("is_archived", false).order("updated_at", { ascending: false }).limit(50),
         supabase.from("problem_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
         supabase.from("mistake_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
         supabase.from("quick_captures").select("*").eq("user_id", user.id).eq("is_archived", false).order("created_at", { ascending: false }).limit(30),
-        supabase.from("diagrams").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30)
+        supabase.from("diagrams").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30),
+        supabase.from("note_templates").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(20),
+        supabase.from("saved_views").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(20)
       ]);
       if (cancelled) return;
       setNotes((notesResult.data ?? []) as Note[]);
@@ -92,6 +96,8 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
       setMistakes((mistakesResult.data ?? []) as MistakeLog[]);
       setCaptures((capturesResult.data ?? []) as QuickCapture[]);
       setMedia((mediaResult.data ?? []) as Diagram[]);
+      setTemplates((templatesResult.data ?? []) as NoteTemplate[]);
+      setViews((viewsResult.data ?? []) as SavedView[]);
     }
     void load();
     return () => {
@@ -111,6 +117,12 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
       { id: "graph", group: "Actions", title: "Open Note Graph", href: "/app/graph", preview: "visual relationships prerequisites links" },
       { id: "manage", group: "Actions", title: "Open Bulk Metadata Manager", href: "/app/manage", preview: "bulk edit tags topics concept level visibility" },
       { id: "media", group: "Actions", title: "Open Media Library", href: "/app/media", preview: "geometry diagram media manager" },
+      { id: "workspace", group: "Actions", title: "Open Workspace", href: "/app/workspace", preview: "multi pane editor reference notes" },
+      { id: "templates", group: "Actions", title: "Open Templates", href: "/app/templates", preview: "note templates custom built in" },
+      { id: "import", group: "Actions", title: "Open Smart Importer", href: "/app/import", preview: "import markdown text split headings" },
+      { id: "taxonomy", group: "Actions", title: "Open Taxonomy", href: "/app/taxonomy", preview: "tags topics merge rename" },
+      { id: "views", group: "Actions", title: "Open Saved Views", href: "/app/views", preview: "saved filters dashboards" },
+      { id: "merge", group: "Actions", title: "Merge Notes", href: "/app/merge", preview: "combine notes archive originals" },
       { id: "settings", group: "Actions", title: "Open Settings", href: "/app/settings", preview: "export backup account" }
     ];
 
@@ -164,13 +176,29 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
         href: "/app/media",
         preview: `${asset.filename} ${asset.caption ?? ""} ${asset.alt_text ?? ""}`,
         tags: asset.tags ?? []
+      })),
+      ...templates.map((template) => ({
+        id: template.id,
+        group: "Templates" as const,
+        title: template.name,
+        href: "/app/templates",
+        preview: `${template.note_type} ${template.topic ?? ""} ${template.description ?? ""}`,
+        tags: template.default_tags
+      })),
+      ...views.map((view) => ({
+        id: view.id,
+        group: "Views" as const,
+        title: view.name,
+        href: view.target_page === "manage" ? "/app/manage" : "/app/notes",
+        preview: `${view.target_page} ${view.description ?? ""}`,
+        tags: []
       }))
     ];
 
     return items.filter((item) => matches(item, query)).slice(0, 24);
-  }, [captures, media, mistakes, notes, problems, query]);
+  }, [captures, media, mistakes, notes, problems, query, templates, views]);
 
-  const groups = ["Actions", "Notes", "Problems", "Mistakes", "Captures", "Media", "Topics"] as const;
+  const groups = ["Actions", "Notes", "Problems", "Mistakes", "Captures", "Media", "Templates", "Views", "Topics"] as const;
 
   function openResult(href: string) {
     setOpen(false);

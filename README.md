@@ -108,6 +108,14 @@ supabase/migrations/20260520000100_part3_extensions.sql
 
 This safely upgrades the existing `diagrams` table into the media-library backing table by adding `title`, `alt_text`, and `tags`. These files are written with `create table if not exists`, `add column if not exists`, `drop policy if exists`, and idempotent triggers so they can be rerun safely.
 
+After pulling the creation and organization tools pass, run:
+
+```text
+supabase/migrations/20260522000100_creation_organization_tools.sql
+```
+
+This adds user-owned `note_templates` and `saved_views` tables with RLS, updated-at triggers, and indexes. It does not modify or delete existing notes.
+
 ## RLS Model
 
 - Public users can select only `notes.visibility = 'public'` and `is_archived = false`, and only when public notes are enabled.
@@ -140,6 +148,12 @@ Owner pages:
 - `/app/mastery`
 - `/app/review-notes`
 - `/app/notebook`
+- `/app/workspace`
+- `/app/templates`
+- `/app/merge`
+- `/app/import`
+- `/app/views`
+- `/app/taxonomy`
 - `/app/diagrams`
 - `/app/media`
 - `/app/graph`
@@ -317,7 +331,7 @@ Note pages also include quick buttons for needs practice, comfortable, and maste
 
 ### Command Palette
 
-Use `Cmd/Ctrl + K` or the mobile command button. It searches notes, problem logs, mistake logs, captures, topics, and common actions. Supported quick filters include:
+Use `Cmd/Ctrl + K` or the mobile command button. It searches notes, problem logs, mistake logs, captures, topics, templates, saved views, and common actions such as Workspace, Import, Taxonomy, Merge Notes, Media, Graph, and Manage. Supported quick filters include:
 
 - `tag:modular`
 - `topic:geometry`
@@ -338,7 +352,24 @@ You do not need to manually find the Supabase storage path. The `/api/diagrams/r
 
 ### Local Drafts And Versions
 
-The editor saves a browser-local draft shortly after changes. Cloud saves also write the previous note body and metadata to `note_versions`, and the edit page can show and restore recent versions.
+The editor saves a browser-local draft shortly after changes. Cloud saves write the previous note body and metadata to `note_versions` only when the cloud copy actually changed, avoiding duplicate version rows. Version History can preview an old version, compare it against the current note with a readable line diff, copy old content, or restore with a backup of the current state first.
+
+### Creation And Organization Tools
+
+These routes improve writing, importing, reorganizing, and viewing notes without adding more study scheduling:
+
+- `/app/templates`: browse built-in templates, create custom templates, duplicate built-ins, edit custom templates, and delete custom templates. New notes can apply a selected template, and the editor can save the current note structure as a reusable template.
+- `/app/merge`: merge several small notes into one new note. You choose the order, title, type, and whether originals should be archived. Originals are not deleted by default.
+- Note pages and edit pages include **Split Note**, which detects Markdown sections, creates selected sections as new notes, optionally replaces the original sections with `[[note:Title]]` embeds, and can create related-note links.
+- `/app/workspace`: a desktop multi-pane workspace with note search, open-note tabs, an editor/preview pane, and a related-note reference pane. Mobile collapses to one pane at a time.
+- Note view and edit pages include an outline/minimap generated from Markdown headings. In view mode, clicking an outline item scrolls to the rendered section. In edit mode, it jumps the editor cursor near that heading.
+- `/app/views`: saved views for Notes and Manage filters. The Notes page can save the current search/filter/sort state and reload it later.
+- `/app/taxonomy`: topic and tag management with usage counts, affected-note previews, rename, merge, and duplicate-tag detection.
+- Note pages have view modes: Clean Reading, Compact, Focus, Metadata Rich, and Split With Related Notes. The preference is stored locally.
+- Inline note embeds use `[[note:Area of Triangle]]` or `[[note:Area of Triangle#Formula]]`. The embed renders a safe preview with KaTeX and links back to the source note. Nested embeds are collapsed to prevent circular render loops.
+- `/app/import`: paste Markdown/text or upload `.md`/`.txt`, preview the content, detect title/headings/type/topic/tags, extract Recognition Triggers and Common False Uses sections, and import as one note or split by top-level headings.
+
+Notebook section extraction is level-aware. Statement Mode, Compact Revision Mode, Standard Notebook Mode, and Formula Sheet Mode render the full selected section, including multiple paragraphs, lists, display math, images, and nested lower-level headings, stopping only at the next heading of the same or higher level.
 
 ### Mobile Editor
 

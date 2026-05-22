@@ -10,14 +10,39 @@ import type { NoteVersion } from "@/lib/types";
 
 interface VersionHistoryProps {
   noteId: string | null;
+  currentTitle?: string;
+  currentBody?: string;
+  currentMetadata?: Record<string, unknown>;
 }
 
-export function VersionHistory({ noteId }: VersionHistoryProps) {
+function diffLines(previous: string, current: string) {
+  const a = previous.split(/\r?\n/);
+  const b = current.split(/\r?\n/);
+  const rows: Array<{ kind: "same" | "added" | "removed"; text: string }> = [];
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    if (a[i] === b[j]) {
+      rows.push({ kind: "same", text: a[i] ?? "" });
+      i += 1;
+      j += 1;
+    } else {
+      if (a[i] !== undefined) rows.push({ kind: "removed", text: a[i] });
+      if (b[j] !== undefined) rows.push({ kind: "added", text: b[j] });
+      i += 1;
+      j += 1;
+    }
+  }
+  return rows;
+}
+
+export function VersionHistory({ noteId, currentTitle, currentBody = "", currentMetadata = {} }: VersionHistoryProps) {
   const router = useRouter();
   const [versions, setVersions] = useState<NoteVersion[]>([]);
   const [selected, setSelected] = useState<NoteVersion | null>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [compare, setCompare] = useState(false);
 
   useEffect(() => {
     if (!noteId || !open) return;
@@ -52,6 +77,15 @@ export function VersionHistory({ noteId }: VersionHistoryProps) {
       is_favorite?: boolean;
     };
     const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from("note_versions").insert({
+      user_id: user.id,
+      note_id: noteId,
+      title: currentTitle ?? "Current note",
+      body_markdown: currentBody,
+      metadata: { ...currentMetadata, restore_backup: true }
+    });
     await supabase
       .from("notes")
       .update({
@@ -65,7 +99,8 @@ export function VersionHistory({ noteId }: VersionHistoryProps) {
         visibility: metadata.visibility,
         is_favorite: metadata.is_favorite
       })
-      .eq("id", noteId);
+      .eq("id", noteId)
+      .eq("user_id", user.id);
     setBusy(false);
     router.refresh();
   }
@@ -98,12 +133,40 @@ export function VersionHistory({ noteId }: VersionHistoryProps) {
                 {selected?.id === version.id ? (
                   <div className="mt-3">
                     <div className="max-h-72 overflow-y-auto rounded border border-[#d5d7de] p-3">
-                      <MarkdownPreview markdown={version.body_markdown ?? ""} />
+                      {compare ? (
+                        <pre className="whitespace-pre-wrap text-xs leading-5">
+                          {diffLines(version.body_markdown ?? "", currentBody).map((line, index) => (
+                            <span
+                              key={`${line.kind}-${index}`}
+                              className={
+                                line.kind === "added"
+                                  ? "block bg-[#dff4e7] text-[#1d5a35]"
+                                  : line.kind === "removed"
+                                    ? "block bg-[#ffdad6] text-[#8f1d15]"
+                                    : "block text-[#43474f]"
+                              }
+                            >
+                              {line.kind === "added" ? "+ " : line.kind === "removed" ? "- " : "  "}
+                              {line.text || " "}
+                            </span>
+                          ))}
+                        </pre>
+                      ) : (
+                        <MarkdownPreview markdown={version.body_markdown ?? ""} />
+                      )}
                     </div>
-                    <Button type="button" className="mt-3" variant="secondary" disabled={busy} onClick={() => void restore(version)}>
-                      <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                      Restore version
-                    </Button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button type="button" variant="secondary" onClick={() => setCompare((current) => !current)}>
+                        {compare ? "Preview rendered" : "Compare with current"}
+                      </Button>
+                      <Button type="button" variant="secondary" onClick={() => navigator.clipboard.writeText(version.body_markdown ?? "")}>
+                        Copy old content
+                      </Button>
+                      <Button type="button" variant="secondary" disabled={busy} onClick={() => void restore(version)}>
+                        <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                        Restore version
+                      </Button>
+                    </div>
                   </div>
                 ) : null}
               </div>

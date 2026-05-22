@@ -7,14 +7,16 @@ import { NoteCard } from "@/components/notes/NoteCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { inputClassName } from "@/components/ui/Field";
 import { MATH_TOPICS, NOTE_TYPES, SPECIAL_TOPICS, topicIncludes } from "@/lib/constants/notes";
-import type { Note, SortKey } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import type { Note, SavedView, SortKey } from "@/lib/types";
 import { matchesNoteSearch, sortNotes } from "@/lib/utils/notes";
 
 interface NotesLibraryClientProps {
   notes: Note[];
+  savedViews?: SavedView[];
 }
 
-export function NotesLibraryClient({ notes }: NotesLibraryClientProps) {
+export function NotesLibraryClient({ notes, savedViews = [] }: NotesLibraryClientProps) {
   const params = useSearchParams();
   const [query, setQuery] = useState("");
   const [topic, setTopic] = useState(params.get("topic") ?? "All");
@@ -22,6 +24,7 @@ export function NotesLibraryClient({ notes }: NotesLibraryClientProps) {
   const [difficulty, setDifficulty] = useState("All");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("updated");
+  const [viewMessage, setViewMessage] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
     const result = notes.filter((note) => {
@@ -35,6 +38,42 @@ export function NotesLibraryClient({ notes }: NotesLibraryClientProps) {
 
     return sortNotes(result, sort);
   }, [notes, query, topic, noteType, difficulty, favoritesOnly, sort]);
+
+  function loadView(view: SavedView) {
+    const config = view.config as Partial<{
+      query: string;
+      topic: string;
+      noteType: string;
+      difficulty: string;
+      favoritesOnly: boolean;
+      sort: SortKey;
+    }>;
+    setQuery(config.query ?? "");
+    setTopic(config.topic ?? "All");
+    setNoteType(config.noteType ?? "All");
+    setDifficulty(config.difficulty ?? "All");
+    setFavoritesOnly(Boolean(config.favoritesOnly));
+    setSort(config.sort ?? "updated");
+  }
+
+  async function saveView() {
+    const name = window.prompt("Saved view name", topic !== "All" ? `${topic} notes` : "Custom notes view");
+    if (!name) return;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setViewMessage("You must be logged in.");
+      return;
+    }
+    const { error } = await supabase.from("saved_views").insert({
+      user_id: user.id,
+      name,
+      target_page: "notes",
+      description: `${filtered.length} matching notes when saved.`,
+      config: { query, topic, noteType, difficulty, favoritesOnly, sort }
+    });
+    setViewMessage(error ? error.message : "Saved view created. Refresh to see it in the list.");
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 lg:px-10">
@@ -87,6 +126,19 @@ export function NotesLibraryClient({ notes }: NotesLibraryClientProps) {
           <option value="difficulty">Concept Level</option>
           <option value="topic">Topic</option>
         </select>
+      </section>
+
+      <section className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#d5d7de] bg-white p-3 text-sm">
+        <span className="font-medium text-[#43474f]">Saved views</span>
+        {savedViews.map((view) => (
+          <button key={view.id} type="button" className="rounded border border-[#c3c6d0] px-2 py-1 text-[#0e3b69] hover:bg-[#eef4ff]" onClick={() => loadView(view)}>
+            {view.name}
+          </button>
+        ))}
+        <button type="button" className="ml-auto rounded border border-[#2c5282] px-2 py-1 text-[#0e3b69] hover:bg-[#eef4ff]" onClick={() => void saveView()}>
+          Save current filters
+        </button>
+        {viewMessage ? <span className="basis-full text-xs text-[#43474f]">{viewMessage}</span> : null}
       </section>
 
       <section className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">

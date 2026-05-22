@@ -24,22 +24,39 @@ export function NoteGraphClient({ notes, links }: NoteGraphClientProps) {
   const [topic, setTopic] = useState("");
   const [noteType, setNoteType] = useState("");
   const [relation, setRelation] = useState("");
+  const [neighborhoodOnly, setNeighborhoodOnly] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const visibleNotes = notes.filter((note) => {
+    let visibleNotes = notes.filter((note) => {
       const haystack = [note.title, note.topic, note.note_type, note.description, note.tags.join(" ")].filter(Boolean).join(" ").toLowerCase();
       if (q && !haystack.includes(q)) return false;
       if (topic && !topicIncludes(note.topic, topic)) return false;
       if (noteType && note.note_type !== noteType) return false;
       return true;
     });
+    if (neighborhoodOnly && q) {
+      const seedIds = new Set(visibleNotes.map((note) => note.id));
+      const neighborIds = new Set(seedIds);
+      for (const link of links) {
+        if (seedIds.has(link.source_note_id)) neighborIds.add(link.target_note_id);
+        if (seedIds.has(link.target_note_id)) neighborIds.add(link.source_note_id);
+      }
+      visibleNotes = notes.filter((note) => neighborIds.has(note.id));
+    }
     const ids = new Set(visibleNotes.map((note) => note.id));
+    const seen = new Set<string>();
+    const visibleLinks = links.filter((link) => {
+      const key = `${link.source_note_id}:${link.target_note_id}:${link.relation_type}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return ids.has(link.source_note_id) && ids.has(link.target_note_id) && (!relation || link.relation_type === relation);
+    });
     return {
       notes: visibleNotes,
-      links: links.filter((link) => ids.has(link.source_note_id) && ids.has(link.target_note_id) && (!relation || link.relation_type === relation))
+      links: visibleLinks
     };
-  }, [links, noteType, notes, query, relation, topic]);
+  }, [links, neighborhoodOnly, noteType, notes, query, relation, topic]);
 
   const positions = useMemo(() => {
     const map = new Map<string, { x: number; y: number }>();
@@ -60,7 +77,7 @@ export function NoteGraphClient({ notes, links }: NoteGraphClientProps) {
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[#43474f]">See prerequisites, confused pairs, generalizations, and related techniques as a note graph.</p>
       </div>
 
-      <section className="mt-6 grid gap-3 rounded-lg border border-[#c3c6d0] bg-white p-4 md:grid-cols-4">
+      <section className="mt-6 grid gap-3 rounded-lg border border-[#c3c6d0] bg-white p-4 md:grid-cols-5">
         <input className={inputClassName()} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes..." />
         <select className={inputClassName()} value={topic} onChange={(event) => setTopic(event.target.value)}>
           <option value="">All topics</option>
@@ -74,6 +91,10 @@ export function NoteGraphClient({ notes, links }: NoteGraphClientProps) {
           <option value="">All relations</option>
           {NOTE_LINK_RELATIONS.map((item) => <option key={item}>{item}</option>)}
         </select>
+        <label className="flex items-center gap-2 rounded border border-[#d5d7de] px-3 py-2 text-sm text-[#43474f]">
+          <input type="checkbox" checked={neighborhoodOnly} onChange={(event) => setNeighborhoodOnly(event.target.checked)} />
+          Neighborhood
+        </label>
       </section>
 
       <section className="mt-6 overflow-hidden rounded-lg border border-[#c3c6d0] bg-white">

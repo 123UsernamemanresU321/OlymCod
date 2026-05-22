@@ -64,20 +64,37 @@ export function extractNotebookSections(markdown: string) {
   const sections: Partial<Record<NotebookSectionKey, string>> = {};
   const lines = markdown.split(/\r?\n/);
   let currentKey: NotebookSectionKey | null = null;
+  let currentLevel = 0;
   let current: string[] = [];
+  let inFence = false;
 
   function flush() {
     if (!currentKey) return;
     const body = current.join("\n").trim();
-    if (body && !sections[currentKey]) sections[currentKey] = body;
+    if (!body) return;
+    sections[currentKey] = sections[currentKey] ? `${sections[currentKey]}\n\n${body}` : body;
   }
 
   for (const line of lines) {
-    const match = line.match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
+    if (/^\s*(```|~~~)/.test(line)) {
+      inFence = !inFence;
+      if (currentKey) current.push(line);
+      continue;
+    }
+
+    const match = !inFence ? line.match(/^(#{1,6})\s+(.+?)\s*#*\s*$/) : null;
     if (match) {
+      const level = match[1].length;
+      const alias = HEADING_ALIASES[normalizeHeading(match[2])];
+
+      if (currentKey && level > currentLevel) {
+        current.push(line);
+        continue;
+      }
+
       flush();
       current = [];
-      const alias = HEADING_ALIASES[normalizeHeading(match[2])];
+      currentLevel = level;
       currentKey = alias ?? null;
       continue;
     }

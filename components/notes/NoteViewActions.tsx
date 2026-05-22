@@ -31,7 +31,8 @@ export function NoteViewActions({ note }: NoteViewActionsProps) {
       const { error: updateError } = await supabase
         .from("notes")
         .update({ is_favorite: !note.is_favorite })
-        .eq("id", note.id);
+        .eq("id", note.id)
+        .eq("user_id", user.id);
       if (updateError) throw updateError;
       router.refresh();
     } catch (favoriteError) {
@@ -53,7 +54,8 @@ export function NoteViewActions({ note }: NoteViewActionsProps) {
       const { error: deleteError } = await supabase
         .from("notes")
         .delete()
-        .eq("id", note.id);
+        .eq("id", note.id)
+        .eq("user_id", user.id);
       if (deleteError) throw deleteError;
 
       router.push("/app/notes");

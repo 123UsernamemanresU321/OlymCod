@@ -148,6 +148,25 @@ export function MediaLibraryClient({ assets, notes }: MediaLibraryClientProps) {
     }
   }
 
+  async function appendToLinkedNote(asset: MediaAsset) {
+    if (!asset.note_id) {
+      setMessage("Attach this media to a note before inserting it.");
+      return;
+    }
+    const note = notes.find((item) => item.id === asset.note_id);
+    if (!note) return;
+    const markdown = `![${asset.alt_text || asset.caption || asset.filename}](${asset.storage_path})`;
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await supabase
+      .from("notes")
+      .update({ body_markdown: `${note.body_markdown.trimEnd()}\n\n${markdown}\n` })
+      .eq("id", note.id)
+      .eq("user_id", user.id);
+    setMessage(error ? error.message : `Inserted media Markdown into ${note.title}.`);
+  }
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-10">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -210,6 +229,7 @@ export function MediaLibraryClient({ assets, notes }: MediaLibraryClientProps) {
                 </select>
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="secondary" onClick={() => void copyMarkdown(asset)}><Copy className="h-4 w-4" />Copy Markdown</Button>
+                  <Button type="button" variant="secondary" onClick={() => void appendToLinkedNote(asset)}>Insert into note</Button>
                   {asset.note_id ? <Button type="button" variant="secondary" onClick={() => void detach(asset)}><Link2 className="h-4 w-4" />Detach</Button> : null}
                   <Button type="button" variant="danger" onClick={() => void deleteAsset(asset)}><Trash2 className="h-4 w-4" />Delete</Button>
                 </div>

@@ -7,9 +7,11 @@ import {
   Home,
   Image,
   LogOut,
+  Network,
   NotebookTabs,
   Plus,
   Settings,
+  Table2,
   Target,
   UserCircle,
   XCircle
@@ -29,7 +31,10 @@ const NAV_ITEMS = [
   { href: "/app/mistakes", label: "Mistakes", icon: XCircle },
   { href: "/app/review-notes", label: "Review", icon: NotebookTabs },
   { href: "/app/notebook", label: "Notebook", icon: BookOpen },
+  { href: "/app/workspace", label: "Workspace", icon: NotebookTabs },
+  { href: "/app/graph", label: "Graph", icon: Network },
   { href: "/app/media", label: "Media / Diagrams", icon: Image },
+  { href: "/app/manage", label: "Manage", icon: Table2 },
   { href: "/app/settings", label: "Settings", icon: Settings }
 ];
 
