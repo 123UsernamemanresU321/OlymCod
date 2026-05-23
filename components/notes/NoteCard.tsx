@@ -29,7 +29,8 @@ export function NoteCard({ note, compact = false }: NoteCardProps) {
     await supabase
       .from("notes")
       .update({ is_favorite: !note.is_favorite })
-      .eq("id", note.id);
+      .eq("id", note.id)
+      .eq("user_id", user.id);
     router.refresh();
   }
 

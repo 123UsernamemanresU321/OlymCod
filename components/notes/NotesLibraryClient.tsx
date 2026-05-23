@@ -111,7 +111,7 @@ export function NotesLibraryClient({ notes, savedViews = [] }: NotesLibraryClien
           <option>All</option>
           {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
             <option key={value} value={value}>
-              Concept Level {value}
+              Level {value}
             </option>
           ))}
         </select>
@@ -123,7 +123,7 @@ export function NotesLibraryClient({ notes, savedViews = [] }: NotesLibraryClien
         <select className={inputClassName("w-auto min-w-44")} value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
           <option value="updated">Recently updated</option>
           <option value="title">Title</option>
-          <option value="difficulty">Concept Level</option>
+          <option value="difficulty">Difficulty / level</option>
           <option value="topic">Topic</option>
         </select>
       </section>

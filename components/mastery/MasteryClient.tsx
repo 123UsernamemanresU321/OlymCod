@@ -57,7 +57,7 @@ export function MasteryClient({ notes, reviews, problems, mistakes }: MasteryCli
               <th className="px-4 py-3">Failed Problems</th>
               <th className="px-4 py-3">Mistakes</th>
               <th className="px-4 py-3">Avg Confidence</th>
-              <th className="px-4 py-3">Avg Concept Level</th>
+              <th className="px-4 py-3">Avg Note Level</th>
               <th className="px-4 py-3">Avg Problem Difficulty</th>
             </tr>
           </thead>

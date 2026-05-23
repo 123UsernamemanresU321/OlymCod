@@ -226,9 +226,11 @@ These appear on note pages, can be edited in the note metadata panel, are search
 
 Recognition triggers and common false uses are rendered through the same safe Markdown/KaTeX pipeline as note bodies. Inline `$...$`, block `$$...$$`, `\(...\)`, and `\[...\]` math works on the note page, editor preview, Notebook preview/print/export, revision packs, and AI metadata previews. Raw HTML is still not enabled.
 
-### Concept Level vs Problem Difficulty
+### Type-Specific Note Levels vs Problem Difficulty
 
-Official notes use **Concept Level**, not contest-placement difficulty. The stored `notes.difficulty` field is kept for compatibility, but note UI labels it as a 1-12 concept-complexity scale:
+Official notes use type-specific level names, not contest-placement difficulty. The stored `notes.difficulty` field is kept for compatibility, but the UI labels it based on the note type: theorems and lemmas use **Concept Level**, techniques use **Recognition Difficulty**, tricks use **Execution Difficulty**, common mistakes use **Trap Severity**, problem patterns use **Pattern Difficulty**, past-problem notes use **Problem Difficulty**, and formula/definition/inbox notes hide the difficulty field.
+
+The concept-style 1-12 scale is:
 
 - `1`: Basic fact
 - `2`: Direct-use tool
@@ -247,7 +249,7 @@ Problem logs still use **Problem Difficulty** with the contest-style BMO/AMO/PAM
 
 ### Type-Specific Note Quality
 
-The Note Quality panel adapts to the note type. Theorems and lemmas look for statements, conditions, proof/proof sketch, examples, use cases, mistakes, and related notes. Techniques emphasize core idea, recognition triggers, example patterns, failure cases, and related notes. Formula notes emphasize formula, variables, conditions, use case, example, and related formulae, and do not require a concept level. Geometry notes require configuration, diagram, key relation, recognition cues, traps, and related notes.
+The Note Quality panel adapts to the note type. Theorems and lemmas look for statements, conditions, proof/proof sketch, examples, use cases, mistakes, and related notes. Techniques emphasize core idea, recognition triggers, example patterns, failure cases, and related notes. Formula notes emphasize formula, variables, conditions, use case, example, and related formulae, and do not require a level. Past-problem and example notes use problem/example structure instead of recognition-trigger metadata. Geometry notes require configuration, diagram, key relation, recognition cues, traps, and related notes.
 
 `false_uses.length > 0` satisfies the Common Mistakes/Traps criterion, so you do not need to duplicate false uses inside Markdown. `recognition_triggers.length > 0` satisfies Recognition/When-to-use criteria where that note type uses them. The panel shows source explanations such as “Common mistakes covered through Common False Uses metadata.”
 
@@ -312,7 +314,7 @@ Open `/app/graph` to view a dependency-free SVG relationship map of current-user
 
 ### Bulk Metadata Manager
 
-Open `/app/manage` for a table view of notes. Select filtered notes and bulk edit topic, note type, concept level, tags, archive state, favorite state, or delete. Bulk delete requires typing `DELETE`. Filters help find missing metadata, missing recognition triggers, missing common false uses, or notes below an 80% quality score.
+Open `/app/manage` for a table view of notes. Select filtered notes and bulk edit topic, note type, type-specific level, tags, archive state, favorite state, or delete. Bulk delete requires typing `DELETE`. Filters help find missing metadata, missing recognition triggers, missing common false uses, or notes below an 80% quality score.
 
 ### Media Library
 
@@ -406,7 +408,7 @@ The builder controls are compact collapsible panels so the filter list does not 
 
 Section selection includes statements, when-to-use notes, recognition signs, intuition, conditions, how-to-recognize sections, proofs, examples, common mistakes, diagram traps, why-it-happens/how-to-avoid sections, recognition triggers, common false uses, related notes, backlinks, linked problems, linked mistakes, diagrams, problem applications, problem statements, solution summaries, source references, key ideas, correct principles, dates, review status, topic page breaks, and the table of contents.
 
-Notebook metadata distinguishes **Concept Level** for note items from **Problem Difficulty** for problem-log items. Recognition triggers and common false uses render LaTeX in preview and print because they are emitted as Markdown sections and passed through the shared safe KaTeX renderer.
+Notebook metadata uses each note type's level label and distinguishes those from **Problem Difficulty** on problem-log items. Recognition triggers and common false uses render LaTeX in preview and print because they are emitted as Markdown sections and passed through the shared safe KaTeX renderer.
 
 Detail levels control how much appears:
 
@@ -458,7 +460,7 @@ The generator is deterministic first:
 - `+30` for `learning`
 - `+25` when linked to a failed problem
 - `+20` when linked to a review-later problem
-- bonuses for triggers, false uses, formulae, geometry diagrams, mid-range concept levels, and recent updates
+- bonuses for triggers, false uses, formulae, geometry diagrams, mid-range note levels, and recent updates
 - penalties for mastered/ignored notes or overly basic notes before a near contest
 
 Actions:
@@ -469,7 +471,7 @@ Actions:
 
 ## Mastery Heatmap
 
-Open `/app/mastery` for a topic-level heatmap. Rows are core topics and columns include total notes, mastered notes, needs-practice/learning notes, failed/review-later problems, unresolved mistakes, average confidence, average note Concept Level, average Problem Difficulty, and a score.
+Open `/app/mastery` for a topic-level heatmap. Rows are core topics and columns include total notes, mastered notes, needs-practice/learning notes, failed/review-later problems, unresolved mistakes, average confidence, average note level, average Problem Difficulty, and a score.
 
 Labels:
 
@@ -530,16 +532,16 @@ Topics use a compact chip picker instead of a long combination dropdown. You can
 
 Current official note types:
 
-- `Theorem`: statement, conditions, intuition, proof sketch, examples, mistakes, related techniques, concept level.
+- `Theorem`: statement, conditions, intuition, proof sketch, examples, mistakes, related techniques, Concept Level.
 - `Lemma`: claim, setup, proof, example use, mistakes, related results.
 - `Technique`: triggers, core idea, application steps, example, mistakes, variations.
-- `Formula`: formula, variables, conditions, when to use it, quick example; no concept level field.
-- `Formula Log`: compact formula recall entry; no concept level field.
+- `Formula`: formula, variables, conditions, when to use it, quick example; no level field.
+- `Formula Log`: compact formula recall entry; no level field.
 - `Trick`: narrow move, trigger, why it works, example, mistakes.
 - `Common Mistake`: wrong idea, warning signs, correction, fix, example.
 - `Problem Pattern`: recurring structure, trigger phrases, strategy, worked example, variations.
 - `Past Problem`: source, problem statement, first observations, solution, mistakes, key takeaway.
-- `Definition`: definition, notation, examples, non-examples; no concept level field.
+- `Definition`: definition, notation, examples, non-examples; no level field.
 - `Example`: worked example with goal, solution, key move, mistakes, generalization.
 - `Inbox`: rough capture before converting to a full note.
 

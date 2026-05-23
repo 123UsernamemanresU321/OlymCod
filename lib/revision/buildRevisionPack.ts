@@ -107,7 +107,7 @@ export function buildRevisionPack({
       }
       if ((note.difficulty ?? 0) >= 4 && (note.difficulty ?? 0) <= 8) {
         score += 10;
-        reasons.push("mid-range concept level");
+        reasons.push("mid-range note level");
       }
       if (options.includeRecentNotes && recent(note)) {
         score += 10;

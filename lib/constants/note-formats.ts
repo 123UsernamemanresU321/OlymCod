@@ -6,6 +6,12 @@ export interface NoteFormat {
   defaultTopic: Topic;
   defaultDifficulty: number | null;
   usesDifficulty: boolean;
+  difficultyLabel: string;
+  difficultyKind: "concept" | "problem";
+  learningFields: {
+    recognitionTriggers: boolean;
+    falseUses: boolean;
+  };
   template: (title: string) => string;
 }
 
@@ -18,6 +24,9 @@ export const NOTE_TYPE_FORMATS = {
     defaultTopic: "Number Theory",
     defaultDifficulty: 4,
     usesDifficulty: true,
+    difficultyLabel: "Concept Level",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: true, falseUses: true },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Statement
@@ -61,6 +70,9 @@ Write a short example.
     defaultTopic: "Geometry",
     defaultDifficulty: 4,
     usesDifficulty: true,
+    difficultyLabel: "Concept Level",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: true, falseUses: true },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Claim
@@ -98,6 +110,9 @@ Show where it appears in a solution.
     defaultTopic: "Combinatorics",
     defaultDifficulty: 4,
     usesDifficulty: true,
+    difficultyLabel: "Recognition Difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: true, falseUses: true },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Trigger
@@ -139,6 +154,9 @@ Write a short worked example.
     defaultTopic: "Formula Bank",
     defaultDifficulty: null,
     usesDifficulty: false,
+    difficultyLabel: "No difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: false, falseUses: false },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Formula
@@ -176,6 +194,9 @@ Show one substitution or use.
     defaultTopic: "Formula Bank",
     defaultDifficulty: null,
     usesDifficulty: false,
+    difficultyLabel: "No difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: false, falseUses: false },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Formula
@@ -207,6 +228,9 @@ Write a fast sanity check or special case.
     defaultTopic: "Problem Patterns",
     defaultDifficulty: 5,
     usesDifficulty: true,
+    difficultyLabel: "Execution Difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: true, falseUses: true },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## The trick
@@ -242,6 +266,9 @@ Show it in a small problem.
     defaultTopic: "Problem Patterns",
     defaultDifficulty: 4,
     usesDifficulty: true,
+    difficultyLabel: "Trap Severity",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: false, falseUses: false },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Mistake
@@ -275,6 +302,9 @@ Write a short example where the mistake appears.
     defaultTopic: "Problem Patterns",
     defaultDifficulty: 5,
     usesDifficulty: true,
+    difficultyLabel: "Pattern Difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: true, falseUses: true },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Pattern
@@ -314,6 +344,9 @@ Write a representative example.
     defaultTopic: "Problem Patterns",
     defaultDifficulty: 5,
     usesDifficulty: true,
+    difficultyLabel: "Problem Difficulty",
+    difficultyKind: "problem",
+    learningFields: { recognitionTriggers: false, falseUses: false },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Source
@@ -357,6 +390,9 @@ What should you remember for the next similar problem?
     defaultTopic: "Algebra",
     defaultDifficulty: null,
     usesDifficulty: false,
+    difficultyLabel: "No difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: false, falseUses: false },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Definition
@@ -390,6 +426,9 @@ Explain how this concept is used in olympiad solutions.
     defaultTopic: "Algebra",
     defaultDifficulty: 3,
     usesDifficulty: true,
+    difficultyLabel: "Example Difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: false, falseUses: false },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Problem
@@ -423,6 +462,9 @@ What broader technique does this illustrate?
     defaultTopic: "Inbox",
     defaultDifficulty: null,
     usesDifficulty: false,
+    difficultyLabel: "No difficulty",
+    difficultyKind: "concept",
+    learningFields: { recognitionTriggers: false, falseUses: false },
     template: (title) => `# ${titleOrPlaceholder(title)}
 
 ## Raw idea
@@ -447,4 +489,17 @@ export function buildNoteTemplate(noteType: string | null | undefined, title: st
 
 export function noteTypeUsesDifficulty(noteType: string | null | undefined): boolean {
   return getNoteFormat(noteType).usesDifficulty;
+}
+
+export function noteTypeDifficultyMeta(noteType: string | null | undefined) {
+  const format = getNoteFormat(noteType);
+  return {
+    usesDifficulty: format.usesDifficulty,
+    label: format.difficultyLabel,
+    kind: format.difficultyKind
+  };
+}
+
+export function noteTypeLearningFields(noteType: string | null | undefined) {
+  return getNoteFormat(noteType).learningFields;
 }

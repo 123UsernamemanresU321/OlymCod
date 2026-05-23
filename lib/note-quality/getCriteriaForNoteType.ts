@@ -1,4 +1,5 @@
 import { topicIncludes } from "@/lib/constants/notes";
+import { noteTypeDifficultyMeta, noteTypeUsesDifficulty } from "@/lib/constants/note-formats";
 import type { Note, NoteDraft } from "@/lib/types";
 
 export type NoteQualityImportance = "required" | "recommended" | "optional";
@@ -68,6 +69,7 @@ function commonMistakesCovered(source: QualitySource) {
     "Common Mistakes",
     "Mistakes",
     "Mistakes to avoid",
+    "Mistakes I made",
     "Common False Uses",
     "Do Not Use This When",
     "Traps",
@@ -101,17 +103,18 @@ export function getCriteriaForNoteType(source: QualitySource): NoteQualityResult
   const hasRelated = relatedNotesMentioned(body);
   const hasDiagram = Boolean(source.diagram_urls?.length) || hasHeading(body, ["Diagram"]);
   const hasTags = Boolean(source.tags?.length);
-  const hasConceptLevel = source.difficulty !== null || type === "Formula" || type === "Formula Log" || type === "Definition" || type === "Inbox";
+  const difficultyMeta = noteTypeDifficultyMeta(type);
+  const hasConceptLevel = source.difficulty !== null || !noteTypeUsesDifficulty(type);
 
   const common = [
     criterion("tags", "Tags", "Searchable tags are present.", "recommended", hasTags, hasTags ? "Tags metadata is filled." : "No tags yet."),
     criterion(
       "concept-level",
-      "Concept Level",
-      "The note has a concept-complexity level when this format uses one.",
+      difficultyMeta.label,
+      "The note has the right difficulty-style rating when this format uses one.",
       "recommended",
       hasConceptLevel,
-      hasConceptLevel ? "Concept level is set or not required for this note type." : "Concept level is missing."
+      hasConceptLevel ? `${difficultyMeta.label} is set or not required for this note type.` : `${difficultyMeta.label} is missing.`
     )
   ];
 
@@ -155,7 +158,6 @@ export function getCriteriaForNoteType(source: QualitySource): NoteQualityResult
       criterion("variables", "Variables defined", "Variables and notation are explained.", "required", hasHeading(body, ["Meaning of variables", "Variables", "Notation"]), "Looks for variables/notation section."),
       criterion("when-to-use", "When to use it", "Use case is present.", "required", Boolean(recognitionSource), recognitionSource || "No use case or trigger metadata found."),
       criterion("example", "Example", "A quick example or check is present.", "required", hasHeading(body, ["Example", "Quick example", "Quick check"]), "Looks for example/check headings."),
-      criterion("false-uses", "Common False Uses", "Important traps are recorded if relevant.", "recommended", Boolean(mistakesSource), mistakesSource || "No false uses or traps found."),
       criterion("derivation", "Derivation", "A derivation is present.", "recommended", hasHeading(body, ["Derivation", "Proof"]), "Looks for Derivation or Proof."),
       criterion("related", "Related formulae", "Related formulas are named.", "recommended", hasRelated, hasRelated ? "Related section exists." : "No related formulae found."),
       criterion("special-cases", "Special cases", "Useful special cases are recorded.", "recommended", hasHeading(body, ["Special cases"]), "Looks for Special cases.")
@@ -196,7 +198,7 @@ export function getCriteriaForNoteType(source: QualitySource): NoteQualityResult
       criterion("key-idea", "Key idea", "The main idea is identified.", "required", hasHeading(body, ["Key idea", "Key move", "First observations"]), "Looks for key idea/move."),
       criterion("solution", "Solution outline", "A solution or outline is present.", "required", hasHeading(body, ["Solution", "Solution outline"]), "Looks for Solution."),
       criterion("linked-notes", "Linked notes", "Relevant notes are named.", "required", hasRelated, hasRelated ? "Related section exists." : "No linked notes found."),
-      criterion("mistake-risk", "Mistake risk", "Mistakes or risks are recorded.", "recommended", Boolean(mistakesSource), mistakesSource || "No mistakes or risks found."),
+      criterion("mistake-risk", "Mistake risk", "Mistakes or risks are recorded.", "recommended", hasHeading(body, ["Mistakes I made", "Mistakes to avoid", "Common mistakes"]), "Looks for mistake/risk sections in the body."),
       criterion("generalization", "Generalization", "Broader idea is recorded.", "recommended", hasHeading(body, ["Generalization", "Key takeaway"]), "Looks for Generalization or Key takeaway.")
     ];
   } else {

@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils/cn";
 import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS } from "@/lib/constants/notes";
-import { noteTypeUsesDifficulty } from "@/lib/constants/note-formats";
+import { noteTypeDifficultyMeta, noteTypeUsesDifficulty } from "@/lib/constants/note-formats";
 
 interface BadgeProps {
   children: React.ReactNode;
@@ -35,14 +35,15 @@ export function DifficultyBadge({
   kind?: "concept" | "problem";
 }) {
   if (noteType && !noteTypeUsesDifficulty(noteType)) return null;
-  if (!value) return <Badge>{kind === "problem" ? "Problem difficulty unset" : "Concept level unset"}</Badge>;
+  const meta = noteType ? noteTypeDifficultyMeta(noteType) : { label: kind === "problem" ? "Problem Difficulty" : "Concept Level", kind };
+  const resolvedKind = kind === "problem" || meta.kind === "problem" ? "problem" : "concept";
+  if (!value) return <Badge>{meta.label} unset</Badge>;
 
-  const labels = kind === "problem" ? PROBLEM_DIFFICULTY_LABELS : CONCEPT_LEVEL_LABELS;
-  const prefix = kind === "problem" ? "Problem difficulty" : "Concept level";
+  const labels = resolvedKind === "problem" ? PROBLEM_DIFFICULTY_LABELS : CONCEPT_LEVEL_LABELS;
 
   return (
     <Badge tone={value >= 9 ? "red" : value >= 5 ? "blue" : "green"}>
-      {prefix} {value}. {labels[value]}
+      {meta.label} {value}. {labels[value]}
     </Badge>
   );
 }

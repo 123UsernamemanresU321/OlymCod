@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { inputClassName } from "@/components/ui/Field";
 import { createClient } from "@/lib/supabase/client";
 import type { Note, NoteLink } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
 
 interface WorkspaceClientProps {
   notes: Note[];
@@ -19,6 +20,8 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
   const [activeId, setActiveId] = useState(notes[0]?.id ?? "");
   const [drafts, setDrafts] = useState<Record<string, string>>(() => Object.fromEntries(notes.map((note) => [note.id, note.body_markdown])));
   const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [showLibrary, setShowLibrary] = useState(true);
+  const [showReference, setShowReference] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const active = notes.find((note) => note.id === activeId) ?? null;
 
@@ -62,8 +65,16 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
   }
 
   return (
-    <div className="grid min-h-screen gap-0 bg-[#f9f9f9] lg:grid-cols-[280px_minmax(0,1fr)_320px]">
-      <aside className="border-r border-[#c3c6d0] bg-white p-4">
+    <div
+      className={cn(
+        "grid min-h-screen gap-0 bg-[#f9f9f9]",
+        showLibrary && showReference && "lg:grid-cols-[280px_minmax(0,1fr)_320px]",
+        showLibrary && !showReference && "lg:grid-cols-[280px_minmax(0,1fr)]",
+        !showLibrary && showReference && "lg:grid-cols-[minmax(0,1fr)_320px]",
+        !showLibrary && !showReference && "lg:grid-cols-1"
+      )}
+    >
+      {showLibrary ? <aside className="border-r border-[#c3c6d0] bg-white p-4">
         <h1 className="text-2xl font-semibold text-[#1a1c1c]">Workspace</h1>
         <input className={inputClassName("mt-4")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes..." />
         <div className="mt-4 grid max-h-[75vh] gap-1 overflow-auto">
@@ -74,9 +85,15 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
             </button>
           ))}
         </div>
-      </aside>
+      </aside> : null}
       <main className="p-4 lg:p-6">
         <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Button type="button" variant="secondary" onClick={() => setShowLibrary((current) => !current)}>
+            {showLibrary ? "Hide library" : "Show library"}
+          </Button>
+          <Button type="button" variant="secondary" onClick={() => setShowReference((current) => !current)}>
+            {showReference ? "Hide reference" : "Show reference"}
+          </Button>
           {openIds.map((id) => {
             const note = notes.find((item) => item.id === id);
             if (!note) return null;
@@ -96,7 +113,7 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
           )
         ) : <p className="text-sm text-[#43474f]">Open a note to begin.</p>}
       </main>
-      <aside className="border-l border-[#c3c6d0] bg-white p-4">
+      {showReference ? <aside className="border-l border-[#c3c6d0] bg-white p-4">
         <h2 className="text-lg font-semibold text-[#1a1c1c]">Reference Pane</h2>
         <div className="mt-4 grid gap-3">
           {related.map(({ link, note }) => (
@@ -108,7 +125,7 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
           ))}
           {!related.length ? <p className="text-sm text-[#43474f]">Related notes appear here when the active note has links.</p> : null}
         </div>
-      </aside>
+      </aside> : null}
     </div>
   );
 }

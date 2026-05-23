@@ -153,12 +153,12 @@ export function BulkMetadataManager({ notes }: BulkMetadataManagerProps) {
             <Button type="button" variant="secondary" onClick={() => void applyUpdate({ topic: bulkTopic })} disabled={busy}>Set topic</Button>
           </div>
         </Field>
-        <Field label="Type / Concept Level">
+        <Field label="Type / difficulty label">
           <div className="grid gap-2">
             <select className={inputClassName()} value={bulkType} onChange={(event) => setBulkType(event.target.value)}>
               {NOTE_TYPES.map((item) => <option key={item}>{item}</option>)}
             </select>
-            <input className={inputClassName()} value={bulkLevel} onChange={(event) => setBulkLevel(event.target.value)} placeholder="Concept level 1-12" />
+            <input className={inputClassName()} value={bulkLevel} onChange={(event) => setBulkLevel(event.target.value)} placeholder="Level 1-12, based on note type" />
             <Button type="button" variant="secondary" onClick={() => void applyUpdate({ note_type: bulkType, difficulty: bulkLevel ? Number(bulkLevel) : null })} disabled={busy}>Set type/level</Button>
           </div>
         </Field>
@@ -194,7 +194,7 @@ export function BulkMetadataManager({ notes }: BulkMetadataManagerProps) {
               <th className="p-3">Title</th>
               <th className="p-3">Topic</th>
               <th className="p-3">Type</th>
-              <th className="p-3">Concept Level</th>
+              <th className="p-3">Difficulty label</th>
               <th className="p-3">Quality</th>
               <th className="p-3">Tags</th>
             </tr>

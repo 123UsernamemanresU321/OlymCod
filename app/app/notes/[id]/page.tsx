@@ -13,6 +13,7 @@ import { NoteViewActions } from "@/components/notes/NoteViewActions";
 import { NoteViewModeShell } from "@/components/notes/NoteViewModeShell";
 import { VersionHistory } from "@/components/notes/VersionHistory";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
+import { noteTypeLearningFields } from "@/lib/constants/note-formats";
 import { normalizeNoteRelations } from "@/lib/notes/normalizeNoteRelations";
 import { createClient } from "@/lib/supabase/server";
 import type { MistakeLog, Note, NoteLink, NoteReview, ProblemLog } from "@/lib/types";
@@ -39,6 +40,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
   if (!noteData) notFound();
 
   const note = noteData as Note;
+  const learningFields = noteTypeLearningFields(note.note_type);
   const [
     { data: relatedData },
     { data: allNotesData },
@@ -82,7 +84,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
 
   return (
     <NoteViewModeShell>
-    <div className="mx-auto grid max-w-6xl gap-10 px-4 py-8 lg:grid-cols-[minmax(0,616px)_288px] lg:px-10 lg:py-20">
+    <div className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:px-10 lg:py-16">
       <article className="rounded-lg border border-[#c3c6d0] bg-white p-6 lg:p-10">
         <nav className="mb-6 flex items-center gap-2 text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
           <Link href="/app/notes" className="text-[#0e3b69]">
@@ -109,14 +111,19 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
         </header>
 
         <div className="mt-8">
-          {note.recognition_triggers?.length || note.false_uses?.length ? (
+          {(learningFields.recognitionTriggers && note.recognition_triggers?.length) ||
+          (learningFields.falseUses && note.false_uses?.length) ? (
             <div className="mb-8 grid gap-4">
-              <LearningMetadataList
-                title="Recognition Triggers"
-                description="Think of this when you see..."
-                items={note.recognition_triggers ?? []}
-              />
-              <LearningMetadataList title="Common False Uses" items={note.false_uses ?? []} tone="red" />
+              {learningFields.recognitionTriggers ? (
+                <LearningMetadataList
+                  title="Recognition Triggers"
+                  description="Think of this when you see..."
+                  items={note.recognition_triggers ?? []}
+                />
+              ) : null}
+              {learningFields.falseUses ? (
+                <LearningMetadataList title="Common False Uses" items={note.false_uses ?? []} tone="red" />
+              ) : null}
             </div>
           ) : null}
           <MarkdownPreview markdown={note.body_markdown} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   NOTEBOOK_CONTENT_SOURCES,
   NOTEBOOK_DETAIL_LEVELS,
@@ -38,6 +39,7 @@ function sectionToggleLabel(label: string, mode: NotebookConfig["sectionSelectio
 export function NotebookControls({ config, availableTopics, availableTags, onChange }: NotebookControlsProps) {
   const topics = Array.from(new Set([...NOTEBOOK_TOPIC_OPTIONS, ...availableTopics])).filter(Boolean);
   const tags = Array.from(new Set(availableTags)).filter(Boolean).sort();
+  const [sectionQuery, setSectionQuery] = useState("");
 
   function update(update: Partial<NotebookConfig>) {
     onChange({ ...config, ...update });
@@ -84,6 +86,9 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
   const activeFilterCount = config.selectionMode === "blacklist" ? exclusionCount : filterCount;
   const sectionVerb = config.sectionSelectionMode === "blacklist" ? "Hide selected" : "Show selected";
   const activeSectionCount = Object.values(config.sectionToggles).filter(Boolean).length;
+  const visibleSectionToggles = NOTEBOOK_SECTION_TOGGLES.filter((toggle) =>
+    `${toggle.label} ${toggle.key}`.toLowerCase().includes(sectionQuery.trim().toLowerCase())
+  );
 
   return (
     <div className="grid gap-3">
@@ -155,7 +160,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
         </summary>
         <div className="grid gap-4 border-t border-[#e2e4ea] px-4 pb-4 pt-3">
           <Field label="Topics">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-2">
               {topics.map((topic) => (
                 <button
                   key={topic}
@@ -173,7 +178,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           </Field>
 
           <Field label="Note Types">
-            <div className="flex flex-wrap gap-2">
+            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-2">
               {NOTEBOOK_NOTE_TYPE_OPTIONS.map((type) => (
                 <button
                   key={type}
@@ -191,7 +196,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Min Level">
+            <Field label="Min note/problem level">
               <input
                 className={inputClassName()}
                 type="number"
@@ -201,7 +206,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 onChange={(event) => update({ difficultyMin: Number(event.target.value) })}
               />
             </Field>
-            <Field label="Max Level">
+            <Field label="Max note/problem level">
               <input
                 className={inputClassName()}
                 type="number"
@@ -389,8 +394,14 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
               {config.sectionSelectionMode === "blacklist" ? "Hide none" : "Show none"}
             </button>
           </div>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {NOTEBOOK_SECTION_TOGGLES.map((toggle) => (
+          <input
+            className={inputClassName("mt-3")}
+            value={sectionQuery}
+            onChange={(event) => setSectionQuery(event.target.value)}
+            placeholder="Search sections, e.g. proof, diagrams, false uses..."
+          />
+        <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-3 sm:grid-cols-2">
+          {visibleSectionToggles.map((toggle) => (
             <label key={toggle.key} className="flex items-center gap-3 text-sm text-[#43474f]">
               <input
                 type="checkbox"
@@ -400,6 +411,9 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
               {sectionToggleLabel(toggle.label, config.sectionSelectionMode)}
             </label>
           ))}
+          {!visibleSectionToggles.length ? (
+            <p className="text-sm text-[#43474f]">No sections match that search.</p>
+          ) : null}
         </div>
         </div>
       </details>

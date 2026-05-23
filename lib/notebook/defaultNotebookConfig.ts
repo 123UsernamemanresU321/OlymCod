@@ -51,7 +51,7 @@ export const NOTEBOOK_SORT_ORDERS: NotebookSortOrder[] = [
 export const NOTEBOOK_SECTION_TOGGLES: Array<{ key: NotebookSectionToggle; label: string }> = [
   { key: "showMetadata", label: "Show metadata badges" },
   { key: "showTags", label: "Show tags" },
-  { key: "showDifficulty", label: "Show Concept Level / Problem Difficulty" },
+  { key: "showDifficulty", label: "Show note/problem level" },
   { key: "showDescriptions", label: "Show descriptions" },
   { key: "showStatements", label: "Show statements" },
   { key: "showWhenToUse", label: "Show when to use" },

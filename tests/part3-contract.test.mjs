@@ -119,6 +119,9 @@ test("notebook supports whitelist and blacklist modes plus Part 3 notebook secti
   assert.match(controls, /Show selected/);
   assert.match(controls, /Hide selected/);
   assert.match(controls, /<details/);
+  assert.match(controls, /sectionQuery/);
+  assert.match(controls, /Search sections/);
+  assert.match(controls, /visibleSectionToggles/);
   assert.match(builder, /matchesBlacklist/);
   assert.match(renderer, /notebookSectionEnabled/);
   assert.match(renderer, /Recognition Triggers/);

@@ -19,10 +19,14 @@ test("formula formats hide difficulty while past problems keep it", () => {
   assert.match(formats, /"Formula Log"[\s\S]*?usesDifficulty:\s*false/);
   assert.match(formats, /"Formula"[\s\S]*?usesDifficulty:\s*false/);
   assert.match(formats, /"Past Problem"[\s\S]*?usesDifficulty:\s*true/);
+  assert.match(formats, /"Past Problem"[\s\S]*?difficultyLabel:\s*"Problem Difficulty"/);
+  assert.match(formats, /"Technique"[\s\S]*?difficultyLabel:\s*"Recognition Difficulty"/);
 });
 
 test("editor can apply templates and hide irrelevant fields", () => {
   assert.match(noteForm, /handleNoteTypeChange/);
   assert.match(noteForm, /Apply .* template/);
-  assert.match(noteForm, /format\.usesDifficulty/);
+  assert.match(noteForm, /difficultyMeta\.usesDifficulty/);
+  assert.match(noteForm, /learningFields\.recognitionTriggers \? parseLearningList\(recognitionText\) : \[\]/);
+  assert.match(noteForm, /learningFields\.falseUses \? parseLearningList\(falseUsesText\) : \[\]/);
 });

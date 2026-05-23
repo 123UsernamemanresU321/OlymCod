@@ -1,6 +1,7 @@
 import { diagramRenderUrl } from "@/lib/utils/diagrams";
 import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS } from "@/lib/constants/notes";
+import { noteTypeDifficultyMeta } from "@/lib/constants/note-formats";
 import type {
   NotebookConfig,
   NotebookEntrySection,
@@ -52,6 +53,14 @@ function addSection(
   if (!key) return;
   const markdown = item.extractedSections[key]?.trim();
   if (markdown) sections.push({ label, markdown });
+}
+
+function primarySectionLabel(item: NotebookItem, key: NotebookSectionKey | undefined) {
+  if (key !== "statement") return key ? SECTION_LABELS[key] : "";
+  if (item.noteType === "Definition") return "Definition";
+  if (item.noteType === "Past Problem") return "Problem Statement";
+  if (item.noteType === "Example") return "Problem / Example";
+  return "Statement";
 }
 
 function linkedList(items: Array<{ title: string; relation?: string | null; status?: string | null; mistakeType?: string | null }>) {
@@ -113,16 +122,23 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
     if (show("showWhenToUse")) addSection(item, sections, "when_to_use", "Use Case");
   } else if (config.detailLevel === "Statement Mode") {
     if (show("showStatements")) {
-      addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]));
+      const key = firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]);
+      addSection(item, sections, key, primarySectionLabel(item, key));
     }
   } else if (config.detailLevel === "Compact Revision Mode") {
-    if (show("showStatements")) addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "first_paragraph"]));
+    if (show("showStatements")) {
+      const key = firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "first_paragraph"]);
+      addSection(item, sections, key, primarySectionLabel(item, key));
+    }
     if (show("showWhenToUse")) addSection(item, sections, "when_to_use");
     if (show("showSigns")) addSection(item, sections, "signs");
     if (show("showCommonMistakes")) addSection(item, sections, "common_mistakes");
     if (show("showConditions")) addSection(item, sections, "conditions");
   } else {
-    if (show("showStatements")) addSection(item, sections, firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]));
+    if (show("showStatements")) {
+      const key = firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]);
+      addSection(item, sections, key, primarySectionLabel(item, key));
+    }
     if (show("showWhenToUse")) addSection(item, sections, "when_to_use");
     if (show("showSigns")) addSection(item, sections, "signs");
     if (show("showIntuition")) addSection(item, sections, "intuition");
@@ -168,7 +184,11 @@ function metadataLine(item: NotebookItem, config: NotebookConfig) {
         ? `Problem Difficulty ${item.difficulty}. ${PROBLEM_DIFFICULTY_LABELS[item.difficulty]}`
         : null
       : item.difficulty
-        ? `Concept Level ${item.difficulty}. ${CONCEPT_LEVEL_LABELS[item.difficulty]}`
+        ? `${noteTypeDifficultyMeta(item.noteType).label} ${item.difficulty}. ${
+            noteTypeDifficultyMeta(item.noteType).kind === "problem"
+              ? PROBLEM_DIFFICULTY_LABELS[item.difficulty]
+              : CONCEPT_LEVEL_LABELS[item.difficulty]
+          }`
         : null;
   const parts = [
     show("showMetadata") ? item.topic : null,

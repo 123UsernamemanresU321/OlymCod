@@ -44,6 +44,7 @@ test("type-specific Note Quality counts false uses and recognition metadata", ()
 
 test("notes use Concept Level while problems use Problem Difficulty", () => {
   const constants = read("../lib/constants/notes.ts");
+  const formats = read("../lib/constants/note-formats.ts");
   const badge = read("../components/ui/Badge.tsx");
   const noteForm = read("../components/notes/NoteForm.tsx");
   const problemForm = read("../components/problems/ProblemForm.tsx");
@@ -52,12 +53,20 @@ test("notes use Concept Level while problems use Problem Difficulty", () => {
 
   assert.match(constants, /CONCEPT_LEVEL_LABELS/);
   assert.match(constants, /PROBLEM_DIFFICULTY_LABELS/);
+  assert.match(formats, /noteTypeDifficultyMeta/);
+  assert.match(formats, /difficultyLabel/);
+  assert.match(formats, /Recognition Difficulty/);
+  assert.match(formats, /Execution Difficulty/);
+  assert.match(formats, /Trap Severity/);
+  assert.match(formats, /Problem Difficulty/);
+  assert.match(formats, /learningFields/);
   assert.match(badge, /kind = "concept"/);
-  assert.match(noteForm, /Concept Level \(1-12\)/);
+  assert.match(noteForm, /difficultyMeta\.label/);
+  assert.match(noteForm, /noteTypeLearningFields/);
   assert.match(problemForm, /Problem Difficulty/);
-  assert.match(notebookMarkdown, /Concept Level/);
+  assert.match(notebookMarkdown, /noteTypeDifficultyMeta/);
   assert.match(notebookMarkdown, /Problem Difficulty/);
-  assert.match(mastery, /Avg Concept Level/);
+  assert.match(mastery, /Avg Note Level/);
   assert.match(mastery, /Avg Problem Difficulty/);
 });
 
@@ -119,6 +128,6 @@ test("media migration and docs cover the Part 3 extension", () => {
   assert.match(readme, /Visual Note Graph/);
   assert.match(readme, /Bulk Metadata Manager/);
   assert.match(readme, /Media Library/);
-  assert.match(readme, /Concept Level vs Problem Difficulty/);
+  assert.match(readme, /Type-Specific Note Levels vs Problem Difficulty/);
   assert.match(readme, /structured `link_suggestions`/);
 });

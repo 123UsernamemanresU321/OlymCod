@@ -6,6 +6,7 @@ import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { TopicSelector } from "@/components/notes/TopicSelector";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
+import { noteTypeLearningFields } from "@/lib/constants/note-formats";
 import { NOTE_TYPES } from "@/lib/constants/notes";
 import { BUILT_IN_NOTE_TEMPLATES, isBuiltInTemplate } from "@/lib/templates/noteTemplates";
 import { createClient } from "@/lib/supabase/client";
@@ -44,6 +45,9 @@ export function TemplateLibraryClient({ customTemplates }: TemplateLibraryClient
   const templates = useMemo(() => [...BUILT_IN_NOTE_TEMPLATES, ...customTemplates], [customTemplates]);
   const selected = templates.find((template) => template.id === selectedId) ?? null;
   const shown = selectedId === "new" ? draft : selected;
+  const editable = selectedId === "new" || Boolean(selected && !isBuiltInTemplate(selected));
+  const activeDraft = selectedId === "new" ? draft : editable ? draft : shown;
+  const learningFields = activeDraft ? noteTypeLearningFields(activeDraft.note_type) : noteTypeLearningFields("Theorem");
 
   function editTemplate(template: NoteTemplate) {
     setSelectedId(template.id);
@@ -81,8 +85,12 @@ export function TemplateLibraryClient({ customTemplates }: TemplateLibraryClient
       note_type: template.note_type,
       topic: template.topic || null,
       template_markdown: template.template_markdown,
-      default_recognition_triggers: triggersText.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean),
-      default_false_uses: falseUsesText.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean),
+      default_recognition_triggers: learningFields.recognitionTriggers
+        ? triggersText.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean)
+        : [],
+      default_false_uses: learningFields.falseUses
+        ? falseUsesText.split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean)
+        : [],
       default_tags: parseTags(tagsText)
     };
     const query = selectedId !== "new" && !duplicate && !isBuiltInTemplate({ id: selectedId })
@@ -100,9 +108,6 @@ export function TemplateLibraryClient({ customTemplates }: TemplateLibraryClient
     const { error } = await supabase.from("note_templates").delete().eq("id", template.id).eq("user_id", user.id);
     setMessage(error ? error.message : "Template deleted. Refresh to update the list.");
   }
-
-  const editable = selectedId === "new" || Boolean(selected && !isBuiltInTemplate(selected));
-  const activeDraft = selectedId === "new" ? draft : editable ? draft : shown;
 
   return (
     <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-10">
@@ -153,14 +158,20 @@ export function TemplateLibraryClient({ customTemplates }: TemplateLibraryClient
             <Field label="Description">
               <textarea className={inputClassName("min-h-20")} value={activeDraft.description ?? ""} disabled={!editable} onChange={(event) => setDraft({ ...draft, description: event.target.value })} />
             </Field>
-            <div className="mt-4 grid gap-4 lg:grid-cols-2">
-              <Field label="Default recognition triggers">
-                <textarea className={inputClassName("min-h-24")} value={editable ? triggersText : activeDraft.default_recognition_triggers.join("\n")} disabled={!editable} onChange={(event) => setTriggersText(event.target.value)} />
-              </Field>
-              <Field label="Default false uses">
-                <textarea className={inputClassName("min-h-24")} value={editable ? falseUsesText : activeDraft.default_false_uses.join("\n")} disabled={!editable} onChange={(event) => setFalseUsesText(event.target.value)} />
-              </Field>
-            </div>
+            {learningFields.recognitionTriggers || learningFields.falseUses ? (
+              <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                {learningFields.recognitionTriggers ? (
+                  <Field label="Default recognition triggers">
+                    <textarea className={inputClassName("min-h-24")} value={editable ? triggersText : activeDraft.default_recognition_triggers.join("\n")} disabled={!editable} onChange={(event) => setTriggersText(event.target.value)} />
+                  </Field>
+                ) : null}
+                {learningFields.falseUses ? (
+                  <Field label="Default false uses">
+                    <textarea className={inputClassName("min-h-24")} value={editable ? falseUsesText : activeDraft.default_false_uses.join("\n")} disabled={!editable} onChange={(event) => setFalseUsesText(event.target.value)} />
+                  </Field>
+                ) : null}
+              </div>
+            ) : null}
             <div className="mt-4 grid gap-4 lg:grid-cols-2">
               <Field label="Template Markdown">
                 <textarea className={inputClassName("min-h-[420px] font-mono text-sm")} value={activeDraft.template_markdown} disabled={!editable} onChange={(event) => setDraft({ ...draft, template_markdown: event.target.value })} />

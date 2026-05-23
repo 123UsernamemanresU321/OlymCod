@@ -16,6 +16,9 @@ test("notebook section extraction keeps full multi-line sections until same-or-h
 
   assert.match(extraction, /inFence/);
   assert.match(extraction, /level > currentLevel/);
+  assert.match(extraction, /definition: "statement"/);
+  assert.match(extraction, /"problem statement": "statement"/);
+  assert.match(extraction, /"example problem": "statement"/);
   assert.match(extraction, /sections\[currentKey\] \? `\$\{sections\[currentKey\]\}\\n\\n\$\{body\}` : body/);
   assert.match(extraction, /current\.join\("\\n"\)/);
   assert.doesNotMatch(extraction, /split\("\\n"\)\[0\]/);
@@ -40,6 +43,9 @@ test("creation and organization routes are implemented and wired into navigation
   const palette = read("../components/command/CommandPalette.tsx");
   const dashboard = read("../components/notes/DashboardClient.tsx");
 
+  assert.match(shell, /sidebarCollapsed/);
+  assert.match(shell, /PanelLeftClose/);
+  assert.match(shell, /lg:ml-20/);
   assert.match(shell, /\/app\/workspace/);
   assert.match(shell, /\/app\/graph/);
   assert.match(shell, /\/app\/manage/);
@@ -103,6 +109,10 @@ test("workspace, importer, taxonomy, saved views, merge, and media improvements 
   const graph = read("../components/graph/NoteGraphClient.tsx");
 
   assert.match(workspace, /openIds/);
+  assert.match(workspace, /showLibrary/);
+  assert.match(workspace, /showReference/);
+  assert.match(workspace, /Hide library/);
+  assert.match(workspace, /Hide reference/);
   assert.match(workspace, /Reference Pane/);
   assert.match(importer, /Smart Importer/);
   assert.match(importer, /Split by top-level/);

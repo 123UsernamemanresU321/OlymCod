@@ -6,6 +6,7 @@ import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
+import { noteTypeLearningFields } from "@/lib/constants/note-formats";
 import type { NoteDraft } from "@/lib/types";
 
 type AssistMode =
@@ -160,13 +161,20 @@ export function AIWritingAssistant({
   const [result, setResult] = useState<AIResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const learningFields = noteTypeLearningFields(draft.note_type);
+  const availableAssistModes = assistModes.filter((item) => {
+    if (item.value === "suggest_recognition_triggers") return learningFields.recognitionTriggers;
+    if (item.value === "suggest_false_uses") return learningFields.falseUses;
+    return true;
+  });
+  const effectiveMode = availableAssistModes.some((item) => item.value === mode) ? mode : "starter_draft";
 
   const hasMarkdown = Boolean(result?.markdown.trim());
   const hasMetadata = Boolean(
     result?.description ||
       result?.tags.length ||
-      result?.recognition_triggers.length ||
-      result?.false_uses.length
+      (learningFields.recognitionTriggers && result?.recognition_triggers.length) ||
+      (learningFields.falseUses && result?.false_uses.length)
   );
 
   async function generate() {
@@ -179,7 +187,7 @@ export function AIWritingAssistant({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode,
+          mode: effectiveMode,
           instruction,
           selectedText: getSelectedText(),
           note: {
@@ -249,10 +257,10 @@ export function AIWritingAssistant({
         <Field label="AI mode">
           <select
             className={inputClassName()}
-            value={mode}
+            value={effectiveMode}
             onChange={(event) => setMode(event.target.value as AssistMode)}
           >
-            {assistModes.map((item) => (
+            {availableAssistModes.map((item) => (
               <option key={item.value} value={item.value}>
                 {item.label}
               </option>
@@ -264,13 +272,13 @@ export function AIWritingAssistant({
             className={inputClassName("min-h-28")}
             value={instruction}
             onChange={(event) => setInstruction(event.target.value)}
-            placeholder={modePlaceholders[mode]}
+            placeholder={modePlaceholders[effectiveMode]}
           />
         </Field>
       </div>
 
       <p className="mt-3 text-sm leading-6 text-[#43474f]">
-        {assistModes.find((item) => item.value === mode)?.hint} Select text in the editor first to focus the request on one section.
+        {assistModes.find((item) => item.value === effectiveMode)?.hint} Select text in the editor first to focus the request on one section.
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
@@ -300,14 +308,20 @@ export function AIWritingAssistant({
               {result.tags.length ? (
                 <p className="mt-2 text-sm text-[#43474f]">Tags: {result.tags.join(", ")}</p>
               ) : null}
-              <div className="mt-3 grid gap-3">
-                <LearningMetadataList
-                  title="Recognition triggers"
-                  items={result.recognition_triggers}
-                  compact
-                />
-                <LearningMetadataList title="False uses" items={result.false_uses} tone="red" compact />
-              </div>
+              {learningFields.recognitionTriggers || learningFields.falseUses ? (
+                <div className="mt-3 grid gap-3">
+                  {learningFields.recognitionTriggers ? (
+                    <LearningMetadataList
+                      title="Recognition triggers"
+                      items={result.recognition_triggers}
+                      compact
+                    />
+                  ) : null}
+                  {learningFields.falseUses ? (
+                    <LearningMetadataList title="False uses" items={result.false_uses} tone="red" compact />
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -388,8 +402,8 @@ export function AIWritingAssistant({
                 onApplyMetadata({
                   description: result.description,
                   tags: result.tags,
-                  recognition_triggers: result.recognition_triggers,
-                  false_uses: result.false_uses
+                  recognition_triggers: learningFields.recognitionTriggers ? result.recognition_triggers : [],
+                  false_uses: learningFields.falseUses ? result.false_uses : []
                 })
               }
               disabled={!hasMetadata}

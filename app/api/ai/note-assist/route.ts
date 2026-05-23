@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserProfile } from "@/lib/auth/server";
-import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
+import {
+  buildNoteTemplate,
+  getNoteFormat,
+  noteTypeDifficultyMeta,
+  noteTypeLearningFields
+} from "@/lib/constants/note-formats";
 
 const assistModes = [
   "starter_draft",
@@ -156,6 +161,8 @@ function parseAssistantContent(content: string) {
 
 function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
   const format = getNoteFormat(input.note.note_type);
+  const difficultyMeta = noteTypeDifficultyMeta(input.note.note_type);
+  const learningFields = noteTypeLearningFields(input.note.note_type);
   const template = buildNoteTemplate(input.note.note_type, input.note.title || "[Title]");
 
   const responseShape =
@@ -178,6 +185,11 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
     "- Allowed relation types: prerequisite, related, used together, commonly confused, stronger version, weaker version, generalization, special case.",
     "- Never invent targetNoteId. If a useful note does not exist, put it under possible_new_notes instead.",
     "- For suggest_related_notes, markdown must be an empty string.",
+    "- Follow the app's note-type conventions. Do not add Recognition Triggers unless this note type supports them.",
+    "- Do not add Common False Uses unless this note type supports them.",
+    `- Difficulty label for this note type: ${difficultyMeta.usesDifficulty ? difficultyMeta.label : "none"}.`,
+    `- Recognition Triggers supported: ${learningFields.recognitionTriggers ? "yes" : "no"}.`,
+    `- Common False Uses supported: ${learningFields.falseUses ? "yes" : "no"}.`,
     "",
     "Note context:",
     JSON.stringify(
@@ -186,7 +198,8 @@ function buildPrompt(input: z.infer<typeof assistRequestSchema>) {
         topic: input.note.topic,
         note_type: input.note.note_type,
         note_type_description: format.description,
-        concept_level: format.usesDifficulty ? input.note.difficulty : null,
+        difficulty_label: difficultyMeta.usesDifficulty ? difficultyMeta.label : null,
+        difficulty: difficultyMeta.usesDifficulty ? input.note.difficulty : null,
         description: input.note.description,
         tags: input.note.tags,
         recognition_triggers: input.note.recognition_triggers,
@@ -300,6 +313,7 @@ export async function POST(request: Request) {
   }
 
   const output = parseAssistantContent(content);
+  const learningFields = noteTypeLearningFields(parsed.data.note.note_type);
   const noteById = new Map((parsed.data.codexNotes ?? []).flatMap((note) => (note.id ? [[note.id, note]] : [])));
   const noteByTitle = new Map((parsed.data.codexNotes ?? []).map((note) => [note.title.toLowerCase(), note]));
   const linkSuggestions = (output.link_suggestions ?? [])
@@ -324,8 +338,12 @@ export async function POST(request: Request) {
     markdown: parsed.data.mode === "suggest_related_notes" ? "" : output.markdown,
     description: output.description ?? null,
     tags: (output.tags ?? []).map((tag) => tag.trim()).filter(Boolean).slice(0, 12),
-    recognition_triggers: (output.recognition_triggers ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8),
-    false_uses: (output.false_uses ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8),
+    recognition_triggers: learningFields.recognitionTriggers
+      ? (output.recognition_triggers ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8)
+      : [],
+    false_uses: learningFields.falseUses
+      ? (output.false_uses ?? []).map((item) => item.trim()).filter(Boolean).slice(0, 8)
+      : [],
     link_suggestions: parsed.data.mode === "suggest_related_notes" ? linkSuggestions : [],
     possible_new_notes: parsed.data.mode === "suggest_related_notes" ? (output.possible_new_notes ?? []).slice(0, 5) : [],
     model: config.model

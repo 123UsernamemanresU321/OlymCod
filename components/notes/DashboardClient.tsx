@@ -157,7 +157,7 @@ export function DashboardClient({ notes, suggestions, reviews, problems, mistake
         <Link href="/app/manage" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
           <Table2 className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
           <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Manage Notes</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">Bulk edit topics, tags, concept levels, visibility, and archived state.</p>
+          <p className="mt-2 text-sm leading-6 text-[#43474f]">Bulk edit topics, tags, type-specific levels, visibility, and archived state.</p>
         </Link>
         <Link href="/app/revision-pack" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
           <Target className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />

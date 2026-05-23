@@ -115,7 +115,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
       { id: "revision-pack", group: "Actions", title: "Generate Contest Revision Pack", href: "/app/revision-pack", preview: "before contest revision pack weak notes false uses triggers" },
       { id: "mastery", group: "Actions", title: "Open Mastery Heatmap", href: "/app/mastery", preview: "mastery heatmap weak topics confidence mistakes" },
       { id: "graph", group: "Actions", title: "Open Note Graph", href: "/app/graph", preview: "visual relationships prerequisites links" },
-      { id: "manage", group: "Actions", title: "Open Bulk Metadata Manager", href: "/app/manage", preview: "bulk edit tags topics concept level visibility" },
+      { id: "manage", group: "Actions", title: "Open Bulk Metadata Manager", href: "/app/manage", preview: "bulk edit tags topics levels visibility" },
       { id: "media", group: "Actions", title: "Open Media Library", href: "/app/media", preview: "geometry diagram media manager" },
       { id: "workspace", group: "Actions", title: "Open Workspace", href: "/app/workspace", preview: "multi pane editor reference notes" },
       { id: "templates", group: "Actions", title: "Open Templates", href: "/app/templates", preview: "note templates custom built in" },

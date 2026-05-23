@@ -4,6 +4,10 @@ import type { NotebookSectionKey } from "@/lib/notebook/types";
 const HEADING_ALIASES: Record<string, NotebookSectionKey> = {
   statement: "statement",
   claim: "statement",
+  definition: "statement",
+  "problem statement": "statement",
+  problem: "statement",
+  "example problem": "statement",
   formula: "formula",
   "core idea": "core_idea",
   idea: "core_idea",

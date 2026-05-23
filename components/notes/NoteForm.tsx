@@ -19,7 +19,12 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { Toast } from "@/components/ui/Toast";
-import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
+import {
+  buildNoteTemplate,
+  getNoteFormat,
+  noteTypeDifficultyMeta,
+  noteTypeLearningFields
+} from "@/lib/constants/note-formats";
 import { NOTE_TYPES } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import { allTemplates, BUILT_IN_NOTE_TEMPLATES } from "@/lib/templates/noteTemplates";
@@ -107,6 +112,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const [localDraftStatus, setLocalDraftStatus] = useState("Local draft ready");
 
   const format = useMemo(() => getNoteFormat(draft.note_type), [draft.note_type]);
+  const difficultyMeta = useMemo(() => noteTypeDifficultyMeta(draft.note_type), [draft.note_type]);
+  const learningFields = useMemo(() => noteTypeLearningFields(draft.note_type), [draft.note_type]);
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0] ?? null;
 
   function updateDraft(update: Partial<NoteDraft>) {
@@ -189,16 +196,21 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
     if (hasBody && !bodyUsesTemplate && !window.confirm("Apply this template and replace the current Markdown body?")) {
       return;
     }
+    const nextLearningFields = noteTypeLearningFields(selectedTemplate.note_type);
+    const nextRecognitionTriggers = nextLearningFields.recognitionTriggers
+      ? selectedTemplate.default_recognition_triggers
+      : [];
+    const nextFalseUses = nextLearningFields.falseUses ? selectedTemplate.default_false_uses : [];
     updateDraft({
       note_type: selectedTemplate.note_type,
       topic: selectedTemplate.topic ?? draft.topic,
       body_markdown: selectedTemplate.template_markdown.replaceAll("[Title]", draft.title || "[Title]"),
-      recognition_triggers: selectedTemplate.default_recognition_triggers,
-      false_uses: selectedTemplate.default_false_uses,
+      recognition_triggers: nextRecognitionTriggers,
+      false_uses: nextFalseUses,
       tags: selectedTemplate.default_tags.length ? selectedTemplate.default_tags : draft.tags
     });
-    setRecognitionText(selectedTemplate.default_recognition_triggers.join("\n"));
-    setFalseUsesText(selectedTemplate.default_false_uses.join("\n"));
+    setRecognitionText(nextRecognitionTriggers.join("\n"));
+    setFalseUsesText(nextFalseUses.join("\n"));
     if (selectedTemplate.default_tags.length) setTagsText(selectedTemplate.default_tags.join(", "));
     setBodyUsesTemplate(true);
   }
@@ -219,8 +231,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       note_type: draft.note_type,
       topic: draft.topic,
       template_markdown: draft.body_markdown,
-      default_recognition_triggers: draft.recognition_triggers,
-      default_false_uses: draft.false_uses,
+      default_recognition_triggers: learningFields.recognitionTriggers ? draft.recognition_triggers : [],
+      default_false_uses: learningFields.falseUses ? draft.false_uses : [],
       default_tags: draft.tags
     });
     setToast(
@@ -321,11 +333,11 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       update.tags = metadata.tags;
       setTagsText(metadata.tags.join(", "));
     }
-    if (metadata.recognition_triggers?.length) {
+    if (learningFields.recognitionTriggers && metadata.recognition_triggers?.length) {
       update.recognition_triggers = metadata.recognition_triggers;
       setRecognitionText(metadata.recognition_triggers.join("\n"));
     }
-    if (metadata.false_uses?.length) {
+    if (learningFields.falseUses && metadata.false_uses?.length) {
       update.false_uses = metadata.false_uses;
       setFalseUsesText(metadata.false_uses.join("\n"));
     }
@@ -343,8 +355,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       tags: parseTags(tagsText),
       body_markdown: draft.body_markdown.trim() || buildNoteTemplate(draft.note_type, draft.title),
       diagram_urls: draft.diagram_urls,
-      recognition_triggers: parseLearningList(recognitionText),
-      false_uses: parseLearningList(falseUsesText),
+      recognition_triggers: learningFields.recognitionTriggers ? parseLearningList(recognitionText) : [],
+      false_uses: learningFields.falseUses ? parseLearningList(falseUsesText) : [],
       visibility: draft.visibility,
       published_at: draft.visibility === "public" ? new Date().toISOString() : null,
       is_favorite: draft.is_favorite,
@@ -534,7 +546,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-7xl gap-0 lg:grid-cols-2">
+      <div className="mx-auto grid max-w-[1800px] gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)]">
         <section className="border-[#c3c6d0] p-4 lg:min-h-[calc(100vh-64px)] lg:border-r lg:p-10">
           <div className="mb-6 flex border-b border-[#c3c6d0] lg:hidden">
             {(["edit", "preview", "metadata"] as const).map((tab) => (
@@ -599,8 +611,8 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                     ))}
                   </select>
                 </Field>
-                {format.usesDifficulty ? (
-                  <Field label="Concept Level (1-12)">
+                {difficultyMeta.usesDifficulty ? (
+                  <Field label={`${difficultyMeta.label} (1-12)`}>
                     <input
                       className={inputClassName()}
                       type="number"
@@ -652,30 +664,43 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                   placeholder="modular arithmetic, phi, coprime"
                 />
               </Field>
-              <Field label="Recognition Triggers">
-                <textarea
-                  className={inputClassName("min-h-24")}
-                  value={recognitionText}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    setRecognitionText(next);
-                    updateDraft({ recognition_triggers: parseLearningList(next) });
-                  }}
-                  placeholder="large exponent modulo n, three cevians in a triangle"
-                />
-              </Field>
-              <Field label="Common False Uses">
-                <textarea
-                  className={inputClassName("min-h-24")}
-                  value={falseUsesText}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    setFalseUsesText(next);
-                    updateDraft({ false_uses: parseLearningList(next) });
-                  }}
-                  placeholder="Do not use if gcd(a,n) is not 1."
-                />
-              </Field>
+              {learningFields.recognitionTriggers || learningFields.falseUses ? (
+                <details className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
+                  <summary className="cursor-pointer text-sm font-semibold text-[#1a1c1c]">
+                    Recognition and traps · {draft.recognition_triggers.length + draft.false_uses.length} items
+                  </summary>
+                  <div className="mt-4 grid gap-4">
+                    {learningFields.recognitionTriggers ? (
+                      <Field label="Recognition Triggers">
+                        <textarea
+                          className={inputClassName("min-h-24")}
+                          value={recognitionText}
+                          onChange={(event) => {
+                            const next = event.target.value;
+                            setRecognitionText(next);
+                            updateDraft({ recognition_triggers: parseLearningList(next) });
+                          }}
+                          placeholder="large exponent modulo n, three cevians in a triangle"
+                        />
+                      </Field>
+                    ) : null}
+                    {learningFields.falseUses ? (
+                      <Field label="Common False Uses">
+                        <textarea
+                          className={inputClassName("min-h-24")}
+                          value={falseUsesText}
+                          onChange={(event) => {
+                            const next = event.target.value;
+                            setFalseUsesText(next);
+                            updateDraft({ false_uses: parseLearningList(next) });
+                          }}
+                          placeholder="Do not use if gcd(a,n) is not 1."
+                        />
+                      </Field>
+                    ) : null}
+                  </div>
+                </details>
+              ) : null}
               <label className="flex items-center gap-3 text-sm font-medium text-[#43474f]">
                 <input
                   type="checkbox"
@@ -684,8 +709,11 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                 />
                 Favorite note
               </label>
-              <div className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
-                <div className="grid gap-3">
+              <details className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-[#1a1c1c]">
+                  Templates and format
+                </summary>
+                <div className="mt-4 grid gap-3">
                   <div>
                     <p className="text-sm font-semibold text-[#1a1c1c]">{format.label} format</p>
                     <p className="mt-1 text-sm leading-6 text-[#43474f]">{format.description}</p>
@@ -711,7 +739,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                     </details>
                   ) : null}
                 </div>
-              </div>
+              </details>
             </div>
           </div>
 
@@ -818,15 +846,21 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
           </div>
           <div className="rounded-lg border border-[#c3c6d0] bg-white p-6">
             <MarkdownPreview markdown={draft.body_markdown} />
-            <div className="mt-6 grid gap-4">
-              <LearningMetadataList
-                title="Recognition Triggers"
-                description="Metadata preview"
-                items={draft.recognition_triggers}
-                compact
-              />
-              <LearningMetadataList title="Common False Uses" items={draft.false_uses} tone="red" compact />
-            </div>
+            {learningFields.recognitionTriggers || learningFields.falseUses ? (
+              <div className="mt-6 grid gap-4">
+                {learningFields.recognitionTriggers ? (
+                  <LearningMetadataList
+                    title="Recognition Triggers"
+                    description="Metadata preview"
+                    items={draft.recognition_triggers}
+                    compact
+                  />
+                ) : null}
+                {learningFields.falseUses ? (
+                  <LearningMetadataList title="Common False Uses" items={draft.false_uses} tone="red" compact />
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </section>
       </div>

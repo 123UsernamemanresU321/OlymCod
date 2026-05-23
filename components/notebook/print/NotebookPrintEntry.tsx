@@ -2,6 +2,7 @@ import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { NotebookPrintSection } from "@/components/notebook/print/NotebookPrintSection";
 import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
 import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS } from "@/lib/constants/notes";
+import { noteTypeDifficultyMeta } from "@/lib/constants/note-formats";
 import { getNotebookEntrySections } from "@/lib/notebook/renderNotebookMarkdown";
 import { cn } from "@/lib/utils/cn";
 import type { NotebookConfig, NotebookItem, NotebookSectionToggle } from "@/lib/notebook/types";
@@ -34,7 +35,11 @@ function metadataParts(item: NotebookItem, config: NotebookConfig) {
         ? `Problem Difficulty ${item.difficulty}. ${PROBLEM_DIFFICULTY_LABELS[item.difficulty]}`
         : null
       : item.difficulty
-        ? `Concept Level ${item.difficulty}. ${CONCEPT_LEVEL_LABELS[item.difficulty]}`
+        ? `${noteTypeDifficultyMeta(item.noteType).label} ${item.difficulty}. ${
+            noteTypeDifficultyMeta(item.noteType).kind === "problem"
+              ? PROBLEM_DIFFICULTY_LABELS[item.difficulty]
+              : CONCEPT_LEVEL_LABELS[item.difficulty]
+          }`
         : null;
   return [
     show("showMetadata") ? item.topic : null,
