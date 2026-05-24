@@ -310,7 +310,62 @@ The note editor has a **Raw Markdown / Section Editor** toggle. Section Editor p
 
 ### Visual Note Graph
 
-Open `/app/graph` to view a dependency-free SVG relationship map of current-user notes and note links. Filter by topic, note type, relation type, or search text. Prerequisite edges are directional, and clicking a node opens the note.
+Open `/app/graph` to use the interactive note map. It is an Obsidian-inspired, dependency-free SVG graph built for mathematical notes, not a public sharing surface.
+
+Graph modes:
+
+- **Global Graph** shows the current user's whole note network.
+- **Local Graph** centers on one note and shows its depth 1-3 neighborhood.
+- Opening `/app/graph?note=<note_id>` from a note page starts in Local Graph mode for that note.
+
+Relation rules:
+
+- Graph edges use the existing `note_links` rows.
+- No reverse edge is created automatically.
+- If Ceva's Theorem links to Area of Triangle as `prerequisite`, the stored edge remains `source_note_id = Ceva`, `target_note_id = Area`, `relation_type = prerequisite`.
+- The graph text explains the direction as “Area of Triangle is a prerequisite of Ceva's Theorem.”
+
+Controls:
+
+- Search note title, topic, note type, tags, recognition triggers, and common false uses.
+- Filter by topic, type, tag, level range, relation type, metadata presence, diagrams, recent updates, orphan notes, and quality status.
+- Switch layouts between force-directed, topic clusters, hierarchical prerequisites, radial local graph, and compact grid.
+- Color nodes by topic or type, size nodes by connections or level, show/hide labels and arrows, and use a dark graph background.
+
+Navigation and editing:
+
+- Click a node to inspect it.
+- Double-click a node to open the note.
+- Right-click a node for open, workspace, copy link, hide, pin, create-link, and focus actions.
+- Click an edge to inspect, edit, or delete the relation.
+- **Link Mode** creates one directional link by selecting source, target, and relation type. Duplicate source-target pairs are updated instead of duplicated.
+
+Organization tools:
+
+- Path Finder highlights the shortest path between two visible notes.
+- Graph Health shows orphan notes, hubs, connected clusters, missing prerequisites, possible duplicate notes, and overuse of generic `related` links.
+- Cluster tools group notes by topic, let you collapse/expand topic clusters, filter to a cluster, or export a cluster.
+
+Export and snapshots:
+
+- Export visible graph as SVG, PNG, or JSON.
+- Copy visible notes as plain text or Markdown links.
+- Save/load one local graph snapshot in browser storage.
+
+AI graph assistant:
+
+- Uses the existing owner-only DeepSeek-backed note assistant.
+- Sends only selected graph context and existing note candidates.
+- Returns structured link suggestions with existing note IDs only.
+- Possible non-existing notes are shown separately as “Possible new note.”
+- The user must approve each suggested link before anything is saved.
+
+Performance and privacy:
+
+- The graph page fetches only graph metadata fields, not full note bodies.
+- All graph queries remain scoped to `user_id`.
+- The browser warns when the graph is larger than 300 notes and encourages topic/local filtering.
+- On mobile, the graph canvas remains full-width with filters and inspector stacked as drawers/panels.
 
 ### Bulk Metadata Manager
 

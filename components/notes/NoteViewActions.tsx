@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, BookmarkCheck, Edit, Trash2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, Edit, Network, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -91,6 +91,13 @@ export function NoteViewActions({ note }: NoteViewActionsProps) {
           )}
           Favorite
         </Button>
+        <Link
+          href={`/app/graph?note=${note.id}`}
+          className="col-span-2 inline-flex min-h-10 items-center justify-center gap-2 rounded border border-[#c3c6d0] px-4 py-2 text-[13px] font-medium tracking-[0.04em] text-[#0e3b69] hover:bg-white"
+        >
+          <Network className="h-4 w-4" aria-hidden="true" />
+          Open Local Graph
+        </Link>
         <Button
           type="button"
           variant="danger"
