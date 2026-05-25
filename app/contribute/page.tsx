@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { PublicFooter } from "@/components/public/PublicFooter";
 import { createClient } from "@/lib/supabase/server";
 import type { SiteSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Contribution Guidelines",
+  description: "Learn how reviewed suggestions work in Olympiad Codex."
+};
 
 export default async function ContributePage() {
   const supabase = await createClient();
@@ -10,6 +16,7 @@ export default async function ContributePage() {
   const settings = data as SiteSettings | null;
 
   return (
+    <>
     <main className="min-h-screen bg-[#f9f9f9] px-4 py-12 text-[#1a1c1c] lg:px-10">
       <section className="mx-auto max-w-3xl rounded-lg border border-[#c3c6d0] bg-white p-6 lg:p-10">
         <Link href="/" className="text-sm font-medium text-[#0e3b69]">Olympiad Codex</Link>
@@ -46,5 +53,7 @@ export default async function ContributePage() {
         ) : null}
       </section>
     </main>
+    <PublicFooter />
+    </>
   );
 }

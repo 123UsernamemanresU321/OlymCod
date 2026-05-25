@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
+import { PublicFooter } from "@/components/public/PublicFooter";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
 import { inputClassName } from "@/components/ui/Field";
 import { MATH_TOPICS, SPECIAL_TOPICS, topicIncludes } from "@/lib/constants/notes";
@@ -26,6 +27,7 @@ export function PublicNotesClient({ notes }: { notes: Note[] }) {
   }, [notes, query, topic]);
 
   return (
+    <>
     <main className="min-h-screen bg-[#f9f9f9] px-4 py-10 text-[#1a1c1c] lg:px-10">
       <div className="mx-auto max-w-6xl">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -98,5 +100,7 @@ export function PublicNotesClient({ notes }: { notes: Note[] }) {
         </section>
       </div>
     </main>
+    <PublicFooter />
+    </>
   );
 }

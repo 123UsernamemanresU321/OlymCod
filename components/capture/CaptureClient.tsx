@@ -319,8 +319,8 @@ export function CaptureClient({ captures, initialConvertId = null }: CaptureClie
                 />
               </Field>
               {error ? <p className="text-sm text-[#8f1d15]">{error}</p> : null}
-              <Button type="button" onClick={() => void convertCapture()} disabled={busy}>
-                {busy ? "Converting..." : "Create official note"}
+              <Button type="button" onClick={() => void convertCapture()} loading={busy} loadingLabel="Converting...">
+                Create official note
               </Button>
             </div>
           ) : (

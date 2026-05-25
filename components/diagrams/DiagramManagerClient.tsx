@@ -156,7 +156,7 @@ export function DiagramManagerClient({ diagrams, notes }: DiagramManagerClientPr
               ))}
             </select>
           </Field>
-          <Button type="button" onClick={() => void uploadDiagram()} disabled={busy}>
+          <Button type="button" onClick={() => void uploadDiagram()} loading={busy} loadingLabel="Uploading...">
             <Upload className="h-4 w-4" aria-hidden="true" />
             Upload
           </Button>

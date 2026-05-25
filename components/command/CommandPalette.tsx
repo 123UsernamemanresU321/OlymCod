@@ -8,6 +8,7 @@ import { TOPICS } from "@/lib/constants/notes";
 import { createClient } from "@/lib/supabase/client";
 import type { Diagram, MistakeLog, Note, NoteTemplate, ProblemLog, QuickCapture, SavedView } from "@/lib/types";
 import { inputClassName } from "@/components/ui/Field";
+import { LoadingSkeleton } from "@/components/ui/Page";
 
 type ResultItem = {
   id: string;
@@ -59,6 +60,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
   const [media, setMedia] = useState<Diagram[]>([]);
   const [templates, setTemplates] = useState<NoteTemplate[]>([]);
   const [views, setViews] = useState<SavedView[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!enableShortcut) return;
@@ -66,6 +68,9 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setOpen(true);
+      }
+      if (event.key === "Escape") {
+        setOpen(false);
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -76,28 +81,33 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
     if (!open) return;
     let cancelled = false;
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user }
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const [notesResult, problemsResult, mistakesResult, capturesResult, mediaResult, templatesResult, viewsResult] = await Promise.all([
-        supabase.from("notes").select("*").eq("user_id", user.id).eq("is_archived", false).order("updated_at", { ascending: false }).limit(50),
-        supabase.from("problem_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
-        supabase.from("mistake_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
-        supabase.from("quick_captures").select("*").eq("user_id", user.id).eq("is_archived", false).order("created_at", { ascending: false }).limit(30),
-        supabase.from("diagrams").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30),
-        supabase.from("note_templates").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(20),
-        supabase.from("saved_views").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(20)
-      ]);
-      if (cancelled) return;
-      setNotes((notesResult.data ?? []) as Note[]);
-      setProblems((problemsResult.data ?? []) as ProblemLog[]);
-      setMistakes((mistakesResult.data ?? []) as MistakeLog[]);
-      setCaptures((capturesResult.data ?? []) as QuickCapture[]);
-      setMedia((mediaResult.data ?? []) as Diagram[]);
-      setTemplates((templatesResult.data ?? []) as NoteTemplate[]);
-      setViews((viewsResult.data ?? []) as SavedView[]);
+      setLoading(true);
+      try {
+        const supabase = createClient();
+        const {
+          data: { user }
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        const [notesResult, problemsResult, mistakesResult, capturesResult, mediaResult, templatesResult, viewsResult] = await Promise.all([
+          supabase.from("notes").select("*").eq("user_id", user.id).eq("is_archived", false).order("updated_at", { ascending: false }).limit(50),
+          supabase.from("problem_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
+          supabase.from("mistake_logs").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(30),
+          supabase.from("quick_captures").select("*").eq("user_id", user.id).eq("is_archived", false).order("created_at", { ascending: false }).limit(30),
+          supabase.from("diagrams").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(30),
+          supabase.from("note_templates").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(20),
+          supabase.from("saved_views").select("*").eq("user_id", user.id).order("updated_at", { ascending: false }).limit(20)
+        ]);
+        if (cancelled) return;
+        setNotes((notesResult.data ?? []) as Note[]);
+        setProblems((problemsResult.data ?? []) as ProblemLog[]);
+        setMistakes((mistakesResult.data ?? []) as MistakeLog[]);
+        setCaptures((capturesResult.data ?? []) as QuickCapture[]);
+        setMedia((mediaResult.data ?? []) as Diagram[]);
+        setTemplates((templatesResult.data ?? []) as NoteTemplate[]);
+        setViews((viewsResult.data ?? []) as SavedView[]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     void load();
     return () => {
@@ -210,7 +220,12 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
     open && typeof document !== "undefined"
       ? createPortal(
           <div className="fixed inset-0 z-[1000] bg-black/45 p-3 backdrop-blur-[1px] sm:p-6">
-            <div className="mx-auto mt-12 max-w-2xl rounded-lg border border-[#c3c6d0] bg-white shadow-xl">
+            <div
+              className="mx-auto mt-12 max-w-2xl rounded-lg border border-[#c3c6d0] bg-white shadow-xl"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Command palette"
+            >
               <div className="flex items-center gap-3 border-b border-[#c3c6d0] p-3">
                 <Search className="h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
                 <input
@@ -230,6 +245,13 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
                 </button>
               </div>
               <div className="max-h-[70vh] overflow-y-auto p-3">
+                {loading ? (
+                  <div className="grid gap-2 p-2">
+                    <LoadingSkeleton className="h-12" />
+                    <LoadingSkeleton className="h-12" />
+                    <LoadingSkeleton className="h-12" />
+                  </div>
+                ) : null}
                 {groups.map((group) => {
                   const groupResults = results.filter((item) => item.group === group);
                   if (!groupResults.length) return null;
@@ -267,7 +289,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
                     </section>
                   );
                 })}
-                {!results.length ? (
+                {!loading && !results.length ? (
                   <p className="p-4 text-sm text-[#43474f]">
                     No results. Try `tag:modular`, `topic:geometry`, or `status:needs_practice`.
                   </p>

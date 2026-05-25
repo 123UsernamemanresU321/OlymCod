@@ -137,8 +137,8 @@ export function LoginForm() {
               />
             </Field>
 
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? "Working..." : mode === "signin" ? "Continue" : "Create Account"}
+            <Button type="submit" loading={busy} loadingLabel="Working..." fullWidth>
+              {mode === "signin" ? "Continue" : "Create Account"}
               <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Button>
           </div>
@@ -154,7 +154,9 @@ export function LoginForm() {
             variant="secondary"
             className="w-full"
             onClick={sendMagicLink}
-            disabled={busy || !email}
+            loading={busy}
+            loadingLabel="Sending..."
+            disabled={!email}
           >
             <Mail className="h-3.5 w-3.5" aria-hidden="true" />
             Send Magic Link
@@ -173,11 +175,9 @@ export function LoginForm() {
           </button>
         </form>
 
-        <div className="mt-6 flex justify-center gap-4 text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
-          <span>Privacy Policy</span>
-          <span>·</span>
-          <span>Terms of Service</span>
-        </div>
+        <p className="mt-6 text-center text-[13px] leading-6 text-[#43474f]">
+          Owner accounts manage private notes. Contributors can track reviewed suggestions after signing in.
+        </p>
       </div>
     </div>
   );

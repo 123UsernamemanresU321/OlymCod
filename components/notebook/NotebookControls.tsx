@@ -39,6 +39,7 @@ function sectionToggleLabel(label: string, mode: NotebookConfig["sectionSelectio
 export function NotebookControls({ config, availableTopics, availableTags, onChange }: NotebookControlsProps) {
   const topics = Array.from(new Set([...NOTEBOOK_TOPIC_OPTIONS, ...availableTopics])).filter(Boolean);
   const tags = Array.from(new Set(availableTags)).filter(Boolean).sort();
+  const [filterQuery, setFilterQuery] = useState("");
   const [sectionQuery, setSectionQuery] = useState("");
 
   function update(update: Partial<NotebookConfig>) {
@@ -89,6 +90,11 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
   const visibleSectionToggles = NOTEBOOK_SECTION_TOGGLES.filter((toggle) =>
     `${toggle.label} ${toggle.key}`.toLowerCase().includes(sectionQuery.trim().toLowerCase())
   );
+  const normalizedFilterQuery = filterQuery.trim().toLowerCase();
+  const visibleTopics = topics.filter((topic) => topic.toLowerCase().includes(normalizedFilterQuery));
+  const visibleNoteTypes = NOTEBOOK_NOTE_TYPE_OPTIONS.filter((type) => type.toLowerCase().includes(normalizedFilterQuery));
+  const visibleReviewStatuses = NOTEBOOK_REVIEW_STATUSES.filter((status) => status.toLowerCase().includes(normalizedFilterQuery));
+  const visibleProblemStatuses = NOTEBOOK_PROBLEM_STATUSES.filter((status) => status.toLowerCase().includes(normalizedFilterQuery));
 
   return (
     <div className="grid gap-3">
@@ -159,9 +165,17 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
         </summary>
         <div className="grid gap-4 border-t border-[#e2e4ea] px-4 pb-4 pt-3">
+          <Field label="Find filter option">
+            <input
+              className={inputClassName()}
+              value={filterQuery}
+              onChange={(event) => setFilterQuery(event.target.value)}
+              placeholder="Search topics, note types, review states..."
+            />
+          </Field>
           <Field label="Topics">
             <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-2">
-              {topics.map((topic) => (
+              {visibleTopics.map((topic) => (
                 <button
                   key={topic}
                   type="button"
@@ -174,12 +188,13 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                   {topic}
                 </button>
               ))}
+              {!visibleTopics.length ? <p className="text-sm text-[#43474f]">No topics match this search.</p> : null}
             </div>
           </Field>
 
           <Field label="Note Types">
             <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-2">
-              {NOTEBOOK_NOTE_TYPE_OPTIONS.map((type) => (
+              {visibleNoteTypes.map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -192,11 +207,12 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                   {type}
                 </button>
               ))}
+              {!visibleNoteTypes.length ? <p className="text-sm text-[#43474f]">No note types match this search.</p> : null}
             </div>
           </Field>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Min note/problem level">
+            <Field label="Min concept/problem level">
               <input
                 className={inputClassName()}
                 type="number"
@@ -206,7 +222,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 onChange={(event) => update({ difficultyMin: Number(event.target.value) })}
               />
             </Field>
-            <Field label="Max note/problem level">
+            <Field label="Max concept/problem level">
               <input
                 className={inputClassName()}
                 type="number"
@@ -231,7 +247,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
 
           <Field label="Review Status">
             <div className="flex flex-wrap gap-2">
-              {NOTEBOOK_REVIEW_STATUSES.map((status) => (
+              {visibleReviewStatuses.map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -244,12 +260,13 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                   {status.replaceAll("_", " ")}
                 </button>
               ))}
+              {!visibleReviewStatuses.length ? <p className="text-sm text-[#43474f]">No review states match this search.</p> : null}
             </div>
           </Field>
 
           <Field label="Problem Status">
             <div className="flex flex-wrap gap-2">
-              {NOTEBOOK_PROBLEM_STATUSES.map((status) => (
+              {visibleProblemStatuses.map((status) => (
                 <button
                   key={status}
                   type="button"
@@ -262,6 +279,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                   {status.replaceAll("_", " ")}
                 </button>
               ))}
+              {!visibleProblemStatuses.length ? <p className="text-sm text-[#43474f]">No problem states match this search.</p> : null}
             </div>
           </Field>
 

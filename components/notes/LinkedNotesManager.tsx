@@ -181,7 +181,7 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
             Add prerequisite for this note, confused pairs, special cases, or notes used together. Reverse labels are computed on the other note page.
           </p>
         </div>
-        <Button type="button" variant="secondary" onClick={() => void suggestRelated()} disabled={!noteId || busy}>
+        <Button type="button" variant="secondary" onClick={() => void suggestRelated()} disabled={!noteId} loading={busy} loadingLabel="Checking...">
           <Wand2 className="h-4 w-4" aria-hidden="true" />
           Suggest related notes
         </Button>
@@ -236,7 +236,7 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
             </option>
           ))}
         </select>
-        <Button type="button" onClick={() => void addLink()} disabled={!noteId || !targetId || busy}>
+        <Button type="button" onClick={() => void addLink()} disabled={!noteId || !targetId} loading={busy} loadingLabel="Adding...">
           <Link2 className="h-4 w-4" aria-hidden="true" />
           Add
         </Button>
@@ -248,11 +248,11 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
             <p className="text-sm font-semibold text-[#1a1c1c]">AI link suggestions</p>
             <div className="flex flex-wrap gap-2">
               {linkSuggestions.length ? (
-                <Button type="button" variant="secondary" onClick={() => void addSelectedSuggestions()} disabled={busy}>
+                <Button type="button" variant="secondary" onClick={() => void addSelectedSuggestions()} loading={busy} loadingLabel="Adding...">
                   Add selected links
                 </Button>
               ) : null}
-              <Button type="button" variant="secondary" onClick={() => void suggestRelated()} disabled={busy}>
+              <Button type="button" variant="secondary" onClick={() => void suggestRelated()} loading={busy} loadingLabel="Checking...">
                 Regenerate
               </Button>
               <Button type="button" variant="secondary" onClick={() => { setLinkSuggestions([]); setPossibleNewNotes([]); }}>
@@ -268,7 +268,7 @@ export function LinkedNotesManager({ noteId, draft }: LinkedNotesManagerProps) {
                   <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#43474f]">{item.relationType} · {Math.round(item.confidence * 100)}%</p>
                   <p className="mt-2 text-sm leading-6 text-[#43474f]">{item.reason}</p>
                 </div>
-                <Button type="button" variant="secondary" onClick={() => void addLink(item.targetNoteId, item.relationType)} disabled={busy}>
+                <Button type="button" variant="secondary" onClick={() => void addLink(item.targetNoteId, item.relationType)} loading={busy} loadingLabel="Adding...">
                   Add
                 </Button>
               </div>

@@ -135,7 +135,7 @@ export function NotebookPresetDialog({
                 onChange={(event) => setDescription(event.target.value)}
               />
             </Field>
-            <Button type="button" className="self-end" onClick={() => void savePreset()} disabled={busy}>
+            <Button type="button" className="self-end" onClick={() => void savePreset()} loading={busy} loadingLabel="Saving...">
               <Save className="h-4 w-4" aria-hidden="true" />
               Save
             </Button>
@@ -177,14 +177,14 @@ export function NotebookPresetDialog({
                       <Button type="button" variant="secondary" onClick={() => onLoad(normalizeNotebookConfig(preset.config))}>
                         Load
                       </Button>
-                      <Button type="button" variant="secondary" onClick={() => void updatePreset(preset)} disabled={busy}>
+                      <Button type="button" variant="secondary" onClick={() => void updatePreset(preset)} loading={busy} loadingLabel="Updating...">
                         Update
                       </Button>
-                      <Button type="button" variant="secondary" onClick={() => void setDefaultPreset(preset)} disabled={busy}>
+                      <Button type="button" variant="secondary" onClick={() => void setDefaultPreset(preset)} loading={busy} loadingLabel="Updating...">
                         <Star className="h-4 w-4" aria-hidden="true" />
                         Default
                       </Button>
-                      <Button type="button" variant="danger" onClick={() => void deletePreset(preset)} disabled={busy}>
+                      <Button type="button" variant="danger" onClick={() => void deletePreset(preset)} loading={busy} loadingLabel="Deleting...">
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
                         Delete
                       </Button>

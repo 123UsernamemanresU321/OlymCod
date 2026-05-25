@@ -208,11 +208,11 @@ export function RevisionPackClient({ notes, reviews, problems, mistakes }: Revis
                 <p className="mt-1 text-sm text-[#43474f]">{pack.selectedNotes.length} notes · {pack.selectedProblems.length} problem reminders</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" onClick={exportMarkdown} disabled={busy}>
+                <Button type="button" variant="secondary" onClick={exportMarkdown} loading={busy} loadingLabel="Exporting...">
                   <Download className="h-4 w-4" aria-hidden="true" />
                   Export Markdown
                 </Button>
-                <Button type="button" onClick={savePreset} disabled={busy}>
+                <Button type="button" onClick={savePreset} loading={busy} loadingLabel="Saving...">
                   <Save className="h-4 w-4" aria-hidden="true" />
                   Save as Notebook Preset
                 </Button>

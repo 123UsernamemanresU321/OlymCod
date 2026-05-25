@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { Brain } from "lucide-react";
 import { useState } from "react";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { LearningMetadataList } from "@/components/notes/LearningMetadataList";
@@ -239,7 +239,7 @@ export function AIWritingAssistant({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-lg font-semibold text-[#1a1c1c]">
-            <Sparkles className="h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
+            <Brain className="h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
             AI Writing Assistant
           </h2>
           <p className="mt-1 text-sm leading-6 text-[#43474f]">
@@ -282,9 +282,9 @@ export function AIWritingAssistant({
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button type="button" onClick={() => void generate()} disabled={busy}>
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
-          {busy ? "Generating..." : "Generate"}
+        <Button type="button" onClick={() => void generate()} loading={busy} loadingLabel="Generating...">
+          <Brain className="h-4 w-4" aria-hidden="true" />
+          Generate
         </Button>
         <Button type="button" variant="secondary" onClick={() => setResult(null)} disabled={busy || !result}>
           Clear output

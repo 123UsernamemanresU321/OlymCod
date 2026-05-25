@@ -4,15 +4,21 @@ interface FieldProps {
   label: string;
   children: React.ReactNode;
   className?: string;
+  description?: string;
+  error?: string | null;
+  required?: boolean;
 }
 
-export function Field({ label, children, className }: FieldProps) {
+export function Field({ label, children, className, description, error, required = false }: FieldProps) {
   return (
     <label className={cn("grid gap-1.5", className)}>
       <span className="text-[13px] font-medium uppercase tracking-[0.05em] text-[#43474f]">
         {label}
+        {required ? <span className="ml-1 text-[#8f1d15]">*</span> : null}
       </span>
       {children}
+      {description ? <span className="text-xs leading-5 text-[#5d6470]">{description}</span> : null}
+      {error ? <span className="text-xs leading-5 text-[#8f1d15]">{error}</span> : null}
     </label>
   );
 }

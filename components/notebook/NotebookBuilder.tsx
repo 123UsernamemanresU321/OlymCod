@@ -221,8 +221,8 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
                     placeholder="PAMO number theory revision, formula sheet, weak geometry topics..."
                   />
                 </Field>
-                <Button type="button" variant="secondary" onClick={() => void runAi()} disabled={aiBusy}>
-                  {aiBusy ? "Thinking..." : "Generate suggestion"}
+                <Button type="button" variant="secondary" onClick={() => void runAi()} loading={aiBusy} loadingLabel="Thinking...">
+                  Generate suggestion
                 </Button>
                 {aiResult?.markdown ? (
                   <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-3 text-sm leading-6 text-[#43474f]">

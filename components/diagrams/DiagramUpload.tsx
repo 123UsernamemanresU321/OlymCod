@@ -187,7 +187,10 @@ export function DiagramUpload({ noteId, paths, onChange, onInsertMarkdown }: Dia
               if (file) void uploadFile(file);
             }}
           />
-          <span className="inline-flex min-h-9 items-center justify-center gap-2 rounded border border-[#2c5282] bg-[#2c5282] px-4 py-2 text-[13px] font-medium tracking-[0.04em] text-white hover:bg-[#23466f]">
+          <span
+            aria-busy={uploading}
+            className="inline-flex min-h-9 items-center justify-center gap-2 rounded border border-[#2c5282] bg-[#2c5282] px-4 py-2 text-[13px] font-medium tracking-[0.04em] text-white hover:bg-[#23466f] aria-busy:cursor-wait aria-busy:opacity-80"
+          >
             <Upload className="h-4 w-4" aria-hidden="true" />
             {uploading ? "Uploading..." : "Upload"}
           </span>

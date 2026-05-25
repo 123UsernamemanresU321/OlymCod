@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
+import { PublicFooter } from "@/components/public/PublicFooter";
 import { PublicNotesClient } from "@/components/public/PublicNotesClient";
 import { createClient } from "@/lib/supabase/server";
 import type { Note, SiteSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Public Notes",
+  description: "Browse public Olympiad Codex notes that have been approved by the owner."
+};
 
 export default async function PublicNotesPage() {
   const supabase = await createClient();
@@ -15,6 +21,7 @@ export default async function PublicNotesPage() {
 
   if (!settings?.public_notes_enabled) {
     return (
+      <>
       <main className="min-h-screen bg-[#f9f9f9] px-4 py-16 text-[#1a1c1c]">
         <div className="mx-auto max-w-2xl rounded-lg border border-[#c3c6d0] bg-white p-8">
           <h1 className="text-3xl font-semibold">Public notes are disabled</h1>
@@ -23,6 +30,8 @@ export default async function PublicNotesPage() {
           </p>
         </div>
       </main>
+      <PublicFooter />
+      </>
     );
   }
 

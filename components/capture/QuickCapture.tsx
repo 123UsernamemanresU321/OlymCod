@@ -224,11 +224,11 @@ export function QuickCapture({
                 <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => void saveCapture(true)} disabled={busy}>
+                <Button type="button" variant="secondary" onClick={() => void saveCapture(true)} loading={busy} loadingLabel="Saving...">
                   Save and Convert
                 </Button>
-                <Button type="button" onClick={() => void saveCapture(false)} disabled={busy}>
-                  {busy ? "Saving..." : "Save"}
+                <Button type="button" onClick={() => void saveCapture(false)} loading={busy} loadingLabel="Saving...">
+                  Save
                 </Button>
               </div>
             </div>

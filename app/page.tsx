@@ -1,10 +1,16 @@
 import { ArrowRight, BookOpen, ShieldCheck } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
+import { PublicFooter } from "@/components/public/PublicFooter";
 import { createClient } from "@/lib/supabase/server";
 import type { Note, SiteSettings } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Olympiad Codex",
+  description: "A private Olympiad mathematics knowledge system with owner-reviewed public contributions."
+};
 
 export default async function PublicHomePage() {
   const supabase = await createClient();
@@ -28,8 +34,9 @@ export default async function PublicHomePage() {
   const notes = (notesData ?? []) as Note[];
 
   return (
+    <>
     <main className="min-h-screen bg-[#f9f9f9] text-[#1a1c1c]">
-      <section className="mx-auto grid min-h-[70vh] max-w-6xl content-center gap-10 px-4 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:px-10">
+      <section className="mx-auto grid min-h-[68vh] max-w-6xl content-center gap-10 px-4 py-16 lg:grid-cols-[1.1fr_0.9fr] lg:px-10">
         <div>
           <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">
             Private handbook, moderated public contributions
@@ -111,5 +118,7 @@ export default async function PublicHomePage() {
         </div>
       </section>
     </main>
+    <PublicFooter />
+    </>
   );
 }

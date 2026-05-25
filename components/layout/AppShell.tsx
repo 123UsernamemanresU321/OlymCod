@@ -26,14 +26,17 @@ import { QuickCapture } from "@/components/capture/QuickCapture";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils/cn";
 
-const NAV_ITEMS = [
+const PRIMARY_NAV_ITEMS = [
   { href: "/app", label: "Dashboard", icon: Home, exact: true },
   { href: "/app/notes", label: "Notes", icon: FileText },
   { href: "/app/capture", label: "Capture", icon: Plus },
   { href: "/app/problems", label: "Problems", icon: ClipboardList },
   { href: "/app/mistakes", label: "Mistakes", icon: XCircle },
   { href: "/app/review-notes", label: "Review", icon: NotebookTabs },
-  { href: "/app/notebook", label: "Notebook", icon: BookOpen },
+  { href: "/app/notebook", label: "Notebook", icon: BookOpen }
+];
+
+const TOOL_NAV_ITEMS = [
   { href: "/app/workspace", label: "Workspace", icon: NotebookTabs },
   { href: "/app/graph", label: "Graph", icon: Network },
   { href: "/app/media", label: "Media / Diagrams", icon: Image },
@@ -79,6 +82,7 @@ export function AppShell({ children, email, role }: AppShellProps) {
   const router = useRouter();
   const isEditingNote = pathname === "/app/notes/new" || pathname.endsWith("/edit");
   const sidebarCollapsed = useSyncExternalStore(subscribeSidebarSnapshot, getSidebarSnapshot, () => false);
+  const toolSectionActive = TOOL_NAV_ITEMS.some((item) => pathname.startsWith(item.href));
 
   function toggleSidebar() {
     const next = !sidebarCollapsed;
@@ -137,7 +141,7 @@ export function AppShell({ children, email, role }: AppShellProps) {
         <div className={cn("pt-8", sidebarCollapsed ? "px-3" : "px-6")}>
           <Link
             href="/app/notes/new"
-            className="flex min-h-9 items-center justify-center gap-2 border border-[#2c5282] bg-[#2c5282] px-3 py-2 text-[13px] font-medium tracking-[0.04em] text-white hover:bg-[#23466f]"
+            className="flex min-h-9 items-center justify-center gap-2 rounded border border-[#2c5282] bg-[#2c5282] px-3 py-2 text-[13px] font-medium tracking-[0.04em] text-white hover:bg-[#23466f]"
             aria-label="New Note"
           >
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -153,7 +157,7 @@ export function AppShell({ children, email, role }: AppShellProps) {
 
         <nav className="mt-6 flex-1 overflow-y-auto">
           <div className="grid gap-2">
-            {NAV_ITEMS.map((item) => {
+            {PRIMARY_NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
               return (
@@ -172,6 +176,52 @@ export function AppShell({ children, email, role }: AppShellProps) {
                 </Link>
               );
             })}
+            {!sidebarCollapsed ? (
+              <details className="group mt-2 border-t border-[#dfe3ea] pt-2" open={toolSectionActive}>
+                <summary className="mx-6 flex cursor-pointer list-none items-center justify-between py-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-[#5d6470]">
+                  Tools
+                  <span className="text-[#0e3b69] group-open:hidden">Open</span>
+                  <span className="hidden text-[#0e3b69] group-open:inline">Close</span>
+                </summary>
+                <div className="grid gap-1">
+                  {TOOL_NAV_ITEMS.map((item) => {
+                    const Icon = item.icon;
+                    const active = pathname.startsWith(item.href);
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-3 px-6 py-2 text-sm text-[#43474f] transition-colors hover:bg-white hover:text-[#0e3b69]",
+                          active && "border-r-2 border-[#0e3b69] font-bold text-[#0e3b69]"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" aria-hidden="true" />
+                        {item.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </details>
+            ) : (
+              TOOL_NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center justify-center py-2 text-base text-[#43474f] transition-colors hover:bg-white hover:text-[#0e3b69]",
+                      active && "border-r-2 border-[#0e3b69] font-bold text-[#0e3b69]"
+                    )}
+                    title={item.label}
+                  >
+                    <Icon className="h-5 w-5" aria-hidden="true" />
+                  </Link>
+                );
+              })
+            )}
           </div>
         </nav>
 

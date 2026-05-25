@@ -146,8 +146,8 @@ export function NoteSplitTool({ note }: NoteSplitToolProps) {
             <input type="checkbox" checked={archiveOriginal} onChange={(event) => setArchiveOriginal(event.target.checked)} />
             Archive original note after splitting
           </label>
-          <Button type="button" onClick={() => void split()} disabled={busy}>
-            {busy ? "Splitting..." : "Create split notes"}
+          <Button type="button" onClick={() => void split()} loading={busy} loadingLabel="Splitting...">
+            Create split notes
           </Button>
           {message ? <p className="text-sm text-[#0e3b69]">{message}</p> : null}
         </div>

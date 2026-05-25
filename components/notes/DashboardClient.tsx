@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, Calculator, Dices, FileText, Flame, Image as ImageIcon, Inbox, Network, NotebookTabs, Plus, Search, ShieldCheck, Shapes, Sigma, Table2, Target } from "lucide-react";
+import { BookOpen, Calculator, FileText, Image as ImageIcon, Inbox, Network, NotebookTabs, Plus, Search, ShieldCheck, Shapes, Shuffle, Sigma, Table2, Target } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
@@ -25,7 +25,7 @@ interface DashboardClientProps {
 
 const topicIcons = {
   "Number Theory": Sigma,
-  Combinatorics: Dices,
+  Combinatorics: Network,
   Algebra: Calculator,
   Geometry: Shapes,
   Inequalities: Sigma,
@@ -98,7 +98,7 @@ export function DashboardClient({ notes, suggestions, reviews, problems, mistake
               if (note) location.assign(`/app/notes/${note.id}`);
             }}
           >
-            <Dices className="h-4 w-4" aria-hidden="true" />
+            <Shuffle className="h-4 w-4" aria-hidden="true" />
             Random Technique
           </Button>
         </div>
@@ -133,68 +133,84 @@ export function DashboardClient({ notes, suggestions, reviews, problems, mistake
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        <Link href="/app/workspace" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <NotebookTabs className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Workspace</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">Edit one note while referencing linked notes side by side.</p>
-        </Link>
-        <Link href="/app/notebook" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <BookOpen className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Notebook Builder</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">Build printable theorem sheets, formula sheets, and revision packs.</p>
-        </Link>
-        <Link href="/app/graph" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <Network className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Note Graph</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">Visualize prerequisites, special cases, and commonly confused notes.</p>
-        </Link>
-        <Link href="/app/media" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <ImageIcon className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Media Library</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">Manage diagrams, captions, alt text, and reusable media assets.</p>
-        </Link>
-        <Link href="/app/manage" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <Table2 className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Manage Notes</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">Bulk edit topics, tags, type-specific levels, visibility, and archived state.</p>
-        </Link>
-        <Link href="/app/revision-pack" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <Target className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Generate Contest Revision Pack</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">Build a compact pack from weak notes, failed problems, triggers, and false uses.</p>
-        </Link>
-        <Link href="/app/mastery" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <Flame className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Mastery Heatmap</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">
-            {weakestTopic ? `Weakest topic now: ${weakestTopic.topic} (${weakestTopic.label}).` : "Track topic strength as you review."}
-          </p>
-        </Link>
-        <Link href="/app/mistakes" className="rounded-lg border border-[#c3c6d0] bg-white p-5 hover:bg-[#f9f9f9]">
-          <ShieldCheck className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
-          <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Mistake Pattern</h2>
-          <p className="mt-2 text-sm leading-6 text-[#43474f]">
-            {mistakePatterns.topCategories[0]
-              ? `${mistakePatterns.topCategories[0].label}: ${mistakePatterns.topCategories[0].count} recent weak problems.`
-              : "Patterns appear once problems are marked failed or review later."}
-          </p>
-        </Link>
+      <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dfe3ea] pb-3">
+          <div>
+            <h2 className="text-lg font-semibold text-[#1a1c1c]">Daily tools</h2>
+            <p className="mt-1 text-sm text-[#43474f]">Open the main writing, organization, and export surfaces.</p>
+          </div>
+          <Link href="/app/settings" className="text-sm font-medium text-[#0e3b69] hover:underline">
+            Settings
+          </Link>
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Link href="/app/workspace" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <NotebookTabs className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Workspace</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">Edit one note while referencing linked notes side by side.</p>
+          </Link>
+          <Link href="/app/notebook" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <BookOpen className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Notebook Builder</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">Build printable theorem sheets, formula sheets, and revision packs.</p>
+          </Link>
+          <Link href="/app/graph" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <Network className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Note Graph</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">Visualize prerequisites, special cases, and commonly confused notes.</p>
+          </Link>
+          <Link href="/app/media" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <ImageIcon className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Media Library</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">Manage diagrams, captions, alt text, and reusable media assets.</p>
+          </Link>
+          <Link href="/app/manage" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <Table2 className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Manage Notes</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">Bulk edit topics, tags, type-specific levels, visibility, and archived state.</p>
+          </Link>
+          <Link href="/app/revision-pack" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <Target className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Generate Contest Revision Pack</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">Build a compact pack from weak notes, failed problems, triggers, and false uses.</p>
+          </Link>
+          <Link href="/app/mastery" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <Target className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Mastery Heatmap</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">
+              {weakestTopic ? `Weakest topic now: ${weakestTopic.topic} (${weakestTopic.label}).` : "Track topic strength as you review."}
+            </p>
+          </Link>
+          <Link href="/app/mistakes" className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-4 hover:bg-white">
+            <ShieldCheck className="h-5 w-5 text-[#0e3b69]" aria-hidden="true" />
+            <h2 className="mt-3 text-lg font-semibold text-[#1a1c1c]">Mistake Pattern</h2>
+            <p className="mt-2 text-sm leading-6 text-[#43474f]">
+              {mistakePatterns.topCategories[0]
+                ? `${mistakePatterns.topCategories[0].label}: ${mistakePatterns.topCategories[0].count} recent weak problems.`
+                : "Patterns appear once problems are marked failed or review later."}
+            </p>
+          </Link>
+        </div>
       </section>
 
-      <section className="flex flex-wrap gap-2 rounded-lg border border-[#c3c6d0] bg-white p-4 text-sm">
-        {[
-          ["/app/templates", "Templates"],
-          ["/app/import", "Import"],
-          ["/app/taxonomy", "Taxonomy"],
-          ["/app/views", "Saved Views"],
-          ["/app/merge", "Merge Notes"]
-        ].map(([href, label]) => (
-          <Link key={href} href={href} className="rounded border border-[#c3c6d0] px-3 py-2 font-medium text-[#0e3b69] hover:bg-[#eef4ff]">
-            {label}
-          </Link>
-        ))}
-      </section>
+      <details className="rounded-lg border border-[#c3c6d0] bg-white p-4 text-sm">
+        <summary className="cursor-pointer list-none font-semibold text-[#1a1c1c]">
+          More organization tools
+        </summary>
+        <section className="mt-3 flex flex-wrap gap-2">
+          {[
+            ["/app/templates", "Templates"],
+            ["/app/import", "Import"],
+            ["/app/taxonomy", "Taxonomy"],
+            ["/app/views", "Saved Views"],
+            ["/app/merge", "Merge Notes"]
+          ].map(([href, label]) => (
+            <Link key={href} href={href} className="rounded border border-[#c3c6d0] px-3 py-2 font-medium text-[#0e3b69] hover:bg-[#eef4ff]">
+              {label}
+            </Link>
+          ))}
+        </section>
+      </details>
 
       <section>
         <div className="border-b border-[#c3c6d0] pb-2">
@@ -225,7 +241,7 @@ export function DashboardClient({ notes, suggestions, reviews, problems, mistake
             key={stat.label}
             className="flex min-h-28 items-center gap-4 border border-[#c3c6d0] bg-[#f9f9f9] p-4"
           >
-            <span className={`grid h-9 w-9 place-items-center rounded-full ${stat.tone}`}>
+            <span className={`grid h-9 w-9 place-items-center rounded ${stat.tone}`}>
               <FileText className="h-4 w-4 text-[#0e3b69]" aria-hidden="true" />
             </span>
             <div>

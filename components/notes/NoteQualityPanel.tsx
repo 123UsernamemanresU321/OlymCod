@@ -54,9 +54,9 @@ export function NoteQualityPanel({ note = null, draft = null, onAppendMarkdown }
             Type-specific checklist · {quality?.completionPercent ?? 0}% complete · {quality?.requiredCompleted ?? 0}/{quality?.requiredTotal ?? 0} required.
           </p>
         </div>
-        <Button type="button" variant="secondary" onClick={() => void improve()} disabled={busy}>
+        <Button type="button" variant="secondary" onClick={() => void improve()} loading={busy} loadingLabel="Thinking...">
           <Wand2 className="h-4 w-4" aria-hidden="true" />
-          {busy ? "Thinking..." : "Improve"}
+          Improve
         </Button>
       </div>
       <div className="mt-4 grid gap-2">

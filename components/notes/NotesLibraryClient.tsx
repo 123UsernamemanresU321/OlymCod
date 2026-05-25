@@ -25,6 +25,8 @@ export function NotesLibraryClient({ notes, savedViews = [] }: NotesLibraryClien
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [sort, setSort] = useState<SortKey>("updated");
   const [viewMessage, setViewMessage] = useState<string | null>(null);
+  const activeFilterCount =
+    Number(topic !== "All") + Number(noteType !== "All") + Number(difficulty !== "All") + Number(favoritesOnly);
 
   const filtered = useMemo(() => {
     const result = notes.filter((note) => {
@@ -93,40 +95,61 @@ export function NotesLibraryClient({ notes, savedViews = [] }: NotesLibraryClien
         </label>
       </header>
 
-      <section className="mt-8 flex flex-wrap items-center gap-3 rounded-lg border border-[#c3c6d0] bg-[#f9f9f9] p-4">
-        <span className="text-[13px] font-medium tracking-[0.04em] text-[#43474f]">Filter</span>
-        <select className={inputClassName("w-auto min-w-32")} value={topic} onChange={(event) => setTopic(event.target.value)}>
-          <option>All</option>
-          {[...MATH_TOPICS, ...SPECIAL_TOPICS].map((item) => (
-            <option key={item}>{item}</option>
-          ))}
-        </select>
-        <select className={inputClassName("w-auto min-w-32")} value={noteType} onChange={(event) => setNoteType(event.target.value)}>
-          <option>All</option>
-          {NOTE_TYPES.map((item) => (
-            <option key={item}>{item}</option>
-          ))}
-        </select>
-        <select className={inputClassName("w-auto min-w-36")} value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
-          <option>All</option>
-          {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
-            <option key={value} value={value}>
-              Level {value}
-            </option>
-          ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm font-medium text-[#43474f]">
-          <input type="checkbox" checked={favoritesOnly} onChange={(event) => setFavoritesOnly(event.target.checked)} />
-          Favorites
-        </label>
-        <span className="ml-auto text-[13px] font-medium tracking-[0.04em] text-[#43474f]">Sort</span>
-        <select className={inputClassName("w-auto min-w-44")} value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
-          <option value="updated">Recently updated</option>
-          <option value="title">Title</option>
-          <option value="difficulty">Difficulty / level</option>
-          <option value="topic">Topic</option>
-        </select>
-      </section>
+      <details className="mt-8 rounded-lg border border-[#c3c6d0] bg-white">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+          <span>
+            <span className="block text-sm font-semibold text-[#1a1c1c]">Filters and sorting</span>
+            <span className="text-xs text-[#5d6470]">
+              {activeFilterCount || "No"} active filters · {filtered.length} matching notes
+            </span>
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69]">Open</span>
+        </summary>
+        <div className="grid gap-3 border-t border-[#e2e4ea] p-4 sm:grid-cols-2 lg:grid-cols-6">
+          <select className={inputClassName()} value={topic} onChange={(event) => setTopic(event.target.value)}>
+            <option>All</option>
+            {[...MATH_TOPICS, ...SPECIAL_TOPICS].map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+          <select className={inputClassName()} value={noteType} onChange={(event) => setNoteType(event.target.value)}>
+            <option>All</option>
+            {NOTE_TYPES.map((item) => (
+              <option key={item}>{item}</option>
+            ))}
+          </select>
+          <select className={inputClassName()} value={difficulty} onChange={(event) => setDifficulty(event.target.value)}>
+            <option>All</option>
+            {Array.from({ length: 12 }, (_, index) => index + 1).map((value) => (
+              <option key={value} value={value}>
+                Concept level {value}
+              </option>
+            ))}
+          </select>
+          <select className={inputClassName()} value={sort} onChange={(event) => setSort(event.target.value as SortKey)}>
+            <option value="updated">Recently updated</option>
+            <option value="title">Title</option>
+            <option value="difficulty">Concept level</option>
+            <option value="topic">Topic</option>
+          </select>
+          <label className="flex min-h-10 items-center gap-2 rounded border border-[#c3c6d0] bg-[#f9f9f9] px-3 text-sm font-medium text-[#43474f]">
+            <input type="checkbox" checked={favoritesOnly} onChange={(event) => setFavoritesOnly(event.target.checked)} />
+            Favorites
+          </label>
+          <button
+            type="button"
+            className="rounded border border-[#c3c6d0] px-3 py-2 text-sm font-medium text-[#0e3b69] hover:bg-[#eef4ff]"
+            onClick={() => {
+              setTopic("All");
+              setNoteType("All");
+              setDifficulty("All");
+              setFavoritesOnly(false);
+            }}
+          >
+            Clear filters
+          </button>
+        </div>
+      </details>
 
       <section className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#d5d7de] bg-white p-3 text-sm">
         <span className="font-medium text-[#43474f]">Saved views</span>

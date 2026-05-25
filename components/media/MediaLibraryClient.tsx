@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Copy, Link2, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
+import { StatusMessage } from "@/components/ui/Page";
 import { createClient } from "@/lib/supabase/client";
 import type { Diagram, Note } from "@/lib/types";
 import { safeFilename, validateDiagramFile } from "@/lib/utils/files";
@@ -190,7 +191,7 @@ export function MediaLibraryClient({ assets, notes }: MediaLibraryClientProps) {
           <Field label="Caption"><input className={inputClassName()} value={caption} onChange={(event) => setCaption(event.target.value)} /></Field>
           <Field label="Alt text"><input className={inputClassName()} value={altText} onChange={(event) => setAltText(event.target.value)} /></Field>
           <Field label="Tags"><input className={inputClassName()} value={tagsText} onChange={(event) => setTagsText(event.target.value)} /></Field>
-          <Button type="button" onClick={() => void upload()} disabled={busy}><Upload className="h-4 w-4" />Upload</Button>
+          <Button type="button" onClick={() => void upload()} loading={busy} loadingLabel="Uploading..."><Upload className="h-4 w-4" />Upload</Button>
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr]">
           <Field label="Attach new upload to note">
@@ -203,7 +204,7 @@ export function MediaLibraryClient({ assets, notes }: MediaLibraryClientProps) {
             <input className={inputClassName()} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="filename, caption, tag, linked note..." />
           </Field>
         </div>
-        {message ? <p className="mt-3 text-sm text-[#0e3b69]">{message}</p> : null}
+        {message ? <StatusMessage className="mt-3">{message}</StatusMessage> : null}
       </section>
 
       <section className={view === "grid" ? "mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3" : "mt-6 grid gap-3"}>
@@ -237,6 +238,9 @@ export function MediaLibraryClient({ assets, notes }: MediaLibraryClientProps) {
             </article>
           );
         })}
+        {!filtered.length ? (
+          <StatusMessage>No media assets match this search.</StatusMessage>
+        ) : null}
       </section>
     </div>
   );

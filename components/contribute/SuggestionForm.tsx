@@ -206,8 +206,8 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
             />
           </label>
           {error ? <p className="rounded border border-[#ffb4ab] bg-[#ffdad6] p-3 text-sm text-[#8f1d15]">{error}</p> : null}
-          <Button type="button" onClick={() => void submit()} disabled={busy}>
-            {busy ? "Submitting..." : "Submit for Review"}
+          <Button type="button" onClick={() => void submit()} loading={busy} loadingLabel="Submitting...">
+            Submit for Review
           </Button>
         </div>
       </section>

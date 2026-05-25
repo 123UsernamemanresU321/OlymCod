@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { getCurrentUserProfile } from "@/lib/auth/server";
@@ -5,6 +6,10 @@ import type { Suggestion } from "@/lib/types";
 import { formatUpdatedAt } from "@/lib/utils/notes";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Contribution Status",
+  description: "Track submitted Olympiad Codex suggestions and owner feedback."
+};
 
 function statusTone(status: string) {
   if (status === "merged" || status === "approved") return "green";

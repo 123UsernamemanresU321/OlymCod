@@ -195,8 +195,8 @@ export function ProblemsClient({ problems, notes }: ProblemsClientProps) {
             </Field>
             {error ? <p className="text-sm text-[#8f1d15]">{error}</p> : null}
             <div className="flex justify-end">
-              <Button type="button" onClick={() => void createProblem()} disabled={busy}>
-                {busy ? "Saving..." : "Save Problem"}
+              <Button type="button" onClick={() => void createProblem()} loading={busy} loadingLabel="Saving...">
+                Save Problem
               </Button>
             </div>
           </div>

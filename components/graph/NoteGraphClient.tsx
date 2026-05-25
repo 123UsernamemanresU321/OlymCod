@@ -14,7 +14,6 @@ import {
   Network,
   Pin,
   Search,
-  Sparkles,
   Trash2
 } from "lucide-react";
 import Link from "next/link";
@@ -87,7 +86,7 @@ const CANVAS_HEIGHT = 980;
 const RECENT_WINDOW_MS = 1000 * 60 * 60 * 24 * 30;
 const TOPIC_COLORS: Record<string, string> = {
   "Number Theory": "#2c5282",
-  Combinatorics: "#6f3d91",
+  Combinatorics: "#0f766e",
   Algebra: "#1f7a5b",
   Geometry: "#8f1d15",
   Inequalities: "#8a5a00",
@@ -100,7 +99,7 @@ const TOPIC_COLORS: Record<string, string> = {
 const TYPE_COLORS: Record<string, string> = {
   Theorem: "#2c5282",
   Lemma: "#315f8f",
-  Technique: "#6f3d91",
+  Technique: "#0f766e",
   Trick: "#8a5a00",
   Formula: "#475569",
   "Formula Log": "#475569",
@@ -117,8 +116,8 @@ const relationStyles: Record<string, { color: string; width: number; dash?: stri
   "used together": { color: "#2c5282", width: 2, directional: false, label: "Used Together" },
   related: { color: "#94a3b8", width: 1.4, directional: false, label: "Related" },
   "commonly confused": { color: "#b7791f", width: 2, dash: "7 5", directional: false, label: "Commonly Confused" },
-  generalization: { color: "#5b3a8e", width: 2.4, directional: true, label: "Generalization" },
-  "special case": { color: "#5b3a8e", width: 2.4, directional: true, label: "Special Case" },
+  generalization: { color: "#1f7a5b", width: 2.4, directional: true, label: "Generalization" },
+  "special case": { color: "#1f7a5b", width: 2.4, directional: true, label: "Special Case" },
   "stronger version": { color: "#0f766e", width: 2.4, directional: true, label: "Stronger Version" },
   "weaker version": { color: "#0f766e", width: 2.4, directional: true, label: "Weaker Version" },
   "example of": { color: "#475569", width: 1.8, directional: true, label: "Example Of" }
@@ -976,8 +975,8 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
             <Button type="button" variant="secondary" onClick={() => setZoom(1)}>
               <Maximize2 className="h-4 w-4" /> Fit View
             </Button>
-            <Button type="button" variant="secondary" onClick={() => void suggestLinksWithAI(false)} disabled={aiBusy || !selectedNote}>
-              <Sparkles className="h-4 w-4" /> AI Suggest Links
+            <Button type="button" variant="secondary" onClick={() => void suggestLinksWithAI(false)} loading={aiBusy} loadingLabel="Asking AI..." disabled={!selectedNote}>
+              <Brain className="h-4 w-4" /> AI Suggest Links
             </Button>
           </div>
         </header>
@@ -1373,7 +1372,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" variant="secondary" onClick={() => { setOrphanOnly(true); setMode("global"); }}>View orphan notes</Button>
                   <Link href="/app/manage" className="inline-flex min-h-9 items-center justify-center rounded border border-[#c3c6d0] px-3 py-2 text-sm text-[#0e3b69]">Open in Manage</Link>
-                  <Button type="button" variant="secondary" onClick={() => void suggestLinksWithAI(true)} disabled={aiBusy}>
+                  <Button type="button" variant="secondary" onClick={() => void suggestLinksWithAI(true)} loading={aiBusy} loadingLabel="Asking AI...">
                     <Brain className="h-4 w-4" /> Ask AI
                   </Button>
                 </div>

@@ -174,8 +174,8 @@ export function ProblemForm({ initialProblem = null, notes }: ProblemFormProps) 
         {error ? <p className="text-sm text-[#8f1d15]">{error}</p> : null}
         <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="secondary" onClick={() => router.back()}>Cancel</Button>
-          <Button type="button" onClick={() => void saveProblem()} disabled={busy}>
-            {busy ? "Saving..." : "Save Problem"}
+          <Button type="button" onClick={() => void saveProblem()} loading={busy} loadingLabel="Saving...">
+            Save Problem
           </Button>
         </div>
       </div>

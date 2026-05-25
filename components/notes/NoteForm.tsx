@@ -44,6 +44,9 @@ type ToastState = {
   message?: string;
 };
 
+const EDITOR_LAYOUT_KEY = "olympiad-codex:note-editor-layout";
+type EditorLayoutMode = "split" | "focus" | "metadata";
+
 function noteToDraft(note?: Note | null): NoteDraft {
   if (!note) {
     return {
@@ -106,6 +109,11 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [mobileTab, setMobileTab] = useState<"edit" | "preview" | "metadata">("edit");
   const [editorMode, setEditorMode] = useState<"raw" | "sections">("raw");
+  const [workspaceMode, setWorkspaceMode] = useState<EditorLayoutMode>(() => {
+    if (typeof window === "undefined") return "split";
+    const saved = window.localStorage.getItem(EDITOR_LAYOUT_KEY);
+    return saved === "focus" || saved === "metadata" || saved === "split" ? saved : "split";
+  });
   const [templates, setTemplates] = useState<NoteTemplate[]>(BUILT_IN_NOTE_TEMPLATES);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(BUILT_IN_NOTE_TEMPLATES[0]?.id ?? "");
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -115,6 +123,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const difficultyMeta = useMemo(() => noteTypeDifficultyMeta(draft.note_type), [draft.note_type]);
   const learningFields = useMemo(() => noteTypeLearningFields(draft.note_type), [draft.note_type]);
   const selectedTemplate = templates.find((template) => template.id === selectedTemplateId) ?? templates[0] ?? null;
+  const showPreviewPane = workspaceMode === "split";
 
   function updateDraft(update: Partial<NoteDraft>) {
     setDraft((current) => ({ ...current, ...update }));
@@ -146,6 +155,10 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(EDITOR_LAYOUT_KEY, workspaceMode);
+  }, [workspaceMode]);
 
   function handleTitleChange(title: string) {
     const update: Partial<NoteDraft> = { title };
@@ -508,7 +521,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   return (
     <div className="min-h-screen bg-[#f9f9f9]">
       <div className="sticky top-16 z-20 border-b border-[#c3c6d0] bg-[#f9f9f9]/95 px-4 py-3 backdrop-blur lg:top-0">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+        <div className="mx-auto flex max-w-[1800px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <p className="text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
               {dirty ? `Unsaved changes · ${localDraftStatus}` : mode === "create" ? "New note" : localDraftStatus}
@@ -517,7 +530,26 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
               {draft.title || "Untitled Note"}
             </h1>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="mr-1 inline-flex rounded border border-[#c3c6d0] bg-white p-1">
+              {([
+                ["split", "Split Preview"],
+                ["focus", "Editor Focus"],
+                ["metadata", "Metadata"]
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={cn(
+                    "rounded px-2.5 py-1.5 text-[12px] font-medium text-[#43474f]",
+                    workspaceMode === value && "bg-[#dbeafe] text-[#0e3b69]"
+                  )}
+                  onClick={() => setWorkspaceMode(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <Button type="button" variant="secondary" onClick={() => router.back()}>
               Cancel
             </Button>
@@ -527,9 +559,9 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                 Delete
               </Button>
             ) : null}
-            <Button type="button" onClick={() => void saveNote(false)} disabled={busy}>
+            <Button type="button" onClick={() => void saveNote(false)} loading={busy} loadingLabel="Saving...">
               <Save className="h-4 w-4" aria-hidden="true" />
-              {busy ? "Saving..." : "Save"}
+              Save
             </Button>
             <Button type="button" variant="secondary" onClick={() => void saveNote(true)} disabled={busy}>
               Save and View
@@ -546,7 +578,14 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         </div>
       ) : null}
 
-      <div className="mx-auto grid max-w-[1800px] gap-0 lg:grid-cols-[minmax(0,1.1fr)_minmax(380px,0.9fr)]">
+      <div
+        className={cn(
+          "mx-auto grid max-w-[1800px] gap-0",
+          showPreviewPane
+            ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
+            : "lg:grid-cols-1"
+        )}
+      >
         <section className="border-[#c3c6d0] p-4 lg:min-h-[calc(100vh-64px)] lg:border-r lg:p-10">
           <div className="mb-6 flex border-b border-[#c3c6d0] lg:hidden">
             {(["edit", "preview", "metadata"] as const).map((tab) => (
@@ -564,7 +603,13 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             ))}
           </div>
 
-          <div className={cn("rounded-lg border border-[#c3c6d0] bg-white p-6", mobileTab !== "metadata" && "hidden lg:block")}>
+          <div
+            className={cn(
+              "rounded-lg border border-[#c3c6d0] bg-white p-6",
+              mobileTab !== "metadata" && "hidden lg:block",
+              workspaceMode !== "metadata" && "lg:hidden"
+            )}
+          >
             <div className="grid gap-5">
               <Field label="Title">
                 <input
@@ -743,7 +788,13 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             </div>
           </div>
 
-          <div className={cn("mt-6", mobileTab !== "edit" && "hidden lg:block")}>
+          <div
+            className={cn(
+              "mt-6",
+              mobileTab !== "edit" && "hidden lg:block",
+              workspaceMode === "metadata" && "lg:hidden"
+            )}
+          >
             <div className="mb-3">
               <NoteOutline markdown={draft.body_markdown} compact onSelectHeading={jumpEditorToHeading} />
             </div>
@@ -789,86 +840,91 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             )}
           </div>
 
-          <AIWritingAssistant
-            draft={draft}
-            noteId={savedId}
-            getSelectedText={getSelectedMarkdown}
-            onInsertMarkdown={insertGeneratedMarkdown}
-            onAppendMarkdown={appendGeneratedMarkdown}
-            onReplaceMarkdown={replaceGeneratedMarkdown}
-            onApplyMetadata={applyAIMetadata}
-          />
+          <details className="mt-6 rounded-lg border border-[#c3c6d0] bg-white p-4">
+            <summary className="cursor-pointer list-none text-sm font-semibold text-[#1a1c1c]">
+              Assistant, links, media, and safety tools
+            </summary>
+            <div className="mt-4 grid gap-6">
+              <AIWritingAssistant
+                draft={draft}
+                noteId={savedId}
+                getSelectedText={getSelectedMarkdown}
+                onInsertMarkdown={insertGeneratedMarkdown}
+                onAppendMarkdown={appendGeneratedMarkdown}
+                onReplaceMarkdown={replaceGeneratedMarkdown}
+                onApplyMetadata={applyAIMetadata}
+              />
 
-          <div className="mt-6">
-            <DiagramUpload
-              noteId={savedId}
-              paths={draft.diagram_urls}
-              onInsertMarkdown={insertDiagramMarkdown}
-              onChange={(diagram_urls) =>
-                setDraft((current) => ({ ...current, diagram_urls }))
-              }
-            />
-          </div>
+              <DiagramUpload
+                noteId={savedId}
+                paths={draft.diagram_urls}
+                onInsertMarkdown={insertDiagramMarkdown}
+                onChange={(diagram_urls) =>
+                  setDraft((current) => ({ ...current, diagram_urls }))
+                }
+              />
 
-          <div className="mt-6 grid gap-6">
-            <LinkedNotesManager noteId={savedId} draft={draft} />
-            <NoteQualityPanel draft={draft} onAppendMarkdown={appendGeneratedMarkdown} />
-            <VersionHistory
-              noteId={savedId}
-              currentTitle={draft.title}
-              currentBody={draft.body_markdown}
-              currentMetadata={{
-                slug: draft.slug,
-                topic: draft.topic,
-                note_type: draft.note_type,
-                difficulty: draft.difficulty,
-                description: draft.description,
-                tags: draft.tags,
-                recognition_triggers: draft.recognition_triggers,
-                false_uses: draft.false_uses,
-                visibility: draft.visibility,
-                is_favorite: draft.is_favorite
-              }}
-            />
-            {initialNote ? <NoteSplitTool note={initialNote} /> : null}
-          </div>
+              <LinkedNotesManager noteId={savedId} draft={draft} />
+              <NoteQualityPanel draft={draft} onAppendMarkdown={appendGeneratedMarkdown} />
+              <VersionHistory
+                noteId={savedId}
+                currentTitle={draft.title}
+                currentBody={draft.body_markdown}
+                currentMetadata={{
+                  slug: draft.slug,
+                  topic: draft.topic,
+                  note_type: draft.note_type,
+                  difficulty: draft.difficulty,
+                  description: draft.description,
+                  tags: draft.tags,
+                  recognition_triggers: draft.recognition_triggers,
+                  false_uses: draft.false_uses,
+                  visibility: draft.visibility,
+                  is_favorite: draft.is_favorite
+                }}
+              />
+              {initialNote ? <NoteSplitTool note={initialNote} /> : null}
+            </div>
+          </details>
         </section>
 
-        <section
-          className={cn(
-            "p-4 lg:block lg:min-h-[calc(100vh-64px)] lg:p-10",
-            mobileTab !== "preview" && "hidden lg:block"
-          )}
-        >
-          <div className="sticky top-20 mb-4 flex items-center justify-between border-b border-[#c3c6d0] bg-[#f9f9f9]/95 py-2 text-[13px] font-medium tracking-[0.04em] text-[#43474f] backdrop-blur lg:top-4">
-            <span>Live Preview</span>
-            <span>KaTeX</span>
-          </div>
-          <div className="rounded-lg border border-[#c3c6d0] bg-white p-6">
-            <MarkdownPreview markdown={draft.body_markdown} />
-            {learningFields.recognitionTriggers || learningFields.falseUses ? (
-              <div className="mt-6 grid gap-4">
-                {learningFields.recognitionTriggers ? (
-                  <LearningMetadataList
-                    title="Recognition Triggers"
-                    description="Metadata preview"
-                    items={draft.recognition_triggers}
-                    compact
-                  />
-                ) : null}
-                {learningFields.falseUses ? (
-                  <LearningMetadataList title="Common False Uses" items={draft.false_uses} tone="red" compact />
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </section>
+        {showPreviewPane ? (
+          <section
+            className={cn(
+              "p-4 lg:block lg:min-h-[calc(100vh-64px)] lg:p-10",
+              mobileTab !== "preview" && "hidden lg:block"
+            )}
+          >
+            <div className="sticky top-20 mb-4 flex items-center justify-between border-b border-[#c3c6d0] bg-[#f9f9f9]/95 py-2 text-[13px] font-medium tracking-[0.04em] text-[#43474f] backdrop-blur lg:top-4">
+              <span>Live Preview</span>
+              <span>KaTeX</span>
+            </div>
+            <div className="rounded-lg border border-[#c3c6d0] bg-white p-6">
+              <MarkdownPreview markdown={draft.body_markdown} />
+              {learningFields.recognitionTriggers || learningFields.falseUses ? (
+                <div className="mt-6 grid gap-4">
+                  {learningFields.recognitionTriggers ? (
+                    <LearningMetadataList
+                      title="Recognition Triggers"
+                      description="Metadata preview"
+                      items={draft.recognition_triggers}
+                      compact
+                    />
+                  ) : null}
+                  {learningFields.falseUses ? (
+                    <LearningMetadataList title="Common False Uses" items={draft.false_uses} tone="red" compact />
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
       </div>
 
       <div className="fixed inset-x-0 bottom-16 z-30 border-t border-[#c3c6d0] bg-[#f9f9f9] p-4 lg:hidden">
-        <Button type="button" className="w-full" onClick={() => void saveNote(false)} disabled={busy}>
+        <Button type="button" fullWidth onClick={() => void saveNote(false)} loading={busy} loadingLabel="Saving...">
           <Save className="h-4 w-4" aria-hidden="true" />
-          {busy ? "Saving..." : "Save Note"}
+          Save Note
         </Button>
       </div>
 

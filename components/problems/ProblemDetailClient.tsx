@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Link2, Pencil, Plus, Sparkles } from "lucide-react";
+import { AlertTriangle, Brain, CheckCircle2, Link2, Pencil, Plus } from "lucide-react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
 import { MarkdownPreview } from "@/components/editor/MarkdownPreview";
 import { Badge, DifficultyBadge } from "@/components/ui/Badge";
@@ -273,7 +273,7 @@ ${problem.mistake_made ?? ""}
                 </option>
               ))}
           </select>
-          <Button type="button" variant="secondary" onClick={() => void linkNote()} disabled={busy || !noteId}>
+          <Button type="button" variant="secondary" onClick={() => void linkNote()} disabled={!noteId} loading={busy} loadingLabel="Linking...">
             <Link2 className="h-4 w-4" aria-hidden="true" />
             Link Note
           </Button>
@@ -285,22 +285,22 @@ ${problem.mistake_made ?? ""}
           <Pencil className="h-4 w-4" aria-hidden="true" />
           Edit Problem
         </Button>
-        <Button type="button" variant="secondary" onClick={() => void updateStatus("review_later")} disabled={busy}>
+        <Button type="button" variant="secondary" onClick={() => void updateStatus("review_later")} loading={busy} loadingLabel="Updating...">
           Mark as Review Later
         </Button>
-        <Button type="button" variant="secondary" onClick={() => void updateStatus("mastered")} disabled={busy}>
+        <Button type="button" variant="secondary" onClick={() => void updateStatus("mastered")} loading={busy} loadingLabel="Updating...">
           <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
           Mark as Mastered
         </Button>
-        <Button type="button" variant="secondary" onClick={() => void analyzeMistake()} disabled={busy}>
-          <Sparkles className="h-4 w-4" aria-hidden="true" />
+        <Button type="button" variant="secondary" onClick={() => void analyzeMistake()} loading={busy} loadingLabel="Analyzing...">
+          <Brain className="h-4 w-4" aria-hidden="true" />
           Analyze Mistake
         </Button>
-        <Button type="button" variant="secondary" onClick={() => void createMistake()} disabled={busy}>
+        <Button type="button" variant="secondary" onClick={() => void createMistake()} loading={busy} loadingLabel="Creating...">
           <AlertTriangle className="h-4 w-4" aria-hidden="true" />
           Create Mistake from this problem
         </Button>
-        <Button type="button" onClick={() => void createTechniqueNote()} disabled={busy}>
+        <Button type="button" onClick={() => void createTechniqueNote()} loading={busy} loadingLabel="Creating...">
           <Plus className="h-4 w-4" aria-hidden="true" />
           Create Technique Note from this problem
         </Button>

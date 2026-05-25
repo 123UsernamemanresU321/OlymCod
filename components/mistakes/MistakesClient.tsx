@@ -181,7 +181,7 @@ export function MistakesClient({ mistakes, notes, problems }: MistakesClientProp
             </Field>
             {error ? <p className="text-sm text-[#8f1d15]">{error}</p> : null}
             <div className="flex justify-end">
-              <Button type="button" onClick={() => void createMistake()} disabled={busy}>
+              <Button type="button" onClick={() => void createMistake()} loading={busy} loadingLabel="Saving...">
                 Save Mistake
               </Button>
             </div>

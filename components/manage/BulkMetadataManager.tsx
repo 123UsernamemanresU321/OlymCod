@@ -150,7 +150,7 @@ export function BulkMetadataManager({ notes }: BulkMetadataManagerProps) {
         <Field label="Topic">
           <div className="grid gap-2">
             <TopicSelector value={bulkTopic} onChange={setBulkTopic} />
-            <Button type="button" variant="secondary" onClick={() => void applyUpdate({ topic: bulkTopic })} disabled={busy}>Set topic</Button>
+            <Button type="button" variant="secondary" onClick={() => void applyUpdate({ topic: bulkTopic })} loading={busy} loadingLabel="Applying...">Set topic</Button>
           </div>
         </Field>
         <Field label="Type / difficulty label">
@@ -159,16 +159,16 @@ export function BulkMetadataManager({ notes }: BulkMetadataManagerProps) {
               {NOTE_TYPES.map((item) => <option key={item}>{item}</option>)}
             </select>
             <input className={inputClassName()} value={bulkLevel} onChange={(event) => setBulkLevel(event.target.value)} placeholder="Level 1-12, based on note type" />
-            <Button type="button" variant="secondary" onClick={() => void applyUpdate({ note_type: bulkType, difficulty: bulkLevel ? Number(bulkLevel) : null })} disabled={busy}>Set type/level</Button>
+            <Button type="button" variant="secondary" onClick={() => void applyUpdate({ note_type: bulkType, difficulty: bulkLevel ? Number(bulkLevel) : null })} loading={busy} loadingLabel="Applying...">Set type/level</Button>
           </div>
         </Field>
         <Field label="Tags and state">
           <div className="grid gap-2">
             <input className={inputClassName()} value={bulkTags} onChange={(event) => setBulkTags(event.target.value)} placeholder="add tags..." />
-            <Button type="button" variant="secondary" onClick={() => void addTags()} disabled={busy}>Add tags</Button>
+            <Button type="button" variant="secondary" onClick={() => void addTags()} loading={busy} loadingLabel="Adding...">Add tags</Button>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" variant="secondary" onClick={() => void applyUpdate({ is_archived: true })}><Archive className="h-4 w-4" />Archive</Button>
-              <Button type="button" variant="secondary" onClick={() => void applyUpdate({ is_favorite: true })}><Star className="h-4 w-4" />Favorite</Button>
+              <Button type="button" variant="secondary" onClick={() => void applyUpdate({ is_archived: true })} loading={busy} loadingLabel="Archiving..."><Archive className="h-4 w-4" />Archive</Button>
+              <Button type="button" variant="secondary" onClick={() => void applyUpdate({ is_favorite: true })} loading={busy} loadingLabel="Updating..."><Star className="h-4 w-4" />Favorite</Button>
             </div>
           </div>
         </Field>
@@ -179,7 +179,7 @@ export function BulkMetadataManager({ notes }: BulkMetadataManagerProps) {
           <Field label="Bulk delete confirmation">
             <input className={inputClassName()} value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} placeholder="Type DELETE to delete selected notes" />
           </Field>
-          <Button type="button" variant="danger" onClick={() => void deleteSelected()} disabled={busy || deleteConfirm !== "DELETE"}>
+          <Button type="button" variant="danger" onClick={() => void deleteSelected()} disabled={deleteConfirm !== "DELETE"} loading={busy} loadingLabel="Deleting...">
             <Trash2 className="h-4 w-4" /> Delete selected
           </Button>
         </div>
