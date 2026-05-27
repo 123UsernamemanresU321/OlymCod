@@ -33,6 +33,9 @@ test("type-specific Note Quality counts false uses and recognition metadata", ()
   assert.match(quality, /getCriteriaForNoteType/);
   assert.match(quality, /Common mistakes covered through Common False Uses metadata/);
   assert.match(quality, /Recognition covered through Recognition Triggers metadata/);
+  assert.match(quality, /linkedNoteCount/);
+  assert.match(quality, /Related Notes completed through/);
+  assert.match(quality, /descriptionImportance/);
   assert.match(quality, /type === "Theorem" \|\| type === "Lemma"/);
   assert.match(quality, /type === "Formula" \|\| type === "Formula Log"/);
   assert.match(quality, /type === "Definition"/);

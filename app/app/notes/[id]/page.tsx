@@ -81,6 +81,10 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
     incomingLinks: backlinks,
     notes: allNotes
   });
+  const linkedNoteCount = new Set([
+    ...sourceLinks.map((link) => link.target_note_id),
+    ...backlinks.map((link) => link.source_note_id)
+  ]).size;
 
   return (
     <NoteViewModeShell>
@@ -165,7 +169,7 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
 
         <NoteReviewActions note={note} review={review} />
 
-        <NoteQualityPanel note={note} />
+        <NoteQualityPanel note={note} linkedNoteCount={linkedNoteCount} linkedProblemCount={problems.length} />
         <VersionHistory
           noteId={note.id}
           currentTitle={note.title}

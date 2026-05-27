@@ -12,13 +12,25 @@ interface NoteQualityPanelProps {
   draft?: NoteDraft | null;
   onAppendMarkdown?: (markdown: string) => void;
   defaultOpen?: boolean;
+  linkedNoteCount?: number;
+  linkedProblemCount?: number;
 }
 
-export function NoteQualityPanel({ defaultOpen = false, note = null, draft = null, onAppendMarkdown }: NoteQualityPanelProps) {
+export function NoteQualityPanel({
+  defaultOpen = false,
+  draft = null,
+  linkedNoteCount = 0,
+  linkedProblemCount = 0,
+  note = null,
+  onAppendMarkdown
+}: NoteQualityPanelProps) {
   const [suggestion, setSuggestion] = useState("");
   const [busy, setBusy] = useState(false);
   const source = draft ?? note;
-  const quality = useMemo(() => (source ? getCriteriaForNoteType(source) : null), [source]);
+  const quality = useMemo(
+    () => (source ? getCriteriaForNoteType(source, { linkedNoteCount, linkedProblemCount }) : null),
+    [linkedNoteCount, linkedProblemCount, source]
+  );
 
   async function improve() {
     if (!source) return;
