@@ -116,7 +116,9 @@ test("workspace, importer, taxonomy, saved views, merge, and media improvements 
   assert.match(workspace, /Reference Pane/);
   assert.match(importer, /Smart Importer/);
   assert.match(importer, /Split by top-level/);
-  assert.match(taxonomy, /Tag And Topic Management/);
+  assert.match(taxonomy, /Tags & Topics/);
+  assert.match(taxonomy, /Search counts/);
+  assert.match(taxonomy, /Unique tags/);
   assert.match(taxonomy, /Rename or merge/);
   assert.match(savedViews, /Saved Views/);
   assert.match(savedViews, /Open/);

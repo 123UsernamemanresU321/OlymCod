@@ -130,7 +130,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
       { id: "workspace", group: "Actions", title: "Open Workspace", href: "/app/workspace", preview: "multi pane editor reference notes" },
       { id: "templates", group: "Actions", title: "Open Templates", href: "/app/templates", preview: "note templates custom built in" },
       { id: "import", group: "Actions", title: "Open Smart Importer", href: "/app/import", preview: "import markdown text split headings" },
-      { id: "taxonomy", group: "Actions", title: "Open Taxonomy", href: "/app/taxonomy", preview: "tags topics merge rename" },
+      { id: "taxonomy", group: "Actions", title: "Open Tags & Topics", href: "/app/taxonomy", preview: "tag counts topic counts merge rename taxonomy" },
       { id: "views", group: "Actions", title: "Open Saved Views", href: "/app/views", preview: "saved filters dashboards" },
       { id: "merge", group: "Actions", title: "Merge Notes", href: "/app/merge", preview: "combine notes archive originals" },
       { id: "settings", group: "Actions", title: "Open Settings", href: "/app/settings", preview: "export backup account" }

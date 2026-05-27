@@ -17,9 +17,18 @@ export function TaxonomyManagerClient({ notes }: { notes: Note[] }) {
   const [to, setTo] = useState("");
   const [mode, setMode] = useState<"tag" | "topic">("tag");
   const [message, setMessage] = useState<string | null>(null);
+  const [countQuery, setCountQuery] = useState("");
 
   const tagCounts = useMemo(() => counts(notes.flatMap((note) => note.tags)), [notes]);
   const topicCounts = useMemo(() => counts(notes.map((note) => note.topic)), [notes]);
+  const visibleTagCounts = useMemo(
+    () => tagCounts.filter(([tag]) => tag.toLowerCase().includes(countQuery.trim().toLowerCase())),
+    [countQuery, tagCounts]
+  );
+  const visibleTopicCounts = useMemo(
+    () => topicCounts.filter(([topic]) => topic.toLowerCase().includes(countQuery.trim().toLowerCase())),
+    [countQuery, topicCounts]
+  );
   const affected = notes.filter((note) => mode === "tag" ? note.tags.includes(from) : note.topic === from);
   const similarTags = useMemo(() => {
     const tags = tagCounts.map(([tag]) => tag);
@@ -58,8 +67,25 @@ export function TaxonomyManagerClient({ notes }: { notes: Note[] }) {
   return (
     <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 lg:grid-cols-[minmax(0,1fr)_360px] lg:px-10">
       <main>
-        <h1 className="text-3xl font-semibold text-[#1a1c1c]">Tag And Topic Management</h1>
-        <p className="mt-2 text-sm leading-6 text-[#43474f]">Rename or merge messy tags and topics with a preview before applying changes.</p>
+        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">Taxonomy</p>
+        <h1 className="mt-2 text-3xl font-semibold text-[#1a1c1c]">Tags & Topics</h1>
+        <p className="mt-2 text-sm leading-6 text-[#43474f]">
+          Rename or merge messy tags and topics with a preview before applying changes. Counts show how many notes use each value.
+        </p>
+        <section className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#43474f]">Notes</p>
+            <p className="mt-2 text-3xl font-semibold text-[#1a1c1c]">{notes.length}</p>
+          </div>
+          <div className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#43474f]">Unique tags</p>
+            <p className="mt-2 text-3xl font-semibold text-[#1a1c1c]">{tagCounts.length}</p>
+          </div>
+          <div className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+            <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#43474f]">Topics</p>
+            <p className="mt-2 text-3xl font-semibold text-[#1a1c1c]">{topicCounts.length}</p>
+          </div>
+        </section>
         <section className="mt-6 grid gap-4 rounded-lg border border-[#c3c6d0] bg-white p-5 md:grid-cols-4">
           <Field label="Mode">
             <select className={inputClassName()} value={mode} onChange={(event) => setMode(event.target.value as "tag" | "topic")}>
@@ -93,15 +119,27 @@ export function TaxonomyManagerClient({ notes }: { notes: Note[] }) {
       </main>
       <aside className="grid content-start gap-4">
         <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-          <h2 className="font-semibold text-[#1a1c1c]">Tags</h2>
+          <Field label="Search counts">
+            <input
+              className={inputClassName()}
+              value={countQuery}
+              onChange={(event) => setCountQuery(event.target.value)}
+              placeholder="Find a tag or topic..."
+            />
+          </Field>
+        </section>
+        <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+          <h2 className="font-semibold text-[#1a1c1c]">Tags ({visibleTagCounts.length})</h2>
           <div className="mt-3 grid max-h-72 gap-1 overflow-auto text-sm">
-            {tagCounts.map(([tag, count]) => <button key={tag} type="button" className="flex justify-between rounded px-2 py-1 hover:bg-[#f9f9f9]" onClick={() => { setMode("tag"); setFrom(tag); }}><span>{tag}</span><span>{count}</span></button>)}
+            {visibleTagCounts.map(([tag, count]) => <button key={tag} type="button" className="flex justify-between rounded px-2 py-1 hover:bg-[#f9f9f9]" onClick={() => { setMode("tag"); setFrom(tag); }}><span>{tag}</span><span>{count}</span></button>)}
+            {!visibleTagCounts.length ? <span className="px-2 py-1 text-[#43474f]">No matching tags.</span> : null}
           </div>
         </section>
         <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-          <h2 className="font-semibold text-[#1a1c1c]">Topics</h2>
+          <h2 className="font-semibold text-[#1a1c1c]">Topics ({visibleTopicCounts.length})</h2>
           <div className="mt-3 grid gap-1 text-sm">
-            {topicCounts.map(([topic, count]) => <button key={topic} type="button" className="flex justify-between rounded px-2 py-1 hover:bg-[#f9f9f9]" onClick={() => { setMode("topic"); setFrom(topic); }}><span>{topic}</span><span>{count}</span></button>)}
+            {visibleTopicCounts.map(([topic, count]) => <button key={topic} type="button" className="flex justify-between rounded px-2 py-1 hover:bg-[#f9f9f9]" onClick={() => { setMode("topic"); setFrom(topic); }}><span>{topic}</span><span>{count}</span></button>)}
+            {!visibleTopicCounts.length ? <span className="px-2 py-1 text-[#43474f]">No matching topics.</span> : null}
           </div>
         </section>
         <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">

@@ -14,6 +14,7 @@ import {
   Plus,
   Settings,
   Table2,
+  Tags,
   Target,
   UserCircle,
   XCircle
@@ -41,6 +42,7 @@ const TOOL_NAV_ITEMS = [
   { href: "/app/graph", label: "Graph", icon: Network },
   { href: "/app/media", label: "Media / Diagrams", icon: Image },
   { href: "/app/manage", label: "Manage", icon: Table2 },
+  { href: "/app/taxonomy", label: "Tags & Topics", icon: Tags },
   { href: "/app/settings", label: "Settings", icon: Settings }
 ];
 

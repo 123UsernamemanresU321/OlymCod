@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Archive, Star, Trash2 } from "lucide-react";
 import { InlineMarkdown } from "@/components/editor/InlineMarkdown";
@@ -120,10 +121,18 @@ export function BulkMetadataManager({ notes }: BulkMetadataManagerProps) {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-10">
-      <div>
-        <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">Metadata operations</p>
-        <h1 className="mt-2 text-3xl font-semibold text-[#1a1c1c]">Bulk Metadata Manager</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#43474f]">Review many notes, fix metadata, and apply safe bulk actions.</p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">Metadata operations</p>
+          <h1 className="mt-2 text-3xl font-semibold text-[#1a1c1c]">Bulk Metadata Manager</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#43474f]">Review many notes, fix metadata, and apply safe bulk actions.</p>
+        </div>
+        <Link
+          href="/app/taxonomy"
+          className="inline-flex min-h-9 items-center justify-center rounded border border-[#c3c6d0] bg-[#f9f9f9] px-4 py-2 text-[13px] font-medium text-[#0e3b69] hover:bg-white"
+        >
+          Tags & Topics counts
+        </Link>
       </div>
 
       <section className="mt-6 grid gap-3 rounded-lg border border-[#c3c6d0] bg-white p-4 lg:grid-cols-5">

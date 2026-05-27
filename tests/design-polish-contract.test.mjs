@@ -44,6 +44,8 @@ test("app chrome and metadata are calmer and more complete", () => {
   assert.match(shell, /TOOL_NAV_ITEMS/);
   assert.match(shell, /Tools/);
   assert.match(shell, /details/);
+  assert.match(shell, /\/app\/taxonomy/);
+  assert.match(shell, /Tags & Topics/);
 });
 
 test("major app surfaces use compact disclosures instead of long exposed control walls", () => {
