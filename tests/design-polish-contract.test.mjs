@@ -51,6 +51,7 @@ test("major app surfaces use compact disclosures instead of long exposed control
   const notes = read("../components/notes/NotesLibraryClient.tsx");
   const notebookControls = read("../components/notebook/NotebookControls.tsx");
   const noteForm = read("../components/notes/NoteForm.tsx");
+  const noteQuality = read("../components/notes/NoteQualityPanel.tsx");
 
   assert.match(dashboard, /Daily tools/);
   assert.match(dashboard, /More organization tools/);
@@ -62,6 +63,9 @@ test("major app surfaces use compact disclosures instead of long exposed control
   assert.match(noteForm, /Split Preview/);
   assert.match(noteForm, /Editor Focus/);
   assert.match(noteForm, /Assistant, links, media, and safety tools/);
+  assert.match(noteQuality, /defaultOpen/);
+  assert.match(noteQuality, /<details/);
+  assert.match(noteQuality, /ChevronDown/);
 });
 
 test("public polish adds route states, footer, and avoids obvious vibe-coded red flags", () => {
