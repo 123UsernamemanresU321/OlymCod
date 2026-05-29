@@ -370,7 +370,7 @@ Performance and privacy:
 
 ### Bulk Metadata Manager
 
-Open `/app/manage` for a table view of notes. Select filtered notes and bulk edit topic, note type, type-specific level, tags, archive state, favorite state, or delete. Bulk delete requires typing `DELETE`. Filters help find missing metadata, missing recognition triggers, missing common false uses, or notes below an 80% quality score.
+Open `/app/manage` for a table view of notes. Select filtered notes and bulk edit topic, note type, type-specific level, tags, public/private visibility, archive state, favorite state, or delete. Bulk delete requires typing `DELETE`. Filters help find missing metadata, missing recognition triggers, missing common false uses, or notes below an 80% quality score.
 
 ### Media Library
 

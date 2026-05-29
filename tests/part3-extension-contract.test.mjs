@@ -111,6 +111,12 @@ test("creation and organization routes are present without extra graph dependenc
   assert.match(graph, /getContext\("2d"\)/);
   assert.doesNotMatch(graph, /reactflow|d3/i);
   assert.match(manage, /Bulk Metadata Manager/);
+  assert.match(manage, /CompactTopicPicker/);
+  assert.match(manage, /Any visibility/);
+  assert.match(manage, /setBulkVisibility/);
+  assert.match(manage, /Make public/);
+  assert.match(manage, /Make private/);
+  assert.match(manage, /published_at/);
   assert.match(manage, /DELETE/);
   assert.match(media, /Media Library/);
   assert.match(media, /image\/webp/);
