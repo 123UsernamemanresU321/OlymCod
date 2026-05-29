@@ -111,7 +111,7 @@ export function NotebookPresetDialog({
 
   return (
     <div className="fixed inset-0 z-[900] grid place-items-center bg-black/45 p-4">
-      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg border border-[#c3c6d0] bg-white p-5 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto codex-scrollbar rounded-lg border border-[#c3c6d0] bg-white p-5 shadow-xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-[#1a1c1c]">Save Preset</h2>

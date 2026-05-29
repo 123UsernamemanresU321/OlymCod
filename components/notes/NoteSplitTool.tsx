@@ -123,7 +123,7 @@ export function NoteSplitTool({ note }: NoteSplitToolProps) {
               {NOTE_TYPES.map((type) => <option key={type}>{type}</option>)}
             </select>
           </Field>
-          <div className="max-h-56 overflow-auto rounded border border-[#d5d7de] bg-white p-2">
+          <div className="max-h-56 overflow-auto codex-scrollbar rounded border border-[#d5d7de] bg-white p-2">
             {sections.map((section) => (
               <label key={section.id} className="flex items-start gap-2 rounded p-2 text-sm text-[#43474f] hover:bg-[#f9f9f9]">
                 <input

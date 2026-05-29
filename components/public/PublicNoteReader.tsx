@@ -201,7 +201,7 @@ export function PublicNoteReader({ note, diagrams }: PublicNoteReaderProps) {
         </article>
 
         {showSidebar ? (
-          <aside className="grid min-w-0 content-start gap-4 xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto">
+          <aside className="grid min-w-0 content-start gap-4 xl:sticky xl:top-6 xl:max-h-[calc(100vh-3rem)] xl:overflow-y-auto codex-scrollbar">
             {headings.length ? (
               <section className="rounded-lg border border-[#c3c6d0] bg-white p-5">
                 <h2 className="text-lg font-semibold">On this note</h2>

@@ -1618,7 +1618,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 <label className="flex items-center gap-1 cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={fadeNonMatches} onChange={(event) => setFadeNonMatches(event.target.checked)} /> Fade non-matches</label>
               </div>
               {query ? (
-                <div className="mt-3 max-h-40 overflow-auto rounded border border-[#e2e4ea] bg-[#f9f9f9] p-2">
+                <div className="mt-3 max-h-40 overflow-auto codex-scrollbar rounded border border-[#e2e4ea] bg-[#f9f9f9] p-2">
                   {visibleSearchResults.slice(0, 10).map((note) => (
                     <button key={note.id} type="button" onClick={() => focusNode(note.id)} className="block w-full rounded px-2 py-1 text-left text-sm hover:bg-white">
                       {note.title}

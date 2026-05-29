@@ -146,7 +146,7 @@ export function QuickCapture({
 
       {open ? (
         <div className="fixed inset-0 z-50 grid place-items-end bg-black/30 p-0 sm:place-items-center sm:p-4">
-          <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-lg border border-[#c3c6d0] bg-white p-5 shadow-xl sm:max-w-2xl sm:rounded-lg">
+          <div className="max-h-[92vh] w-full overflow-y-auto codex-scrollbar rounded-t-lg border border-[#c3c6d0] bg-white p-5 shadow-xl sm:max-w-2xl sm:rounded-lg">
             <div className="flex items-start justify-between gap-4 border-b border-[#c3c6d0] pb-3">
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">

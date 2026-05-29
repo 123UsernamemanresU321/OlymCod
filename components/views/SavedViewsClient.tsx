@@ -41,7 +41,7 @@ export function SavedViewsClient({ views }: { views: SavedView[] }) {
                 </Button>
               </div>
             </div>
-            <pre className="mt-3 max-h-32 overflow-auto rounded bg-[#f9f9f9] p-3 text-xs text-[#43474f]">{JSON.stringify(view.config, null, 2)}</pre>
+            <pre className="mt-3 max-h-32 overflow-auto codex-scrollbar rounded bg-[#f9f9f9] p-3 text-xs text-[#43474f]">{JSON.stringify(view.config, null, 2)}</pre>
           </article>
         ))}
         {!views.length ? <p className="rounded border border-dashed border-[#c3c6d0] p-6 text-sm text-[#43474f]">No saved views yet. Save filters from the Notes page.</p> : null}

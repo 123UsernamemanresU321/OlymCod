@@ -132,7 +132,7 @@ export function VersionHistory({ noteId, currentTitle, currentBody = "", current
                 </button>
                 {selected?.id === version.id ? (
                   <div className="mt-3">
-                    <div className="max-h-72 overflow-y-auto rounded border border-[#d5d7de] p-3">
+                    <div className="max-h-72 overflow-y-auto codex-scrollbar rounded border border-[#d5d7de] p-3">
                       {compare ? (
                         <pre className="whitespace-pre-wrap text-xs leading-5">
                           {diffLines(version.body_markdown ?? "", currentBody).map((line, index) => (

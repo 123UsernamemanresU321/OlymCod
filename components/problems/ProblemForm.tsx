@@ -161,7 +161,7 @@ export function ProblemForm({ initialProblem = null, notes }: ProblemFormProps) 
         </Field>
 
         <Field label="Linked notes">
-          <div className="max-h-56 overflow-y-auto rounded border border-[#d5d7de] p-3">
+          <div className="max-h-56 overflow-y-auto codex-scrollbar rounded border border-[#d5d7de] p-3">
             {notes.map((note) => (
               <label key={note.id} className="flex items-center gap-2 py-1 text-sm text-[#43474f]">
                 <input type="checkbox" checked={linkedNoteIds.includes(note.id)} onChange={() => toggleNote(note.id)} />

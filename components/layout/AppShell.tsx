@@ -157,7 +157,7 @@ export function AppShell({ children, email, role }: AppShellProps) {
           ) : null}
         </div>
 
-        <nav className="mt-6 flex-1 overflow-y-auto">
+        <nav className="mt-6 flex-1 overflow-y-auto codex-scrollbar">
           <div className="grid gap-2">
             {PRIMARY_NAV_ITEMS.map((item) => {
               const Icon = item.icon;

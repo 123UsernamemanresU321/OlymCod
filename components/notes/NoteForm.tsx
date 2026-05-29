@@ -780,7 +780,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
                   {selectedTemplate ? (
                     <details className="rounded border border-[#d5d7de] bg-white p-3 text-sm text-[#43474f]">
                       <summary className="cursor-pointer font-medium text-[#0e3b69]">Preview template</summary>
-                      <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap font-mono text-xs">{selectedTemplate.template_markdown}</pre>
+                      <pre className="mt-3 max-h-56 overflow-auto codex-scrollbar whitespace-pre-wrap font-mono text-xs">{selectedTemplate.template_markdown}</pre>
                     </details>
                   ) : null}
                 </div>

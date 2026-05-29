@@ -130,7 +130,7 @@ export function TaxonomyManagerClient({ notes }: { notes: Note[] }) {
         </section>
         <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
           <h2 className="font-semibold text-[#1a1c1c]">Tags ({visibleTagCounts.length})</h2>
-          <div className="mt-3 grid max-h-72 gap-1 overflow-auto text-sm">
+          <div className="mt-3 grid max-h-72 gap-1 overflow-auto codex-scrollbar text-sm">
             {visibleTagCounts.map(([tag, count]) => <button key={tag} type="button" className="flex justify-between rounded px-2 py-1 hover:bg-[#f9f9f9]" onClick={() => { setMode("tag"); setFrom(tag); }}><span>{tag}</span><span>{count}</span></button>)}
             {!visibleTagCounts.length ? <span className="px-2 py-1 text-[#43474f]">No matching tags.</span> : null}
           </div>

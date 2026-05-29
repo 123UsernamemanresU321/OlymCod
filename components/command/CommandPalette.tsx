@@ -244,7 +244,7 @@ export function CommandPalette({ enableShortcut = true }: { enableShortcut?: boo
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               </div>
-              <div className="max-h-[70vh] overflow-y-auto p-3">
+              <div className="max-h-[70vh] overflow-y-auto codex-scrollbar p-3">
                 {loading ? (
                   <div className="grid gap-2 p-2">
                     <LoadingSkeleton className="h-12" />

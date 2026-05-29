@@ -89,7 +89,7 @@ export function MergeNotesClient({ notes }: { notes: Note[] }) {
           <Button type="button" onClick={() => void merge()}>Create merged note</Button>
           {message ? <p className="text-sm text-[#8f1d15]">{message}</p> : null}
         </div>
-        <div className="mt-4 max-h-[55vh] overflow-auto rounded border border-[#d5d7de] bg-[#f9f9f9] p-2">
+        <div className="mt-4 max-h-[55vh] overflow-auto codex-scrollbar rounded border border-[#d5d7de] bg-[#f9f9f9] p-2">
           {notes.map((note) => (
             <label key={note.id} className="flex items-start gap-2 rounded p-2 text-sm hover:bg-white">
               <input
