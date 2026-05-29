@@ -138,9 +138,9 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
   }
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9]">
-      <div className="notebook-print-hidden sticky top-16 z-20 border-b border-[#c3c6d0] bg-[#f9f9f9]/95 px-4 py-4 backdrop-blur lg:top-0">
-        <div className="mx-auto flex max-w-7xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex min-h-screen flex-col bg-[#f9f9f9] lg:h-screen lg:max-h-screen lg:overflow-hidden">
+      <div className="notebook-print-hidden sticky top-16 z-20 flex-none border-b border-[#c3c6d0] bg-white px-4 py-4 lg:top-0 lg:px-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-3xl font-semibold text-[#1a1c1c]">Notebook Builder</h1>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-[#43474f]">
@@ -167,7 +167,7 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
         </div>
       </div>
 
-      <div className="notebook-print-hidden mx-auto flex max-w-7xl border-b border-[#c3c6d0] px-4 lg:hidden">
+      <div className="notebook-print-hidden flex flex-none border-b border-[#c3c6d0] bg-white px-4 lg:hidden">
         {(["Build", "Preview", "Export"] as const).map((tab) => (
           <button
             key={tab}
@@ -183,8 +183,8 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
         ))}
       </div>
 
-      <div className="mx-auto grid max-w-7xl gap-0 lg:grid-cols-[380px_minmax(0,1fr)] lg:h-[calc(100vh-144px)] lg:overflow-hidden">
-        <aside className={cn("notebook-print-hidden codex-scrollbar p-4 lg:block lg:border-r lg:border-[#c3c6d0] lg:p-6 lg:h-full lg:overflow-y-auto pb-20", mobileTab !== "Build" && "hidden")}>
+      <div className="flex flex-1 flex-col lg:min-h-0 lg:flex-row lg:overflow-hidden">
+        <aside className={cn("notebook-print-hidden codex-scrollbar w-full bg-white p-4 lg:block lg:w-[340px] lg:flex-none lg:border-r lg:border-[#c3c6d0] lg:h-full lg:overflow-y-auto lg:p-6 lg:pb-6 pb-20", mobileTab !== "Build" && "hidden")}>
           <NotebookControls
             config={config}
             availableTopics={availableTopics}
@@ -246,27 +246,29 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
           </section>
         </aside>
 
-        <main className={cn("p-4 lg:block lg:p-8 lg:h-full lg:overflow-y-auto codex-scrollbar pb-20", mobileTab === "Build" && "hidden")}>
-          <div className={cn("notebook-print-hidden mb-4 rounded-lg border border-[#c3c6d0] bg-white p-4", mobileTab !== "Export" && "hidden lg:block")}>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <p className="text-sm font-medium text-[#1a1c1c]">{busy ? "Building preview..." : `${itemCount} selected items`}</p>
-                {error ? <p className="mt-1 text-sm text-[#8f1d15]">{error}</p> : null}
+        <main className={cn("flex-1 bg-[#f9f9f9] p-4 lg:block lg:h-full lg:min-w-0 lg:overflow-y-auto codex-scrollbar lg:p-8 pb-20 lg:pb-8", mobileTab === "Build" && "hidden")}>
+          <div className="mx-auto max-w-4xl">
+            <div className={cn("notebook-print-hidden mb-4 rounded-lg border border-[#c3c6d0] bg-white p-4", mobileTab !== "Export" && "hidden lg:block")}>
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#1a1c1c]">{busy ? "Building preview..." : `${itemCount} selected items`}</p>
+                  {error ? <p className="mt-1 text-sm text-[#8f1d15]">{error}</p> : null}
+                </div>
+                <NotebookExportButtons config={config} onBeforePrint={() => setRenderAll(true)} />
               </div>
-              <NotebookExportButtons config={config} onBeforePrint={() => setRenderAll(true)} />
             </div>
-          </div>
 
-          <div className={cn(mobileTab === "Export" && "hidden lg:block")}>
-            <NotebookPreview
-              config={config}
-              items={visibleItems}
-              itemCount={itemCount}
-              warning={warning}
-              renderAll={renderAll}
-              onRenderAll={() => setRenderAll(true)}
-              onClearFilters={clearFilters}
-            />
+            <div className={cn(mobileTab === "Export" && "hidden lg:block")}>
+              <NotebookPreview
+                config={config}
+                items={visibleItems}
+                itemCount={itemCount}
+                warning={warning}
+                renderAll={renderAll}
+                onRenderAll={() => setRenderAll(true)}
+                onClearFilters={clearFilters}
+              />
+            </div>
           </div>
         </main>
       </div>

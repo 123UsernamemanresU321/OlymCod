@@ -115,21 +115,21 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 type="button"
                 onClick={() => update({ selectionMode: "whitelist" })}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  "flex-1 py-1.5 text-[11px] font-semibold text-center rounded-md transition-all text-[#43474f]",
                   config.selectionMode === "whitelist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
                 )}
               >
-                Include only selected
+                Include selected
               </button>
               <button
                 type="button"
                 onClick={() => update({ selectionMode: "blacklist" })}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  "flex-1 py-1.5 text-[11px] font-semibold text-center rounded-md transition-all text-[#43474f]",
                   config.selectionMode === "blacklist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
                 )}
               >
-                Include everything except selected
+                Exclude selected
               </button>
             </div>
             <p className="mt-2 text-xs leading-5 text-[#43474f]">
@@ -175,7 +175,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
             />
           </Field>
           <Field label="Topics">
-            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto codex-scrollbar rounded border border-[#e2e4ea] bg-white p-2">
+            <div className="flex flex-wrap gap-2 rounded border border-[#e2e4ea] bg-white p-2">
               {visibleTopics.map((topic) => (
                 <button
                   key={topic}
@@ -194,7 +194,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           </Field>
 
           <Field label="Note Types">
-            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto codex-scrollbar rounded border border-[#e2e4ea] bg-white p-2">
+            <div className="flex flex-wrap gap-2 rounded border border-[#e2e4ea] bg-white p-2">
               {visibleNoteTypes.map((type) => (
                 <button
                   key={type}
@@ -391,7 +391,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 type="button"
                 onClick={() => updateSectionSelectionMode("whitelist")}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  "flex-1 py-1.5 text-[11px] font-semibold text-center rounded-md transition-all text-[#43474f]",
                   config.sectionSelectionMode === "whitelist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
                 )}
               >
@@ -401,7 +401,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                 type="button"
                 onClick={() => updateSectionSelectionMode("blacklist")}
                 className={cn(
-                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  "flex-1 py-1.5 text-[11px] font-semibold text-center rounded-md transition-all text-[#43474f]",
                   config.sectionSelectionMode === "blacklist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
                 )}
               >
@@ -423,7 +423,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
             onChange={(event) => setSectionQuery(event.target.value)}
             placeholder="Search sections, e.g. proof, diagrams, false uses..."
           />
-          <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto codex-scrollbar rounded border border-[#e2e4ea] bg-white p-3 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 rounded border border-[#e2e4ea] bg-white p-3 sm:grid-cols-2">
             {visibleSectionToggles.map((toggle) => (
               <label key={toggle.key} className="flex items-center gap-3 text-sm text-[#43474f] cursor-pointer">
                 <input
