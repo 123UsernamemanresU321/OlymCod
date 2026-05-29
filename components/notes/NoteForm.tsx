@@ -586,7 +586,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             : "lg:grid-cols-1"
         )}
       >
-        <section className="border-[#c3c6d0] p-4 lg:h-full lg:overflow-y-auto lg:border-r lg:p-10 pb-20">
+        <section className="border-[#c3c6d0] codex-scrollbar p-4 lg:h-full lg:overflow-y-auto lg:border-r lg:p-10 pb-20">
           <div className="mb-6 flex border-b border-[#c3c6d0] lg:hidden">
             {(["edit", "preview", "metadata"] as const).map((tab) => (
               <button
@@ -891,7 +891,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         {showPreviewPane ? (
           <section
             className={cn(
-              "p-4 lg:block lg:h-full lg:overflow-y-auto lg:p-10 pb-20",
+              "p-4 lg:block lg:h-full lg:overflow-y-auto codex-scrollbar lg:p-10 pb-20",
               mobileTab !== "preview" && "hidden lg:block"
             )}
           >

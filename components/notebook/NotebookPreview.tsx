@@ -74,14 +74,14 @@ export function NotebookPreview({
           <section
             key={topic}
             className={cn(
-              "notebook-topic-section",
+              "notebook-topic-section border border-[#e2e4ea] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-10 md:p-12 rounded-sm print:border-0 print:shadow-none print:p-0",
               index > 0 && shouldBreakTopics && "notebook-page-break"
             )}
           >
-            <div className="mb-4 border-b border-[#c3c6d0] pb-2">
+            <div className="mb-6 border-b border-[#dfe3ea] pb-2">
               <h2 className="text-2xl font-semibold text-[#1a1c1c]">{topic}</h2>
             </div>
-            <div className={cn("grid gap-4", columnClass)}>
+            <div className={cn("grid gap-6", columnClass)}>
               {topicItems.map((item) => (
                 <NotebookEntry key={`${item.sourceType}-${item.id}`} item={item} config={config} />
               ))}

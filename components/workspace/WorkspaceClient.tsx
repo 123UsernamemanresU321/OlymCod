@@ -77,7 +77,7 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
       {showLibrary ? <aside className="border-r border-[#c3c6d0] bg-white p-4 lg:h-full lg:flex lg:flex-col lg:min-h-0">
         <h1 className="text-2xl font-semibold text-[#1a1c1c]">Workspace</h1>
         <input className={inputClassName("mt-4")} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes..." />
-        <div className="mt-4 grid gap-1 overflow-y-auto lg:flex-1 lg:min-h-0 pb-16">
+        <div className="mt-4 grid gap-1 overflow-y-auto codex-scrollbar lg:flex-1 lg:min-h-0 pb-16">
           {filtered.map((note) => (
             <button key={note.id} type="button" onClick={() => openNote(note.id)} className={`rounded p-2 text-left text-sm ${activeId === note.id ? "bg-[#eef4ff] text-[#0e3b69]" : "hover:bg-[#f9f9f9]"}`}>
               <span className="block font-semibold">{note.title}</span>
@@ -109,13 +109,13 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
           mode === "edit" ? (
             <textarea className="flex-1 resize-none w-full rounded border border-[#c3c6d0] bg-white p-4 font-mono text-sm leading-7 outline-none" value={drafts[active.id] ?? ""} onChange={(event) => setDrafts((current) => ({ ...current, [active.id]: event.target.value }))} />
           ) : (
-            <div className="rounded border border-[#c3c6d0] bg-white p-6 flex-1 min-h-0 overflow-y-auto"><MarkdownPreview markdown={drafts[active.id] ?? ""} /></div>
+            <div className="rounded border border-[#c3c6d0] bg-white p-6 flex-1 min-h-0 overflow-y-auto codex-scrollbar"><MarkdownPreview markdown={drafts[active.id] ?? ""} /></div>
           )
         ) : <p className="text-sm text-[#43474f]">Open a note to begin.</p>}
       </main>
       {showReference ? <aside className="border-l border-[#c3c6d0] bg-white p-4 lg:h-full lg:flex lg:flex-col lg:min-h-0">
         <h2 className="text-lg font-semibold text-[#1a1c1c]">Reference Pane</h2>
-        <div className="mt-4 grid gap-3 overflow-y-auto lg:flex-1 lg:min-h-0 pb-16">
+        <div className="mt-4 grid gap-3 overflow-y-auto codex-scrollbar lg:flex-1 lg:min-h-0 pb-16">
           {related.map(({ link, note }) => (
             <article key={link.id} className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-3">
               <Link href={`/app/notes/${note.id}`} className="font-semibold text-[#0e3b69]">{note.title}</Link>

@@ -1596,7 +1596,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
         ) : null}
 
         <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 xl:flex-row xl:overflow-hidden">
-          <aside className="graph-control-panel grid max-h-[34vh] min-h-0 shrink-0 gap-3 overflow-y-auto pr-1 xl:h-full xl:max-h-none xl:w-[300px] xl:flex-none">
+          <aside className="graph-control-panel codex-scrollbar grid max-h-[34vh] min-h-0 shrink-0 gap-3 overflow-y-auto pr-1 xl:h-full xl:max-h-none xl:w-[300px] xl:flex-none">
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-[#0e3b69]" />
@@ -1854,7 +1854,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
             )}
           </main>
 
-          <aside className="graph-inspector grid max-h-[38vh] min-h-0 shrink-0 content-start gap-3 overflow-y-auto pr-1 xl:h-full xl:max-h-none xl:w-[360px] xl:flex-none">
+          <aside className="graph-inspector codex-scrollbar grid max-h-[38vh] min-h-0 shrink-0 content-start gap-3 overflow-y-auto pr-1 xl:h-full xl:max-h-none xl:w-[360px] xl:flex-none">
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
               <h2 className="text-base font-semibold text-[#1a1c1c]">Inspector</h2>
               {!selectedNote && !selectedEdge ? (

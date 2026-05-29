@@ -97,9 +97,9 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
   const visibleProblemStatuses = NOTEBOOK_PROBLEM_STATUSES.filter((status) => status.toLowerCase().includes(normalizedFilterQuery));
 
   return (
-    <div className="grid gap-3">
-      <details className="group rounded-lg border border-[#c3c6d0] bg-white" open>
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+    <div className="grid gap-0">
+      <details className="group border-b border-[#dfe3ea] bg-white py-1" open>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 px-1">
           <span>
             <span className="block text-sm font-semibold text-[#1a1c1c]">Content Sources</span>
             <span className="text-xs text-[#5d6470]">{selectedSources} sources selected</span>
@@ -107,54 +107,55 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
           <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
         </summary>
-        <div className="border-t border-[#e2e4ea] px-4 pb-4 pt-3">
-        <div className="mt-3 rounded border border-[#d5d7de] bg-[#f9f9f9] p-3">
-          <p className="text-sm font-semibold text-[#1a1c1c]">Selection Mode</p>
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => update({ selectionMode: "whitelist" })}
-              className={cn(
-                "rounded border px-3 py-2 text-sm text-[#43474f]",
-                config.selectionMode === "whitelist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
-              )}
-            >
-              Include only
-            </button>
-            <button
-              type="button"
-              onClick={() => update({ selectionMode: "blacklist" })}
-              className={cn(
-                "rounded border px-3 py-2 text-sm text-[#43474f]",
-                config.selectionMode === "blacklist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
-              )}
-            >
-              Include everything except
-            </button>
+        <div className="px-1 pb-4 pt-2">
+          <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#43474f]">Selection Mode</p>
+            <div className="flex rounded-md bg-[#eef4ff] p-0.5 mt-2 border border-[#d5d7de]">
+              <button
+                type="button"
+                onClick={() => update({ selectionMode: "whitelist" })}
+                className={cn(
+                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  config.selectionMode === "whitelist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
+                )}
+              >
+                Include only selected
+              </button>
+              <button
+                type="button"
+                onClick={() => update({ selectionMode: "blacklist" })}
+                className={cn(
+                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  config.selectionMode === "blacklist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
+                )}
+              >
+                Include everything except selected
+              </button>
+            </div>
+            <p className="mt-2 text-xs leading-5 text-[#43474f]">
+              {config.selectionMode === "blacklist"
+                ? "Start with selected sources, then remove items matching exclusions."
+                : "Start with selected sources, then include only matching filters."}
+            </p>
           </div>
-          <p className="mt-2 text-xs leading-5 text-[#43474f]">
-            {config.selectionMode === "blacklist"
-              ? "Start with selected sources, then remove items matching exclusions."
-              : "Start with selected sources, then include only matching filters."}
-          </p>
-        </div>
-        <div className="mt-3 grid gap-2">
-          {NOTEBOOK_CONTENT_SOURCES.map((source) => (
-            <label key={source.key} className="flex items-center gap-3 text-sm text-[#43474f]">
-              <input
-                type="checkbox"
-                checked={config.contentSources[source.key]}
-                onChange={(event) => updateSource(source.key, event.target.checked)}
-              />
-              {source.label}
-            </label>
-          ))}
-        </div>
+          <div className="mt-3 grid gap-2">
+            {NOTEBOOK_CONTENT_SOURCES.map((source) => (
+              <label key={source.key} className="flex items-center gap-3 text-sm text-[#43474f] cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="accent-[#2c5282] cursor-pointer"
+                  checked={config.contentSources[source.key]}
+                  onChange={(event) => updateSource(source.key, event.target.checked)}
+                />
+                {source.label}
+              </label>
+            ))}
+          </div>
         </div>
       </details>
 
-      <details className="group rounded-lg border border-[#c3c6d0] bg-white">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+      <details className="group border-b border-[#dfe3ea] bg-white py-1">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 px-1">
           <span>
             <span className="block text-sm font-semibold text-[#1a1c1c]">Filters</span>
             <span className="text-xs text-[#5d6470]">
@@ -164,7 +165,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
           <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
         </summary>
-        <div className="grid gap-4 border-t border-[#e2e4ea] px-4 pb-4 pt-3">
+        <div className="grid gap-4 px-1 pb-4 pt-2">
           <Field label="Find filter option">
             <input
               className={inputClassName()}
@@ -174,7 +175,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
             />
           </Field>
           <Field label="Topics">
-            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-2">
+            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto codex-scrollbar rounded border border-[#e2e4ea] bg-white p-2">
               {visibleTopics.map((topic) => (
                 <button
                   key={topic}
@@ -193,7 +194,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           </Field>
 
           <Field label="Note Types">
-            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-2">
+            <div className="flex max-h-36 flex-wrap gap-2 overflow-y-auto codex-scrollbar rounded border border-[#e2e4ea] bg-white p-2">
               {visibleNoteTypes.map((type) => (
                 <button
                   key={type}
@@ -344,9 +345,10 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                   placeholder="mastered, ignored"
                 />
               </Field>
-              <label className="flex items-center gap-3 text-sm text-[#43474f]">
+              <label className="flex items-center gap-3 text-sm text-[#43474f] cursor-pointer">
                 <input
                   type="checkbox"
+                  className="accent-[#2c5282] cursor-pointer"
                   checked={config.excludeMastered}
                   onChange={(event) => update({ excludeMastered: event.target.checked })}
                 />
@@ -357,7 +359,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
         </div>
       </details>
 
-      <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+      <section className="border-b border-[#dfe3ea] bg-white py-4 px-1">
         <h2 className="text-sm font-semibold text-[#1a1c1c]">Detail Level</h2>
         <select
           className={inputClassName("mt-3")}
@@ -370,8 +372,8 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
         </select>
       </section>
 
-      <details className="group rounded-lg border border-[#c3c6d0] bg-white">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+      <details className="group border-b border-[#dfe3ea] bg-white py-1">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 px-1">
           <span>
             <span className="block text-sm font-semibold text-[#1a1c1c]">Sections</span>
             <span className="text-xs text-[#5d6470]">
@@ -381,28 +383,31 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
           <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
         </summary>
-        <div className="border-t border-[#e2e4ea] px-4 pb-4 pt-3">
-          <div className="grid gap-2 rounded border border-[#d5d7de] bg-[#f9f9f9] p-3 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => updateSectionSelectionMode("whitelist")}
-              className={cn(
-                "rounded border px-3 py-2 text-sm text-[#43474f]",
-                config.sectionSelectionMode === "whitelist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
-              )}
-            >
-              Show selected
-            </button>
-            <button
-              type="button"
-              onClick={() => updateSectionSelectionMode("blacklist")}
-              className={cn(
-                "rounded border px-3 py-2 text-sm text-[#43474f]",
-                config.sectionSelectionMode === "blacklist" && "border-[#2c5282] bg-[#dbeafe] text-[#0e3b69]"
-              )}
-            >
-              Hide selected
-            </button>
+        <div className="px-1 pb-4 pt-2">
+          <div className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#43474f]">Section Selection Mode</p>
+            <div className="flex rounded-md bg-[#eef4ff] p-0.5 mt-2 border border-[#d5d7de]">
+              <button
+                type="button"
+                onClick={() => updateSectionSelectionMode("whitelist")}
+                className={cn(
+                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  config.sectionSelectionMode === "whitelist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
+                )}
+              >
+                Show selected
+              </button>
+              <button
+                type="button"
+                onClick={() => updateSectionSelectionMode("blacklist")}
+                className={cn(
+                  "flex-1 py-1.5 text-xs font-semibold text-center rounded-md transition-all whitespace-nowrap text-[#43474f]",
+                  config.sectionSelectionMode === "blacklist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
+                )}
+              >
+                Hide selected
+              </button>
+            </div>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button type="button" onClick={() => setAllSections(true)} className="rounded border border-[#c3c6d0] px-2.5 py-1.5 text-xs font-semibold text-[#43474f]">
@@ -418,26 +423,27 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
             onChange={(event) => setSectionQuery(event.target.value)}
             placeholder="Search sections, e.g. proof, diagrams, false uses..."
           />
-        <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded border border-[#e2e4ea] bg-white p-3 sm:grid-cols-2">
-          {visibleSectionToggles.map((toggle) => (
-            <label key={toggle.key} className="flex items-center gap-3 text-sm text-[#43474f]">
-              <input
-                type="checkbox"
-                checked={config.sectionToggles[toggle.key]}
-                onChange={(event) => updateToggle(toggle.key, event.target.checked)}
-              />
-              {sectionToggleLabel(toggle.label, config.sectionSelectionMode)}
-            </label>
-          ))}
-          {!visibleSectionToggles.length ? (
-            <p className="text-sm text-[#43474f]">No sections match that search.</p>
-          ) : null}
-        </div>
+          <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto codex-scrollbar rounded border border-[#e2e4ea] bg-white p-3 sm:grid-cols-2">
+            {visibleSectionToggles.map((toggle) => (
+              <label key={toggle.key} className="flex items-center gap-3 text-sm text-[#43474f] cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="accent-[#2c5282] cursor-pointer"
+                  checked={config.sectionToggles[toggle.key]}
+                  onChange={(event) => updateToggle(toggle.key, event.target.checked)}
+                />
+                {sectionToggleLabel(toggle.label, config.sectionSelectionMode)}
+              </label>
+            ))}
+            {!visibleSectionToggles.length ? (
+              <p className="text-sm text-[#43474f]">No sections match that search.</p>
+            ) : null}
+          </div>
         </div>
       </details>
 
-      <details className="group rounded-lg border border-[#c3c6d0] bg-white">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3">
+      <details className="group border-b border-[#dfe3ea] bg-white py-1">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3 px-1">
           <span>
             <span className="block text-sm font-semibold text-[#1a1c1c]">Layout And Page</span>
             <span className="text-xs text-[#5d6470]">{config.layoutStyle} · {config.sortOrder}</span>
@@ -445,93 +451,93 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
           <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:hidden">Open</span>
           <span className="hidden text-xs font-semibold uppercase tracking-[0.14em] text-[#0e3b69] group-open:inline">Close</span>
         </summary>
-        <div className="border-t border-[#e2e4ea] px-4 pb-4 pt-3">
-        <div className="mt-4 grid gap-3">
-          <Field label="Layout Style">
-            <select
-              className={inputClassName()}
-              value={config.layoutStyle}
-              onChange={(event) => update({ layoutStyle: event.target.value as NotebookConfig["layoutStyle"] })}
-            >
-              {NOTEBOOK_LAYOUT_STYLES.map((style) => (
-                <option key={style}>{style}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Sort Order">
-            <select
-              className={inputClassName()}
-              value={config.sortOrder}
-              onChange={(event) => update({ sortOrder: event.target.value as NotebookConfig["sortOrder"] })}
-            >
-              {NOTEBOOK_SORT_ORDERS.map((sort) => (
-                <option key={sort}>{sort}</option>
-              ))}
-            </select>
-          </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Page Size">
+        <div className="px-1 pb-4 pt-2">
+          <div className="mt-4 grid gap-3">
+            <Field label="Layout Style">
               <select
                 className={inputClassName()}
-                value={config.pageSettings.pageSize}
-                onChange={(event) =>
-                  update({ pageSettings: { ...config.pageSettings, pageSize: event.target.value as "A4" | "Letter" } })
-                }
+                value={config.layoutStyle}
+                onChange={(event) => update({ layoutStyle: event.target.value as NotebookConfig["layoutStyle"] })}
               >
-                <option>A4</option>
-                <option>Letter</option>
+                {NOTEBOOK_LAYOUT_STYLES.map((style) => (
+                  <option key={style}>{style}</option>
+                ))}
               </select>
             </Field>
-            <Field label="Columns">
+            <Field label="Sort Order">
               <select
                 className={inputClassName()}
-                value={config.pageSettings.columns}
-                onChange={(event) =>
-                  update({ pageSettings: { ...config.pageSettings, columns: event.target.value as "one" | "two" } })
-                }
+                value={config.sortOrder}
+                onChange={(event) => update({ sortOrder: event.target.value as NotebookConfig["sortOrder"] })}
               >
-                <option value="one">One column</option>
-                <option value="two">Two columns</option>
+                {NOTEBOOK_SORT_ORDERS.map((sort) => (
+                  <option key={sort}>{sort}</option>
+                ))}
               </select>
             </Field>
-            <Field label="Margins">
-              <select
-                className={inputClassName()}
-                value={config.pageSettings.margins}
-                onChange={(event) =>
-                  update({
-                    pageSettings: {
-                      ...config.pageSettings,
-                      margins: event.target.value as "compact" | "normal" | "wide"
-                    }
-                  })
-                }
-              >
-                <option value="compact">Compact</option>
-                <option value="normal">Normal</option>
-                <option value="wide">Wide</option>
-              </select>
-            </Field>
-            <Field label="Font Size">
-              <select
-                className={inputClassName()}
-                value={config.pageSettings.fontSize}
-                onChange={(event) =>
-                  update({
-                    pageSettings: {
-                      ...config.pageSettings,
-                      fontSize: event.target.value as "small" | "normal" | "large"
-                    }
-                  })
-                }
-              >
-                <option value="small">Small</option>
-                <option value="normal">Normal</option>
-                <option value="large">Large</option>
-              </select>
-            </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Page Size">
+                <select
+                  className={inputClassName()}
+                  value={config.pageSettings.pageSize}
+                  onChange={(event) =>
+                    update({ pageSettings: { ...config.pageSettings, pageSize: event.target.value as "A4" | "Letter" } })
+                  }
+                >
+                  <option>A4</option>
+                  <option>Letter</option>
+                </select>
+              </Field>
+              <Field label="Columns">
+                <select
+                  className={inputClassName()}
+                  value={config.pageSettings.columns}
+                  onChange={(event) =>
+                    update({ pageSettings: { ...config.pageSettings, columns: event.target.value as "one" | "two" } })
+                  }
+                >
+                  <option value="one">One column</option>
+                  <option value="two">Two columns</option>
+                </select>
+              </Field>
+              <Field label="Margins">
+                <select
+                  className={inputClassName()}
+                  value={config.pageSettings.margins}
+                  onChange={(event) =>
+                    update({
+                      pageSettings: {
+                        ...config.pageSettings,
+                        margins: event.target.value as "compact" | "normal" | "wide"
+                      }
+                    })
+                  }
+                >
+                  <option value="compact">Compact</option>
+                  <option value="normal">Normal</option>
+                  <option value="wide">Wide</option>
+                </select>
+              </Field>
+              <Field label="Font Size">
+                <select
+                  className={inputClassName()}
+                  value={config.pageSettings.fontSize}
+                  onChange={(event) =>
+                    update({
+                      pageSettings: {
+                        ...config.pageSettings,
+                        fontSize: event.target.value as "small" | "normal" | "large"
+                      }
+                    })
+                  }
+                >
+                  <option value="small">Small</option>
+                  <option value="normal">Normal</option>
+                  <option value="large">Large</option>
+                </select>
+              </Field>
+            </div>
           </div>
-        </div>
         </div>
       </details>
     </div>

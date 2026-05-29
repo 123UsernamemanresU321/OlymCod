@@ -15,7 +15,7 @@ export function NotebookEntry({ item, config }: NotebookEntryProps) {
   const show = (key: keyof NotebookConfig["sectionToggles"]) => notebookSectionEnabled(config, key);
 
   return (
-    <article className="notebook-entry rounded-lg border border-[#d5d7de] bg-white p-5 shadow-sm print:break-inside-avoid print:border-[#d0d0d0] print:shadow-none">
+    <article className="notebook-entry border-b border-[#f1f2f4] last:border-b-0 pb-6 mb-6 last:pb-0 last:mb-0 bg-transparent p-0 print:break-inside-avoid">
       <header>
         <div className="flex flex-wrap items-center gap-2 text-[12px]">
           {show("showMetadata") && item.topic ? <Badge tone="blue">{item.topic}</Badge> : null}
