@@ -580,13 +580,13 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
 
       <div
         className={cn(
-          "mx-auto grid max-w-[1800px] gap-0",
+          "mx-auto grid max-w-[1800px] gap-0 lg:h-[calc(100vh-120px)] lg:overflow-hidden",
           showPreviewPane
             ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
             : "lg:grid-cols-1"
         )}
       >
-        <section className="border-[#c3c6d0] p-4 lg:min-h-[calc(100vh-64px)] lg:border-r lg:p-10">
+        <section className="border-[#c3c6d0] p-4 lg:h-full lg:overflow-y-auto lg:border-r lg:p-10 pb-20">
           <div className="mb-6 flex border-b border-[#c3c6d0] lg:hidden">
             {(["edit", "preview", "metadata"] as const).map((tab) => (
               <button
@@ -891,7 +891,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         {showPreviewPane ? (
           <section
             className={cn(
-              "p-4 lg:block lg:min-h-[calc(100vh-64px)] lg:p-10",
+              "p-4 lg:block lg:h-full lg:overflow-y-auto lg:p-10 pb-20",
               mobileTab !== "preview" && "hidden lg:block"
             )}
           >

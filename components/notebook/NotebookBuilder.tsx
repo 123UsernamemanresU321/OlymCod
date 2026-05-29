@@ -183,8 +183,8 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
         ))}
       </div>
 
-      <div className="mx-auto grid max-w-7xl gap-0 lg:grid-cols-[380px_minmax(0,1fr)]">
-        <aside className={cn("notebook-print-hidden p-4 lg:block lg:border-r lg:border-[#c3c6d0] lg:p-6", mobileTab !== "Build" && "hidden")}>
+      <div className="mx-auto grid max-w-7xl gap-0 lg:grid-cols-[380px_minmax(0,1fr)] lg:h-[calc(100vh-144px)] lg:overflow-hidden">
+        <aside className={cn("notebook-print-hidden p-4 lg:block lg:border-r lg:border-[#c3c6d0] lg:p-6 lg:h-full lg:overflow-y-auto pb-20", mobileTab !== "Build" && "hidden")}>
           <NotebookControls
             config={config}
             availableTopics={availableTopics}
@@ -246,7 +246,7 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
           </section>
         </aside>
 
-        <main className={cn("p-4 lg:block lg:p-8", mobileTab === "Build" && "hidden")}>
+        <main className={cn("p-4 lg:block lg:p-8 lg:h-full lg:overflow-y-auto pb-20", mobileTab === "Build" && "hidden")}>
           <div className={cn("notebook-print-hidden mb-4 rounded-lg border border-[#c3c6d0] bg-white p-4", mobileTab !== "Export" && "hidden lg:block")}>
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>

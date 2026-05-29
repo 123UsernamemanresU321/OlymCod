@@ -118,11 +118,11 @@ const GRAPH_LAYOUT_KEY = "olympiad-codex:graph-layout-v2";
 const GRAPH_SNAPSHOT_KEY = "olympiad-codex:graph-snapshot-v2";
 const RECENT_WINDOW_MS = 1000 * 60 * 60 * 24 * 30;
 const DEFAULT_PHYSICS: PhysicsSettings = {
-  repulsion: 560,
+  repulsion: 680,
   linkDistance: 142,
   collisionRadius: 22,
   centering: 0.025,
-  labelThreshold: 1.05
+  labelThreshold: 1.3
 };
 
 const TOPIC_COLORS: Record<string, string> = {
@@ -477,6 +477,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
   const [aiSuggestions, setAiSuggestions] = useState<LinkSuggestion[]>([]);
   const [possibleNewNotes, setPossibleNewNotes] = useState<Array<{ title: string; reason?: string }>>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 720 });
+  const [hasAutoFitted, setHasAutoFitted] = useState(false);
   const [recentCutoff] = useState(() => Date.now() - RECENT_WINDOW_MS);
   const notesById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
   const allDegree = useMemo(() => degreeCounts(graphLinks), [graphLinks]);
@@ -693,6 +694,30 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     }));
   }, [filteredNotes, graphLinks, localDepth, mode, pinnedIds, selectedId, sizeMode, visibleDegree, visibleLinks]);
 
+  const fitView = useCallback((silent: boolean | unknown = false) => {
+    const simNodes = nodesRef.current;
+    if (!simNodes.length) return;
+    const minX = Math.min(...simNodes.map((node) => node.x));
+    const maxX = Math.max(...simNodes.map((node) => node.x));
+    const minY = Math.min(...simNodes.map((node) => node.y));
+    const maxY = Math.max(...simNodes.map((node) => node.y));
+    const graphWidth = Math.max(1, maxX - minX + 120);
+    const graphHeight = Math.max(1, maxY - minY + 120);
+    viewportRef.current.scale = Math.max(0.3, Math.min(1.8, Math.min(canvasSize.width / graphWidth, canvasSize.height / graphHeight)));
+    viewportRef.current.x = -(minX + maxX) / 2;
+    viewportRef.current.y = -(minY + maxY) / 2;
+    if (silent !== true) {
+      setMessage("Graph fitted to view.");
+    }
+  }, [canvasSize]);
+
+  useEffect(() => {
+    if (!hasAutoFitted && canvasSize.width > 0 && canvasSize.height > 0 && nodesRef.current.length > 0) {
+      fitView(true);
+      setHasAutoFitted(true);
+    }
+  }, [canvasSize, hasAutoFitted, fitView]);
+
   const worldToScreen = useCallback((point: GraphVector) => {
     const view = viewportRef.current;
     return {
@@ -771,7 +796,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     for (let index = 0; index < simNodes.length; index += 1) {
       const node = simNodes[index];
       const target = targetPosition(node.note, index, simNodes.map((item) => item.note), layout, selectedId, simLinks.map((link) => link.link), componentGroups);
-      const layoutStrength = layout === "force" ? 0.0015 : layout === "grid" ? 0.055 : 0.022;
+      const layoutStrength = layout === "force" ? 0 : layout === "grid" ? 0.055 : 0.022;
       if (!node.pinned) {
         node.vx += (target.x - node.x) * layoutStrength;
         node.vy += (target.y - node.y) * layoutStrength;
@@ -939,6 +964,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
         (showLabels &&
           (isPath ||
             directNeighbor ||
+            node.degree >= 6 ||
             (viewportRef.current.scale >= physics.labelThreshold && (node.degree >= 2 || simNodes.length < 35))));
       if (showLabel) {
         const title = node.note.title;
@@ -1149,21 +1175,6 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   });
-
-  function fitView() {
-    const simNodes = nodesRef.current;
-    if (!simNodes.length) return;
-    const minX = Math.min(...simNodes.map((node) => node.x));
-    const maxX = Math.max(...simNodes.map((node) => node.x));
-    const minY = Math.min(...simNodes.map((node) => node.y));
-    const maxY = Math.max(...simNodes.map((node) => node.y));
-    const graphWidth = Math.max(1, maxX - minX + 120);
-    const graphHeight = Math.max(1, maxY - minY + 120);
-    viewportRef.current.scale = Math.max(0.3, Math.min(1.8, Math.min(canvasSize.width / graphWidth, canvasSize.height / graphHeight)));
-    viewportRef.current.x = -(minX + maxX) / 2;
-    viewportRef.current.y = -(minY + maxY) / 2;
-    setMessage("Graph fitted to view.");
-  }
 
   function resetLayout() {
     nodesRef.current = nodesRef.current.map((node, index) => {
@@ -1603,8 +1614,8 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 />
               </div>
               <div className="mt-3 flex flex-wrap gap-3 text-xs text-[#43474f]">
-                <label className="flex items-center gap-1"><input type="checkbox" checked={showOnlyMatches} onChange={(event) => setShowOnlyMatches(event.target.checked)} /> Show only matches</label>
-                <label className="flex items-center gap-1"><input type="checkbox" checked={fadeNonMatches} onChange={(event) => setFadeNonMatches(event.target.checked)} /> Fade non-matches</label>
+                <label className="flex items-center gap-1 cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={showOnlyMatches} onChange={(event) => setShowOnlyMatches(event.target.checked)} /> Show only matches</label>
+                <label className="flex items-center gap-1 cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={fadeNonMatches} onChange={(event) => setFadeNonMatches(event.target.checked)} /> Fade non-matches</label>
               </div>
               {query ? (
                 <div className="mt-3 max-h-40 overflow-auto rounded border border-[#e2e4ea] bg-[#f9f9f9] p-2">
@@ -1617,7 +1628,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 </div>
               ) : null}
             </section>
-
+ 
             <details className="rounded-lg border border-[#c3c6d0] bg-white p-4" open>
               <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold">
                 <Filter className="h-4 w-4 text-[#0e3b69]" /> Filters
@@ -1655,16 +1666,16 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                   <option value="missing-metadata">Missing metadata</option>
                   <option value="strong">Strongly connected</option>
                 </select>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasTriggersOnly} onChange={(event) => setHasTriggersOnly(event.target.checked)} /> Has recognition triggers</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasFalseUsesOnly} onChange={(event) => setHasFalseUsesOnly(event.target.checked)} /> Has common false uses</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasDiagramsOnly} onChange={(event) => setHasDiagramsOnly(event.target.checked)} /> Has diagrams/media</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasRelatedOnly} onChange={(event) => setHasRelatedOnly(event.target.checked)} /> Has related notes</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={orphanOnly} onChange={(event) => setOrphanOnly(event.target.checked)} /> Orphan notes only</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={recentOnly} onChange={(event) => setRecentOnly(event.target.checked)} /> Recently updated</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={hasTriggersOnly} onChange={(event) => setHasTriggersOnly(event.target.checked)} /> Has recognition triggers</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={hasFalseUsesOnly} onChange={(event) => setHasFalseUsesOnly(event.target.checked)} /> Has common false uses</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={hasDiagramsOnly} onChange={(event) => setHasDiagramsOnly(event.target.checked)} /> Has diagrams/media</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={hasRelatedOnly} onChange={(event) => setHasRelatedOnly(event.target.checked)} /> Has related notes</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={orphanOnly} onChange={(event) => setOrphanOnly(event.target.checked)} /> Orphan notes only</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={recentOnly} onChange={(event) => setRecentOnly(event.target.checked)} /> Recently updated</label>
                 <Button type="button" size="sm" variant="secondary" onClick={clearFilters}>Clear filters</Button>
               </div>
             </details>
-
+ 
             <details className="rounded-lg border border-[#c3c6d0] bg-white p-4" open>
               <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold">
                 <SlidersHorizontal className="h-4 w-4 text-[#0e3b69]" /> Physics & Visuals
@@ -1686,7 +1697,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 {mode === "local" ? (
                   <label className="text-sm text-[#43474f]">
                     Local depth: {localDepth}
-                    <input className="mt-2 w-full" type="range" min={1} max={3} value={localDepth} onChange={(event) => setLocalDepth(Number(event.target.value))} />
+                    <input className="mt-2 w-full accent-[#2c5282] cursor-pointer" type="range" min={1} max={3} value={localDepth} onChange={(event) => setLocalDepth(Number(event.target.value))} />
                   </label>
                 ) : null}
                 <select className={inputClassName()} value={colorMode} onChange={(event) => setColorMode(event.target.value as ColorMode)}>
@@ -1707,7 +1718,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                   <label key={key} className="text-xs text-[#43474f]">
                     {label}: {physics[key]}
                     <input
-                      className="mt-1 w-full"
+                      className="mt-1 w-full accent-[#2c5282] cursor-pointer"
                       type="range"
                       min={min}
                       max={max}
@@ -1717,18 +1728,20 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                     />
                   </label>
                 ))}
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={showArrows} onChange={(event) => setShowArrows(event.target.checked)} /> Show directional arrows</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={showLabels} onChange={(event) => setShowLabels(event.target.checked)} /> Show contextual labels</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={darkCanvas} onChange={(event) => setDarkCanvas(event.target.checked)} /> Dark canvas</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={showArrows} onChange={(event) => setShowArrows(event.target.checked)} /> Show directional arrows</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={showLabels} onChange={(event) => setShowLabels(event.target.checked)} /> Show contextual labels</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={darkCanvas} onChange={(event) => setDarkCanvas(event.target.checked)} /> Dark canvas</label>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button type="button" size="sm" variant="secondary" onClick={() => { viewportRef.current.scale *= 1.15; }}><ZoomIn className="h-4 w-4" /> Zoom in</Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={() => { viewportRef.current.scale *= 0.85; }}><ZoomOut className="h-4 w-4" /> Zoom out</Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={saveLayout}><Save className="h-4 w-4" /> Save layout</Button>
-                  <Button type="button" size="sm" variant="secondary" onClick={loadLayout}><LocateFixed className="h-4 w-4" /> Load layout</Button>
+                  <Button type="button" size="sm" className="w-full whitespace-nowrap" variant="secondary" onClick={() => { viewportRef.current.scale *= 1.15; }}><ZoomIn className="h-4 w-4" /> Zoom in</Button>
+                  <Button type="button" size="sm" className="w-full whitespace-nowrap" variant="secondary" onClick={() => { viewportRef.current.scale *= 0.85; }}><ZoomOut className="h-4 w-4" /> Zoom out</Button>
+                </div>
+                <div className="grid grid-cols-1 gap-2 mt-2">
+                  <Button type="button" size="sm" className="w-full whitespace-nowrap" variant="secondary" onClick={saveLayout}><Save className="h-4 w-4" /> Save layout</Button>
+                  <Button type="button" size="sm" className="w-full whitespace-nowrap" variant="secondary" onClick={loadLayout}><LocateFixed className="h-4 w-4" /> Load layout</Button>
                 </div>
               </div>
             </details>
-
+ 
             <details className="rounded-lg border border-[#c3c6d0] bg-white p-4">
               <summary className="cursor-pointer list-none font-semibold">Path Finder</summary>
               <div className="mt-3 grid gap-2">
@@ -1740,13 +1753,13 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                   <option value="">End note</option>
                   {filteredNotes.map((note) => <option key={note.id} value={note.id}>{note.title}</option>)}
                 </select>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={pathRespectDirection} onChange={(event) => setPathRespectDirection(event.target.checked)} /> Respect direction</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f] cursor-pointer"><input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={pathRespectDirection} onChange={(event) => setPathRespectDirection(event.target.checked)} /> Respect direction</label>
                 <details className="rounded border border-[#e2e4ea] p-2">
                   <summary className="cursor-pointer text-sm font-medium">Relation types for path</summary>
                   <div className="mt-2 grid gap-1">
                     {NOTE_LINK_RELATIONS.map((item) => (
-                      <label key={item} className="flex items-center gap-2 text-xs text-[#43474f]">
-                        <input type="checkbox" checked={pathRelations.includes(item)} onChange={() => togglePathRelation(item)} />
+                      <label key={item} className="flex items-center gap-2 text-xs text-[#43474f] cursor-pointer">
+                        <input type="checkbox" className="accent-[#2c5282] cursor-pointer" checked={pathRelations.includes(item)} onChange={() => togglePathRelation(item)} />
                         {item}
                       </label>
                     ))}
