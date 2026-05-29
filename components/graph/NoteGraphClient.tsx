@@ -794,8 +794,6 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     if (canvas.width !== Math.floor(canvasSize.width * dpr) || canvas.height !== Math.floor(canvasSize.height * dpr)) {
       canvas.width = Math.floor(canvasSize.width * dpr);
       canvas.height = Math.floor(canvasSize.height * dpr);
-      canvas.style.width = `${canvasSize.width}px`;
-      canvas.style.height = `${canvasSize.height}px`;
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
     } else {
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1541,8 +1539,8 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
   const tooltipPoint = tooltipNode ? worldToScreen(tooltipNode) : null;
 
   return (
-    <div className="graph-page flex h-[calc(100vh-8rem)] min-h-[680px] flex-col overflow-hidden bg-[#f9f9f9] text-[#1a1c1c] lg:h-screen lg:min-h-0">
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-4 lg:px-6">
+    <div className="graph-page flex h-auto min-h-screen flex-col bg-[#f9f9f9] text-[#1a1c1c] xl:h-screen xl:min-h-0 xl:overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col px-3 py-4 lg:px-6 xl:overflow-hidden">
         <header className="flex shrink-0 flex-col gap-4 border-b border-[#c3c6d0] pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">Relationship map</p>
@@ -1586,7 +1584,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
           </div>
         ) : null}
 
-        <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:flex-row">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 xl:flex-row xl:overflow-hidden">
           <aside className="graph-control-panel grid max-h-[34vh] min-h-0 shrink-0 gap-3 overflow-y-auto pr-1 xl:h-full xl:max-h-none xl:w-[300px] xl:flex-none">
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
               <div className="flex items-center gap-2">
@@ -1802,7 +1800,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
               <div ref={wrapRef} className={cn("graph-canvas relative min-h-0 flex-1 overflow-hidden", darkCanvas ? "bg-[#0b1120]" : "bg-white")}>
                 <canvas
                   ref={canvasRef}
-                  className="h-full w-full touch-none"
+                  className="absolute inset-0 h-full w-full touch-none"
                   onPointerDown={handlePointerDown}
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}

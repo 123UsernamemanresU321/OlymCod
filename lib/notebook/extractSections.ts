@@ -72,6 +72,9 @@ export function extractNotebookSections(markdown: string) {
   let current: string[] = [];
   let inFence = false;
 
+  const preamble: string[] = [];
+  let hitFirstRecognizedHeading = false;
+
   function flush() {
     if (!currentKey) return;
     const body = current.join("\n").trim();
@@ -82,7 +85,11 @@ export function extractNotebookSections(markdown: string) {
   for (const line of lines) {
     if (/^\s*(```|~~~)/.test(line)) {
       inFence = !inFence;
-      if (currentKey) current.push(line);
+      if (currentKey) {
+        current.push(line);
+      } else if (!hitFirstRecognizedHeading) {
+        preamble.push(line);
+      }
       continue;
     }
 
@@ -91,22 +98,41 @@ export function extractNotebookSections(markdown: string) {
       const level = match[1].length;
       const alias = HEADING_ALIASES[normalizeHeading(match[2])];
 
-      if (currentKey && level > currentLevel) {
-        current.push(line);
+      if (alias) {
+        hitFirstRecognizedHeading = true;
+        flush();
+        current = [];
+        currentLevel = level;
+        currentKey = alias;
         continue;
       }
 
-      flush();
-      current = [];
-      currentLevel = level;
-      currentKey = alias ?? null;
-      continue;
+      // Unrecognized heading
+      if (currentKey) {
+        if (level > currentLevel) {
+          current.push(line);
+        } else {
+          flush();
+          current = [];
+          currentKey = null;
+        }
+        continue;
+      }
     }
 
-    if (currentKey) current.push(line);
+    if (currentKey) {
+      current.push(line);
+    } else if (!hitFirstRecognizedHeading) {
+      preamble.push(line);
+    }
   }
 
   flush();
+
+  const finalPreamble = preamble.join("\n").trim();
+  if (finalPreamble) {
+    sections.statement = sections.statement ?? finalPreamble;
+  }
 
   const first = firstUsefulParagraph(markdown);
   if (first) sections.first_paragraph = first;
