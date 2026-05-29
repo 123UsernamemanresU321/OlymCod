@@ -310,7 +310,7 @@ The note editor has a **Raw Markdown / Section Editor** toggle. Section Editor p
 
 ### Visual Note Graph
 
-Open `/app/graph` to use the interactive note map. It is an Obsidian-inspired, dependency-free SVG graph built for mathematical notes, not a public sharing surface.
+Open `/app/graph` to use the interactive note map. It is an Obsidian-inspired, dependency-free Canvas force graph built for mathematical notes, not a public sharing surface.
 
 Graph modes:
 
@@ -331,6 +331,7 @@ Controls:
 - Filter by topic, type, tag, level range, relation type, metadata presence, diagrams, recent updates, orphan notes, and quality status.
 - Switch layouts between force-directed, topic clusters, hierarchical prerequisites, radial local graph, and compact grid.
 - Color nodes by topic or type, size nodes by connections or level, show/hide labels and arrows, and use a dark graph background.
+- Tune graph physics directly: repulsion, link distance, collision radius, centering force, label threshold, pause/resume, fit view, reset layout, and locally saved node positions.
 
 Navigation and editing:
 

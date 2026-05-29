@@ -107,7 +107,8 @@ test("creation and organization routes are present without extra graph dependenc
   assert.match(toolbar, /event\.key\.toLowerCase\(\) === "m"/);
   assert.match(sectionEditor, /Section Editor/);
   assert.match(sectionEditor, /Move up/);
-  assert.match(graph, /<svg/);
+  assert.match(graph, /<canvas/);
+  assert.match(graph, /getContext\("2d"\)/);
   assert.doesNotMatch(graph, /reactflow|d3/i);
   assert.match(manage, /Bulk Metadata Manager/);
   assert.match(manage, /DELETE/);

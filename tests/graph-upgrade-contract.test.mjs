@@ -28,9 +28,13 @@ test("interactive graph implements global local modes, layouts, and relation-awa
   assert.match(graph, /shortestPath/);
   assert.match(graph, /connectedComponents/);
   assert.match(graph, /relationMeaning/);
-  assert.match(graph, /markerEnd=\{showArrows && style\.directional/);
+  assert.match(graph, /canvasRef/);
+  assert.match(graph, /getContext\("2d"\)/);
+  assert.match(graph, /tickSimulation/);
+  assert.match(graph, /edgeVisualEndpoints/);
+  assert.match(graph, /showArrows && style\.directional/);
   assert.match(graph, /commonly confused[\s\S]*dash/);
-  assert.match(graph, /Edge Legend/);
+  assert.match(graph, /Relation type legend/);
 });
 
 test("graph supports search, filters, path finder, health, clusters, and exports", () => {
@@ -49,7 +53,8 @@ test("graph supports search, filters, path finder, health, clusters, and exports
   assert.match(graph, /exportSvg/);
   assert.match(graph, /exportPng/);
   assert.match(graph, /exportJson/);
-  assert.match(graph, /Save snapshot/);
+  assert.match(graph, /saveSnapshot/);
+  assert.match(graph, /Snapshot/);
 });
 
 test("graph link mode stores one directional edge and AI returns structured suggestions only", () => {

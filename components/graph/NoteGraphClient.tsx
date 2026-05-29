@@ -12,13 +12,19 @@ import {
   LocateFixed,
   Maximize2,
   Network,
+  Pause,
   Pin,
+  Play,
+  RotateCcw,
+  Save,
   Search,
-  Trash2
+  SlidersHorizontal,
+  Trash2,
+  ZoomIn,
+  ZoomOut
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { inputClassName } from "@/components/ui/Field";
 import { NOTE_LINK_RELATIONS } from "@/lib/constants/daily";
@@ -66,11 +72,37 @@ interface NoteGraphClientProps {
 
 type GraphMode = "global" | "local";
 type LayoutMode = "force" | "topic" | "hierarchy" | "radial" | "grid";
+type ClusterMode = "topic" | "type" | "component" | "none";
 type ColorMode = "topic" | "type";
 type SizeMode = "connections" | "level";
 type QualityFilter = "any" | "missing-links" | "missing-metadata" | "strong";
 
-type GraphPosition = { x: number; y: number };
+type GraphVector = { x: number; y: number };
+type SimNode = GraphVector & {
+  id: string;
+  note: GraphNote;
+  vx: number;
+  vy: number;
+  radius: number;
+  degree: number;
+  pinned: boolean;
+  depth: number;
+};
+type SimLink = {
+  id: string;
+  sourceId: string;
+  targetId: string;
+  relation: string;
+  link: NoteLink;
+};
+type PhysicsSettings = {
+  repulsion: number;
+  linkDistance: number;
+  collisionRadius: number;
+  centering: number;
+  labelThreshold: number;
+};
+type Viewport = { scale: number; x: number; y: number };
 type LinkSuggestion = {
   sourceNoteId: string;
   sourceTitle: string;
@@ -81,9 +113,18 @@ type LinkSuggestion = {
   confidence: number;
 };
 
-const CANVAS_WIDTH = 1600;
-const CANVAS_HEIGHT = 980;
+const GRAPH_SETTINGS_KEY = "olympiad-codex:graph-settings-v2";
+const GRAPH_LAYOUT_KEY = "olympiad-codex:graph-layout-v2";
+const GRAPH_SNAPSHOT_KEY = "olympiad-codex:graph-snapshot-v2";
 const RECENT_WINDOW_MS = 1000 * 60 * 60 * 24 * 30;
+const DEFAULT_PHYSICS: PhysicsSettings = {
+  repulsion: 560,
+  linkDistance: 142,
+  collisionRadius: 22,
+  centering: 0.025,
+  labelThreshold: 1.05
+};
+
 const TOPIC_COLORS: Record<string, string> = {
   "Number Theory": "#2c5282",
   Combinatorics: "#0f766e",
@@ -91,7 +132,7 @@ const TOPIC_COLORS: Record<string, string> = {
   Geometry: "#8f1d15",
   Inequalities: "#8a5a00",
   "Formula Bank": "#475569",
-  "Problem Patterns": "#0f766e",
+  "Problem Patterns": "#6b4a00",
   Inbox: "#64748b",
   Mixed: "#334155"
 };
@@ -111,20 +152,33 @@ const TYPE_COLORS: Record<string, string> = {
   Inbox: "#64748b"
 };
 
-const relationStyles: Record<string, { color: string; width: number; dash?: string; directional: boolean; label: string }> = {
-  prerequisite: { color: "#8f1d15", width: 2.8, directional: true, label: "Prerequisite" },
-  "used together": { color: "#2c5282", width: 2, directional: false, label: "Used Together" },
-  related: { color: "#94a3b8", width: 1.4, directional: false, label: "Related" },
-  "commonly confused": { color: "#b7791f", width: 2, dash: "7 5", directional: false, label: "Commonly Confused" },
-  generalization: { color: "#1f7a5b", width: 2.4, directional: true, label: "Generalization" },
-  "special case": { color: "#1f7a5b", width: 2.4, directional: true, label: "Special Case" },
-  "stronger version": { color: "#0f766e", width: 2.4, directional: true, label: "Stronger Version" },
-  "weaker version": { color: "#0f766e", width: 2.4, directional: true, label: "Weaker Version" },
-  "example of": { color: "#475569", width: 1.8, directional: true, label: "Example Of" }
+const RELATION_STYLES: Record<string, { color: string; width: number; dash?: number[]; directional: boolean; label: string }> = {
+  prerequisite: { color: "#d14b42", width: 1.8, directional: true, label: "Prerequisite" },
+  "used together": { color: "#4a75a8", width: 1.35, directional: false, label: "Used Together" },
+  related: { color: "#9aa5b3", width: 0.9, directional: false, label: "Related" },
+  "commonly confused": { color: "#c0842d", width: 1.45, dash: [7, 5], directional: false, label: "Commonly Confused" },
+  generalization: { color: "#2a8f62", width: 1.55, directional: true, label: "Generalization" },
+  "special case": { color: "#2a8f62", width: 1.55, directional: true, label: "Special Case" },
+  "stronger version": { color: "#0f766e", width: 1.55, directional: true, label: "Stronger Version" },
+  "weaker version": { color: "#0f766e", width: 1.55, directional: true, label: "Weaker Version" },
+  "example of": { color: "#64748b", width: 1.1, directional: true, label: "Example Of" }
 };
 
 function relationStyle(relation: string) {
-  return relationStyles[relation] ?? { color: "#64748b", width: 1.6, directional: false, label: relation };
+  return RELATION_STYLES[relation] ?? { color: "#64748b", width: 1, directional: false, label: relation };
+}
+
+function relationMeaning(link: NoteLink, source?: GraphNote, target?: GraphNote) {
+  const sourceTitle = source?.title ?? "Source note";
+  const targetTitle = target?.title ?? "Target note";
+  if (link.relation_type === "prerequisite") return `${targetTitle} is a prerequisite of ${sourceTitle}.`;
+  if (link.relation_type === "generalization") return `${targetTitle} is a broader generalization of ${sourceTitle}.`;
+  if (link.relation_type === "special case") return `${targetTitle} is a special case of ${sourceTitle}.`;
+  if (link.relation_type === "stronger version") return `${targetTitle} is a stronger version related to ${sourceTitle}.`;
+  if (link.relation_type === "weaker version") return `${targetTitle} is a weaker version related to ${sourceTitle}.`;
+  if (link.relation_type === "commonly confused") return `${sourceTitle} and ${targetTitle} are commonly confused.`;
+  if (link.relation_type === "used together") return `${sourceTitle} and ${targetTitle} are often used together.`;
+  return `${sourceTitle} is linked to ${targetTitle}.`;
 }
 
 function primaryTopic(topic: string) {
@@ -141,10 +195,6 @@ function difficultyLabel(note: GraphNote) {
   const meta = noteTypeDifficultyMeta(note.note_type);
   const scale = meta.kind === "problem" ? PROBLEM_DIFFICULTY_LABELS : CONCEPT_LEVEL_LABELS;
   return `${meta.label} ${note.difficulty}: ${scale[note.difficulty] ?? "Unlabeled"}`;
-}
-
-function noteUrl(id: string) {
-  return `/app/notes/${id}`;
 }
 
 function noteHaystack(note: GraphNote) {
@@ -190,28 +240,31 @@ function degreeCounts(links: NoteLink[]) {
 }
 
 function getNeighborhood(seedId: string | null, links: NoteLink[], depth: number) {
-  if (!seedId) return new Set<string>();
-  const included = new Set([seedId]);
+  if (!seedId) return new Map<string, number>();
+  const included = new Map<string, number>([[seedId, 0]]);
   let frontier = new Set([seedId]);
-  for (let step = 0; step < depth; step += 1) {
+  for (let step = 1; step <= depth; step += 1) {
     const next = new Set<string>();
     for (const link of links) {
       if (frontier.has(link.source_note_id) && !included.has(link.target_note_id)) next.add(link.target_note_id);
       if (frontier.has(link.target_note_id) && !included.has(link.source_note_id)) next.add(link.source_note_id);
     }
-    for (const id of next) included.add(id);
+    for (const id of next) included.set(id, step);
     frontier = next;
   }
   return included;
 }
 
-function shortestPath(startId: string, endId: string, links: NoteLink[], allowedIds: Set<string>) {
+function shortestPath(startId: string, endId: string, links: NoteLink[], allowedIds: Set<string>, respectDirection: boolean, allowedRelations: Set<string>) {
   if (!startId || !endId || startId === endId) return startId ? [startId] : [];
   const adjacency = new Map<string, string[]>();
   for (const link of links) {
     if (!allowedIds.has(link.source_note_id) || !allowedIds.has(link.target_note_id)) continue;
+    if (allowedRelations.size && !allowedRelations.has(link.relation_type)) continue;
     adjacency.set(link.source_note_id, [...(adjacency.get(link.source_note_id) ?? []), link.target_note_id]);
-    adjacency.set(link.target_note_id, [...(adjacency.get(link.target_note_id) ?? []), link.source_note_id]);
+    if (!respectDirection) {
+      adjacency.set(link.target_note_id, [...(adjacency.get(link.target_note_id) ?? []), link.source_note_id]);
+    }
   }
   const queue = [startId];
   const previous = new Map<string, string | null>([[startId, null]]);
@@ -264,176 +317,87 @@ function connectedComponents(notes: GraphNote[], links: NoteLink[]) {
   return components.sort((a, b) => b.length - a.length);
 }
 
-function relationMeaning(link: NoteLink, source?: GraphNote, target?: GraphNote) {
-  const sourceTitle = source?.title ?? "Source note";
-  const targetTitle = target?.title ?? "Target note";
-  if (link.relation_type === "prerequisite") return `${targetTitle} is a prerequisite of ${sourceTitle}.`;
-  if (link.relation_type === "generalization") return `${targetTitle} is a broader generalization of ${sourceTitle}.`;
-  if (link.relation_type === "special case") return `${targetTitle} is a special case of ${sourceTitle}.`;
-  if (link.relation_type === "stronger version") return `${targetTitle} is a stronger version related to ${sourceTitle}.`;
-  if (link.relation_type === "weaker version") return `${targetTitle} is a weaker version related to ${sourceTitle}.`;
-  if (link.relation_type === "commonly confused") return `${sourceTitle} and ${targetTitle} are commonly confused.`;
-  if (link.relation_type === "used together") return `${sourceTitle} and ${targetTitle} are often used together.`;
-  return `${sourceTitle} is linked to ${targetTitle}.`;
-}
-
-function topicLayout(notes: GraphNote[]) {
-  const groups = new Map<string, GraphNote[]>();
-  for (const note of notes) {
-    const key = primaryTopic(note.topic);
-    groups.set(key, [...(groups.get(key) ?? []), note]);
+function loadPhysicsSettings() {
+  if (typeof window === "undefined") return DEFAULT_PHYSICS;
+  try {
+    return { ...DEFAULT_PHYSICS, ...JSON.parse(window.localStorage.getItem(GRAPH_SETTINGS_KEY) ?? "{}") } as PhysicsSettings;
+  } catch {
+    return DEFAULT_PHYSICS;
   }
-  const positions = new Map<string, GraphPosition>();
-  Array.from(groups.entries()).forEach(([topic, group], groupIndex) => {
-    const centerX = 230 + (groupIndex % 4) * 360;
-    const centerY = 210 + Math.floor(groupIndex / 4) * 310;
-    group.forEach((note, index) => {
-      const angle = (index / Math.max(group.length, 1)) * Math.PI * 2;
-      const radius = Math.max(62, 42 + group.length * 7);
-      positions.set(note.id, {
-        x: centerX + Math.cos(angle) * radius,
-        y: centerY + Math.sin(angle) * radius
-      });
-    });
-  });
-  return positions;
 }
 
-function gridLayout(notes: GraphNote[]) {
-  const positions = new Map<string, GraphPosition>();
-  const columns = Math.max(1, Math.ceil(Math.sqrt(notes.length)));
-  notes.forEach((note, index) => {
-    positions.set(note.id, {
-      x: 150 + (index % columns) * 220,
-      y: 130 + Math.floor(index / columns) * 150
-    });
-  });
-  return positions;
+function hashToUnit(value: string) {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) hash = (hash * 31 + value.charCodeAt(index)) | 0;
+  return Math.abs(hash % 1000) / 1000;
 }
 
-function radialLayout(notes: GraphNote[], links: NoteLink[], selectedId: string | null) {
-  const positions = new Map<string, GraphPosition>();
-  const centerId = selectedId && notes.some((note) => note.id === selectedId) ? selectedId : notes[0]?.id;
-  if (!centerId) return positions;
-  positions.set(centerId, { x: CANVAS_WIDTH / 2, y: CANVAS_HEIGHT / 2 });
-  const idsByDepth = [new Set([centerId]), getNeighborhood(centerId, links, 1), getNeighborhood(centerId, links, 2), new Set(notes.map((note) => note.id))];
-  const assigned = new Set([centerId]);
-  idsByDepth.slice(1).forEach((ids, ringIndex) => {
-    const ring = Array.from(ids).filter((id) => !assigned.has(id) && notes.some((note) => note.id === id));
-    const radius = 160 + ringIndex * 170;
-    ring.forEach((id, index) => {
-      const angle = (index / Math.max(ring.length, 1)) * Math.PI * 2 - Math.PI / 2;
-      positions.set(id, {
-        x: CANVAS_WIDTH / 2 + Math.cos(angle) * radius,
-        y: CANVAS_HEIGHT / 2 + Math.sin(angle) * radius
-      });
-      assigned.add(id);
-    });
-  });
-  return positions;
+function initialPosition(note: GraphNote, index: number, count: number) {
+  const angle = hashToUnit(note.id) * Math.PI * 2 + (index / Math.max(count, 1)) * 0.4;
+  const radius = 170 + hashToUnit(note.title) * 260;
+  return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
 
-function hierarchyLayout(notes: GraphNote[], links: NoteLink[]) {
-  const levels = new Map(notes.map((note) => [note.id, 0]));
-  for (let iteration = 0; iteration < notes.length; iteration += 1) {
-    let changed = false;
-    for (const link of links) {
-      if (link.relation_type !== "prerequisite") continue;
-      const prerequisiteLevel = levels.get(link.target_note_id) ?? 0;
-      const dependentLevel = levels.get(link.source_note_id) ?? 0;
-      if (dependentLevel <= prerequisiteLevel) {
-        levels.set(link.source_note_id, prerequisiteLevel + 1);
-        changed = true;
+function noteRadius(note: GraphNote, degree: number, sizeMode: SizeMode) {
+  if (sizeMode === "level") return Math.max(4.2, Math.min(12, 4.5 + (note.difficulty ?? 2) * 0.7));
+  return Math.max(4.5, Math.min(13, 4.8 + Math.sqrt(degree) * 2.1));
+}
+
+function targetPosition(note: GraphNote, index: number, notes: GraphNote[], layout: LayoutMode, selectedId: string | null, links: NoteLink[], components: string[][]) {
+  if (layout === "grid") {
+    const columns = Math.max(1, Math.ceil(Math.sqrt(notes.length)));
+    return { x: (index % columns) * 135 - (columns * 135) / 2, y: Math.floor(index / columns) * 108 - 220 };
+  }
+  if (layout === "topic") {
+    const groups = Array.from(new Set(notes.map((item) => primaryTopic(item.topic))));
+    const groupIndex = groups.indexOf(primaryTopic(note.topic));
+    const centerAngle = (groupIndex / Math.max(groups.length, 1)) * Math.PI * 2 - Math.PI / 2;
+    const centerRadius = Math.max(130, Math.min(360, groups.length * 56));
+    const groupNotes = notes.filter((item) => primaryTopic(item.topic) === primaryTopic(note.topic));
+    const noteIndex = groupNotes.findIndex((item) => item.id === note.id);
+    const angle = (noteIndex / Math.max(groupNotes.length, 1)) * Math.PI * 2;
+    const spread = 34 + Math.sqrt(groupNotes.length) * 15;
+    return {
+      x: Math.cos(centerAngle) * centerRadius + Math.cos(angle) * spread,
+      y: Math.sin(centerAngle) * centerRadius + Math.sin(angle) * spread
+    };
+  }
+  if (layout === "hierarchy") {
+    const levels = new Map(notes.map((item) => [item.id, 0]));
+    for (let iteration = 0; iteration < notes.length; iteration += 1) {
+      let changed = false;
+      for (const link of links) {
+        if (link.relation_type !== "prerequisite") continue;
+        const prerequisiteLevel = levels.get(link.target_note_id) ?? 0;
+        const dependentLevel = levels.get(link.source_note_id) ?? 0;
+        if (dependentLevel <= prerequisiteLevel) {
+          levels.set(link.source_note_id, prerequisiteLevel + 1);
+          changed = true;
+        }
       }
+      if (!changed) break;
     }
-    if (!changed) break;
-  }
-  const grouped = new Map<number, GraphNote[]>();
-  for (const note of notes) {
     const level = levels.get(note.id) ?? 0;
-    grouped.set(level, [...(grouped.get(level) ?? []), note]);
+    const group = notes.filter((item) => (levels.get(item.id) ?? 0) === level);
+    const groupIndex = group.findIndex((item) => item.id === note.id);
+    return { x: level * 210 - 340, y: groupIndex * 82 - (group.length * 82) / 2 };
   }
-  const positions = new Map<string, GraphPosition>();
-  Array.from(grouped.entries()).forEach(([level, group]) => {
-    group.forEach((note, index) => {
-      positions.set(note.id, {
-        x: 140 + level * 280,
-        y: 120 + index * 130
-      });
-    });
-  });
-  return positions;
-}
-
-function forceLayout(notes: GraphNote[], links: NoteLink[]) {
-  const positions = new Map<string, GraphPosition>();
-  const velocities = new Map<string, GraphPosition>();
-  notes.forEach((note, index) => {
-    const angle = (index / Math.max(notes.length, 1)) * Math.PI * 2;
-    positions.set(note.id, {
-      x: CANVAS_WIDTH / 2 + Math.cos(angle) * 320,
-      y: CANVAS_HEIGHT / 2 + Math.sin(angle) * 260
-    });
-    velocities.set(note.id, { x: 0, y: 0 });
-  });
-  const visibleLinks = links.filter((link) => positions.has(link.source_note_id) && positions.has(link.target_note_id));
-  for (let tick = 0; tick < 110; tick += 1) {
-    for (let i = 0; i < notes.length; i += 1) {
-      for (let j = i + 1; j < notes.length; j += 1) {
-        const a = positions.get(notes[i].id)!;
-        const b = positions.get(notes[j].id)!;
-        const dx = a.x - b.x;
-        const dy = a.y - b.y;
-        const distanceSq = Math.max(dx * dx + dy * dy, 90);
-        const force = 2400 / distanceSq;
-        const distance = Math.sqrt(distanceSq);
-        const ax = (dx / distance) * force;
-        const ay = (dy / distance) * force;
-        const va = velocities.get(notes[i].id)!;
-        const vb = velocities.get(notes[j].id)!;
-        va.x += ax;
-        va.y += ay;
-        vb.x -= ax;
-        vb.y -= ay;
-      }
-    }
-    for (const link of visibleLinks) {
-      const source = positions.get(link.source_note_id)!;
-      const target = positions.get(link.target_note_id)!;
-      const dx = target.x - source.x;
-      const dy = target.y - source.y;
-      const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
-      const desired = link.relation_type === "prerequisite" ? 180 : 210;
-      const force = (distance - desired) * 0.006;
-      const sx = (dx / distance) * force;
-      const sy = (dy / distance) * force;
-      const vs = velocities.get(link.source_note_id)!;
-      const vt = velocities.get(link.target_note_id)!;
-      vs.x += sx;
-      vs.y += sy;
-      vt.x -= sx;
-      vt.y -= sy;
-    }
-    for (const note of notes) {
-      const position = positions.get(note.id)!;
-      const velocity = velocities.get(note.id)!;
-      velocity.x += (CANVAS_WIDTH / 2 - position.x) * 0.003;
-      velocity.y += (CANVAS_HEIGHT / 2 - position.y) * 0.003;
-      position.x = Math.min(CANVAS_WIDTH - 80, Math.max(80, position.x + velocity.x));
-      position.y = Math.min(CANVAS_HEIGHT - 80, Math.max(80, position.y + velocity.y));
-      velocity.x *= 0.82;
-      velocity.y *= 0.82;
-    }
+  if (layout === "radial") {
+    if (note.id === selectedId) return { x: 0, y: 0 };
+    const depthMap = getNeighborhood(selectedId, links, 3);
+    const depth = depthMap.get(note.id) ?? 3;
+    const ring = notes.filter((item) => (depthMap.get(item.id) ?? 3) === depth);
+    const ringIndex = ring.findIndex((item) => item.id === note.id);
+    const angle = (ringIndex / Math.max(ring.length, 1)) * Math.PI * 2 - Math.PI / 2;
+    return { x: Math.cos(angle) * (depth * 155), y: Math.sin(angle) * (depth * 155) };
   }
-  return positions;
-}
-
-function buildLayout(notes: GraphNote[], links: NoteLink[], mode: LayoutMode, selectedId: string | null) {
-  if (mode === "topic") return topicLayout(notes);
-  if (mode === "hierarchy") return hierarchyLayout(notes, links);
-  if (mode === "radial") return radialLayout(notes, links, selectedId);
-  if (mode === "grid") return gridLayout(notes);
-  return forceLayout(notes, links);
+  if (components.length > 1) {
+    const componentIndex = components.findIndex((component) => component.includes(note.id));
+    const angle = (componentIndex / components.length) * Math.PI * 2;
+    const radius = Math.min(340, components.length * 44);
+    return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
+  }
+  return { x: 0, y: 0 };
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -445,16 +409,37 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function formatRelationLabel(relation: string) {
+  return relation.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function edgeVisualEndpoints(source: SimNode, target: SimNode, relation: string) {
+  // A stored prerequisite edge is dependent -> prerequisite. Draw it as prerequisite -> dependent.
+  if (relation === "prerequisite") return { from: target, to: source };
+  return { from: source, to: target };
+}
+
 export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGraphClientProps) {
   const router = useRouter();
-  const svgRef = useRef<SVGSVGElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const nodesRef = useRef<SimNode[]>([]);
+  const linksRef = useRef<SimLink[]>([]);
+  const viewportRef = useRef<Viewport>({ scale: 1, x: 0, y: 0 });
+  const mouseRef = useRef<{ draggingId: string | null; panning: boolean; lastX: number; lastY: number }>({ draggingId: null, panning: false, lastX: 0, lastY: 0 });
+  const animationRef = useRef<number | null>(null);
   const [graphLinks, setGraphLinks] = useState(() => dedupeLinks(links));
   const [mode, setMode] = useState<GraphMode>(initialNoteId ? "local" : "global");
   const [layout, setLayout] = useState<LayoutMode>(initialNoteId ? "radial" : "force");
-  const [selectedId, setSelectedId] = useState<string>(initialNoteId ?? notes[0]?.id ?? "");
-  const [selectedEdgeId, setSelectedEdgeId] = useState<string>("");
+  const [clusterMode, setClusterMode] = useState<ClusterMode>("topic");
+  const [selectedId, setSelectedId] = useState(initialNoteId ?? notes[0]?.id ?? "");
+  const [selectedEdgeId, setSelectedEdgeId] = useState("");
+  const [hoverId, setHoverId] = useState("");
+  const [hoverEdgeId, setHoverEdgeId] = useState("");
   const [localDepth, setLocalDepth] = useState(1);
   const [query, setQuery] = useState("");
+  const [showOnlyMatches, setShowOnlyMatches] = useState(false);
+  const [fadeNonMatches, setFadeNonMatches] = useState(true);
   const [topic, setTopic] = useState("");
   const [noteType, setNoteType] = useState("");
   const [tag, setTag] = useState("");
@@ -464,32 +449,35 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
   const [hasTriggersOnly, setHasTriggersOnly] = useState(false);
   const [hasFalseUsesOnly, setHasFalseUsesOnly] = useState(false);
   const [hasDiagramsOnly, setHasDiagramsOnly] = useState(false);
+  const [hasRelatedOnly, setHasRelatedOnly] = useState(false);
   const [orphanOnly, setOrphanOnly] = useState(false);
   const [recentOnly, setRecentOnly] = useState(false);
   const [qualityFilter, setQualityFilter] = useState<QualityFilter>("any");
-  const [showLabels, setShowLabels] = useState(true);
   const [showArrows, setShowArrows] = useState(true);
-  const [detailedNodes, setDetailedNodes] = useState(false);
-  const [darkCanvas, setDarkCanvas] = useState(false);
+  const [showLabels, setShowLabels] = useState(true);
+  const [darkCanvas, setDarkCanvas] = useState(true);
   const [colorMode, setColorMode] = useState<ColorMode>("topic");
   const [sizeMode, setSizeMode] = useState<SizeMode>("connections");
-  const [zoom, setZoom] = useState(1);
+  const [physics, setPhysics] = useState<PhysicsSettings>(() => loadPhysicsSettings());
+  const [paused, setPaused] = useState(false);
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(() => new Set());
   const [pinnedIds, setPinnedIds] = useState<Set<string>>(() => new Set());
-  const [collapsedTopics, setCollapsedTopics] = useState<Set<string>>(() => new Set());
+  const [collapsedClusters, setCollapsedClusters] = useState<Set<string>>(() => new Set());
   const [linkMode, setLinkMode] = useState(false);
   const [linkSourceId, setLinkSourceId] = useState(initialNoteId ?? "");
   const [linkTargetId, setLinkTargetId] = useState("");
   const [linkRelation, setLinkRelation] = useState("related");
   const [pathStartId, setPathStartId] = useState("");
   const [pathEndId, setPathEndId] = useState("");
+  const [pathRespectDirection, setPathRespectDirection] = useState(false);
+  const [pathRelations, setPathRelations] = useState<string[]>([]);
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<LinkSuggestion[]>([]);
   const [possibleNewNotes, setPossibleNewNotes] = useState<Array<{ title: string; reason?: string }>>([]);
+  const [canvasSize, setCanvasSize] = useState({ width: 1000, height: 720 });
   const [recentCutoff] = useState(() => Date.now() - RECENT_WINDOW_MS);
-
   const notesById = useMemo(() => new Map(notes.map((note) => [note.id, note])), [notes]);
   const allDegree = useMemo(() => degreeCounts(graphLinks), [graphLinks]);
   const allTags = useMemo(() => Array.from(new Set(notes.flatMap((note) => note.tags))).filter(Boolean).sort(), [notes]);
@@ -497,17 +485,20 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     () => new Set(notes.filter((note) => (allDegree.get(note.id)?.total ?? 0) === 0).map((note) => note.id)),
     [allDegree, notes]
   );
-
   const searchMatches = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return new Set<string>();
     return new Set(notes.filter((note) => noteHaystack(note).includes(q)).map((note) => note.id));
   }, [notes, query]);
+  const components = useMemo(() => connectedComponents(notes, graphLinks), [graphLinks, notes]);
 
   const filteredNotes = useMemo(() => {
-    const base = notes.filter((note) => {
+    const localDepths = mode === "local" ? getNeighborhood(selectedId || null, graphLinks, localDepth) : null;
+    return notes.filter((note) => {
+      const degree = allDegree.get(note.id)?.total ?? 0;
+      const clusterKey = clusterMode === "type" ? note.note_type : clusterMode === "component" ? `Component ${components.findIndex((group) => group.includes(note.id)) + 1}` : primaryTopic(note.topic);
       if (hiddenIds.has(note.id)) return false;
-      if (collapsedTopics.has(primaryTopic(note.topic))) return false;
+      if (clusterMode !== "none" && collapsedClusters.has(clusterKey)) return false;
       if (topic && !topicIncludes(note.topic, topic)) return false;
       if (noteType && note.note_type !== noteType) return false;
       if (tag && !note.tags.includes(tag)) return false;
@@ -515,37 +506,33 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
       if (hasTriggersOnly && !note.recognition_triggers.length) return false;
       if (hasFalseUsesOnly && !note.false_uses.length) return false;
       if (hasDiagramsOnly && !note.diagram_urls.length) return false;
+      if (hasRelatedOnly && degree === 0) return false;
       if (orphanOnly && !orphanIds.has(note.id)) return false;
       if (recentOnly && new Date(note.updated_at).getTime() < recentCutoff) return false;
-      if (qualityFilter === "missing-links" && (allDegree.get(note.id)?.total ?? 0) > 0) return false;
-      if (qualityFilter === "missing-metadata" && note.tags.length && note.description) return false;
-      if (qualityFilter === "strong" && ((allDegree.get(note.id)?.total ?? 0) < 2 || !note.tags.length)) return false;
+      if (qualityFilter === "missing-links" && degree > 0) return false;
+      if (qualityFilter === "missing-metadata" && note.tags.length && note.description && note.difficulty) return false;
+      if (qualityFilter === "strong" && (degree < 2 || !note.tags.length || !note.description)) return false;
+      if (query.trim() && showOnlyMatches && !searchMatches.has(note.id)) return false;
+      if (localDepths && !localDepths.has(note.id)) return false;
+      if (relation) {
+        const hasRelation = graphLinks.some(
+          (link) =>
+            link.relation_type === relation &&
+            (link.source_note_id === note.id || link.target_note_id === note.id)
+        );
+        if (!hasRelation) return false;
+      }
       return true;
     });
-
-    let visible = base;
-    if (relation) {
-      const relationIds = new Set(
-        graphLinks
-          .filter((link) => link.relation_type === relation)
-          .flatMap((link) => [link.source_note_id, link.target_note_id])
-      );
-      visible = visible.filter((note) => relationIds.has(note.id));
-    }
-
-    if (mode === "local") {
-      const seedId = selectedId || visible[0]?.id || notes[0]?.id || null;
-      const localIds = getNeighborhood(seedId, graphLinks, localDepth);
-      visible = visible.filter((note) => localIds.has(note.id));
-    }
-
-    return visible;
   }, [
     allDegree,
-    collapsedTopics,
+    clusterMode,
+    collapsedClusters,
+    components,
     graphLinks,
     hasDiagramsOnly,
     hasFalseUsesOnly,
+    hasRelatedOnly,
     hasTriggersOnly,
     hiddenIds,
     levelMax,
@@ -557,14 +544,16 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     orphanIds,
     orphanOnly,
     qualityFilter,
+    query,
     recentCutoff,
     recentOnly,
     relation,
+    searchMatches,
     selectedId,
+    showOnlyMatches,
     tag,
     topic
   ]);
-
   const visibleIds = useMemo(() => new Set(filteredNotes.map((note) => note.id)), [filteredNotes]);
   const visibleLinks = useMemo(
     () =>
@@ -579,15 +568,21 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     [graphLinks, relation, visibleIds]
   );
   const visibleDegree = useMemo(() => degreeCounts(visibleLinks), [visibleLinks]);
-  const positions = useMemo(() => buildLayout(filteredNotes, visibleLinks, layout, selectedId), [filteredNotes, layout, selectedId, visibleLinks]);
+  const visibleSearchResults = useMemo(
+    () => filteredNotes.filter((note) => searchMatches.has(note.id)),
+    [filteredNotes, searchMatches]
+  );
   const selectedNote = notesById.get(selectedId) ?? null;
   const selectedEdge = visibleLinks.find((link) => link.id === selectedEdgeId) ?? graphLinks.find((link) => link.id === selectedEdgeId) ?? null;
   const selectedEdgeSource = selectedEdge ? notesById.get(selectedEdge.source_note_id) : null;
   const selectedEdgeTarget = selectedEdge ? notesById.get(selectedEdge.target_note_id) : null;
-  const viewBoxWidth = CANVAS_WIDTH / zoom;
-  const viewBoxHeight = CANVAS_HEIGHT / zoom;
-  const viewBox = `${(CANVAS_WIDTH - viewBoxWidth) / 2} ${(CANVAS_HEIGHT - viewBoxHeight) / 2} ${viewBoxWidth} ${viewBoxHeight}`;
-  const pathIds = useMemo(() => (pathStartId && pathEndId ? shortestPath(pathStartId, pathEndId, graphLinks, visibleIds) : []), [graphLinks, pathEndId, pathStartId, visibleIds]);
+  const selectedIncoming = selectedNote ? graphLinks.filter((link) => link.target_note_id === selectedNote.id) : [];
+  const selectedOutgoing = selectedNote ? graphLinks.filter((link) => link.source_note_id === selectedNote.id) : [];
+  const allowedPathRelations = useMemo(() => new Set(pathRelations), [pathRelations]);
+  const pathIds = useMemo(
+    () => (pathStartId && pathEndId ? shortestPath(pathStartId, pathEndId, graphLinks, visibleIds, pathRespectDirection, allowedPathRelations) : []),
+    [allowedPathRelations, graphLinks, pathEndId, pathRespectDirection, pathStartId, visibleIds]
+  );
   const pathNodeIds = useMemo(() => new Set(pathIds), [pathIds]);
   const pathEdgeKeys = useMemo(() => {
     const keys = new Set<string>();
@@ -597,17 +592,15 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     }
     return keys;
   }, [pathIds]);
-
-  const topicClusters = useMemo(() => {
+  const filteredComponents = useMemo(() => connectedComponents(filteredNotes, visibleLinks), [filteredNotes, visibleLinks]);
+  const clusters = useMemo(() => {
     const groups = new Map<string, GraphNote[]>();
     for (const note of filteredNotes) {
-      const key = primaryTopic(note.topic);
+      const key = clusterMode === "type" ? note.note_type : clusterMode === "component" ? `Component ${filteredComponents.findIndex((group) => group.includes(note.id)) + 1}` : primaryTopic(note.topic);
       groups.set(key, [...(groups.get(key) ?? []), note]);
     }
-    return Array.from(groups.entries()).sort((a, b) => b[1].length - a[1].length);
-  }, [filteredNotes]);
-
-  const components = useMemo(() => connectedComponents(filteredNotes, visibleLinks), [filteredNotes, visibleLinks]);
+    return [...groups.entries()].sort((a, b) => b[1].length - a[1].length);
+  }, [clusterMode, filteredComponents, filteredNotes]);
   const health = useMemo(() => {
     const incoming = [...notes].sort((a, b) => (allDegree.get(b.id)?.in ?? 0) - (allDegree.get(a.id)?.in ?? 0)).slice(0, 5);
     const outgoing = [...notes].sort((a, b) => (allDegree.get(b.id)?.out ?? 0) - (allDegree.get(a.id)?.out ?? 0)).slice(0, 5);
@@ -632,11 +625,583 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
       outgoing,
       missingPrerequisites,
       duplicates: duplicates.slice(0, 5),
-      relationImbalance: graphLinks.length >= 6 && relatedCount / graphLinks.length > 0.55
+      relationImbalance: graphLinks.length >= 6 && relatedCount / graphLinks.length > 0.55,
+      noOutgoing: notes.filter((note) => (allDegree.get(note.id)?.out ?? 0) === 0),
+      noIncoming: notes.filter((note) => (allDegree.get(note.id)?.in ?? 0) === 0),
+      missingMetadata: notes.filter((note) => !note.topic || !note.note_type || !note.difficulty)
     };
   }, [allDegree, graphLinks, notes]);
 
-  const hiddenCount = notes.length - filteredNotes.length;
+  useEffect(() => {
+    window.localStorage.setItem(GRAPH_SETTINGS_KEY, JSON.stringify(physics));
+  }, [physics]);
+
+  useEffect(() => {
+    const wrapper = wrapRef.current;
+    if (!wrapper) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setCanvasSize({
+        width: Math.max(360, entry.contentRect.width),
+        height: Math.max(560, entry.contentRect.height)
+      });
+    });
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const previous = new Map(nodesRef.current.map((node) => [node.id, node]));
+    const localDepths = mode === "local" ? getNeighborhood(selectedId || null, graphLinks, localDepth) : new Map<string, number>();
+    const nextNodes = filteredNotes.map((note, index) => {
+      const degree = visibleDegree.get(note.id)?.total ?? 0;
+      const old = previous.get(note.id);
+      const seed = initialPosition(note, index, filteredNotes.length);
+      return {
+        id: note.id,
+        note,
+        x: old?.x ?? seed.x,
+        y: old?.y ?? seed.y,
+        vx: old?.vx ?? 0,
+        vy: old?.vy ?? 0,
+        radius: noteRadius(note, degree, sizeMode),
+        degree,
+        pinned: pinnedIds.has(note.id) || old?.pinned === true,
+        depth: mode === "local" ? localDepths.get(note.id) ?? 99 : 0
+      };
+    });
+    nodesRef.current = nextNodes;
+    linksRef.current = visibleLinks.map((link) => ({
+      id: link.id,
+      sourceId: link.source_note_id,
+      targetId: link.target_note_id,
+      relation: link.relation_type,
+      link
+    }));
+  }, [filteredNotes, graphLinks, localDepth, mode, pinnedIds, selectedId, sizeMode, visibleDegree, visibleLinks]);
+
+  const worldToScreen = useCallback((point: GraphVector) => {
+    const view = viewportRef.current;
+    return {
+      x: canvasSize.width / 2 + (point.x + view.x) * view.scale,
+      y: canvasSize.height / 2 + (point.y + view.y) * view.scale
+    };
+  }, [canvasSize.height, canvasSize.width]);
+
+  const screenToWorld = useCallback((point: GraphVector) => {
+    const view = viewportRef.current;
+    return {
+      x: (point.x - canvasSize.width / 2) / view.scale - view.x,
+      y: (point.y - canvasSize.height / 2) / view.scale - view.y
+    };
+  }, [canvasSize.height, canvasSize.width]);
+
+  const tickSimulation = useCallback(() => {
+    const simNodes = nodesRef.current;
+    const simLinks = linksRef.current;
+    if (paused || !simNodes.length) return;
+    const nodeMap = new Map(simNodes.map((node) => [node.id, node]));
+    const componentGroups = connectedComponents(simNodes.map((node) => node.note), simLinks.map((link) => link.link));
+    for (let i = 0; i < simNodes.length; i += 1) {
+      for (let j = i + 1; j < simNodes.length; j += 1) {
+        const a = simNodes[i];
+        const b = simNodes[j];
+        const dx = a.x - b.x || 0.01;
+        const dy = a.y - b.y || 0.01;
+        const distanceSq = Math.max(dx * dx + dy * dy, 40);
+        const distance = Math.sqrt(distanceSq);
+        const force = physics.repulsion / distanceSq;
+        const fx = (dx / distance) * force;
+        const fy = (dy / distance) * force;
+        if (!a.pinned) {
+          a.vx += fx;
+          a.vy += fy;
+        }
+        if (!b.pinned) {
+          b.vx -= fx;
+          b.vy -= fy;
+        }
+        const minDistance = a.radius + b.radius + physics.collisionRadius;
+        if (distance < minDistance) {
+          const push = (minDistance - distance) * 0.018;
+          if (!a.pinned) {
+            a.vx += (dx / distance) * push;
+            a.vy += (dy / distance) * push;
+          }
+          if (!b.pinned) {
+            b.vx -= (dx / distance) * push;
+            b.vy -= (dy / distance) * push;
+          }
+        }
+      }
+    }
+    for (const link of simLinks) {
+      const source = nodeMap.get(link.sourceId);
+      const target = nodeMap.get(link.targetId);
+      if (!source || !target) continue;
+      const dx = target.x - source.x;
+      const dy = target.y - source.y;
+      const distance = Math.max(Math.sqrt(dx * dx + dy * dy), 1);
+      const desired = physics.linkDistance * (link.relation === "prerequisite" ? 0.88 : 1);
+      const force = (distance - desired) * 0.0048;
+      const fx = (dx / distance) * force;
+      const fy = (dy / distance) * force;
+      if (!source.pinned) {
+        source.vx += fx;
+        source.vy += fy;
+      }
+      if (!target.pinned) {
+        target.vx -= fx;
+        target.vy -= fy;
+      }
+    }
+    for (let index = 0; index < simNodes.length; index += 1) {
+      const node = simNodes[index];
+      const target = targetPosition(node.note, index, simNodes.map((item) => item.note), layout, selectedId, simLinks.map((link) => link.link), componentGroups);
+      const layoutStrength = layout === "force" ? 0.0015 : layout === "grid" ? 0.055 : 0.022;
+      if (!node.pinned) {
+        node.vx += (target.x - node.x) * layoutStrength;
+        node.vy += (target.y - node.y) * layoutStrength;
+        node.vx += -node.x * physics.centering * 0.01;
+        node.vy += -node.y * physics.centering * 0.01;
+        node.x += node.vx;
+        node.y += node.vy;
+      }
+      node.vx *= 0.84;
+      node.vy *= 0.84;
+    }
+  }, [layout, paused, physics, selectedId]);
+
+  const drawGraph = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (canvas.width !== Math.floor(canvasSize.width * dpr) || canvas.height !== Math.floor(canvasSize.height * dpr)) {
+      canvas.width = Math.floor(canvasSize.width * dpr);
+      canvas.height = Math.floor(canvasSize.height * dpr);
+      canvas.style.width = `${canvasSize.width}px`;
+      canvas.style.height = `${canvasSize.height}px`;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    } else {
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    const simNodes = nodesRef.current;
+    const simLinks = linksRef.current;
+    const nodeMap = new Map(simNodes.map((node) => [node.id, node]));
+    const background = darkCanvas ? "#0b1120" : "#ffffff";
+    context.fillStyle = background;
+    context.fillRect(0, 0, canvasSize.width, canvasSize.height);
+    context.save();
+    context.globalAlpha = darkCanvas ? 0.16 : 0.22;
+    context.strokeStyle = darkCanvas ? "#334155" : "#d5d7de";
+    context.lineWidth = 1;
+    for (let x = (viewportRef.current.x * viewportRef.current.scale) % 72; x < canvasSize.width; x += 72) {
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, canvasSize.height);
+      context.stroke();
+    }
+    for (let y = (viewportRef.current.y * viewportRef.current.scale) % 72; y < canvasSize.height; y += 72) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvasSize.width, y);
+      context.stroke();
+    }
+    context.restore();
+    if (clusterMode !== "none" && layout === "topic") {
+      for (const [label, clusterNotes] of clusters) {
+        const clusterNodes = clusterNotes.map((note) => nodeMap.get(note.id)).filter(Boolean) as SimNode[];
+        if (!clusterNodes.length) continue;
+        const points = clusterNodes.map((node) => worldToScreen(node));
+        const minX = Math.min(...points.map((point) => point.x));
+        const maxX = Math.max(...points.map((point) => point.x));
+        const minY = Math.min(...points.map((point) => point.y));
+        const maxY = Math.max(...points.map((point) => point.y));
+        context.save();
+        context.fillStyle = darkCanvas ? "rgba(30, 58, 95, 0.13)" : "rgba(239, 246, 255, 0.75)";
+        context.strokeStyle = darkCanvas ? "rgba(148, 163, 184, 0.18)" : "rgba(195, 198, 208, 0.55)";
+        context.beginPath();
+        context.roundRect(minX - 42, minY - 42, maxX - minX + 84, maxY - minY + 84, 28);
+        context.fill();
+        context.stroke();
+        context.fillStyle = darkCanvas ? "#dbeafe" : "#0e3b69";
+        context.font = "600 12px ui-sans-serif, system-ui";
+        context.fillText(label, minX - 28, minY - 20);
+        context.restore();
+      }
+    }
+    for (const graphLink of simLinks) {
+      const source = nodeMap.get(graphLink.sourceId);
+      const target = nodeMap.get(graphLink.targetId);
+      if (!source || !target) continue;
+      const style = relationStyle(graphLink.relation);
+      const sourcePoint = worldToScreen(source);
+      const targetPoint = worldToScreen(target);
+      const visual = edgeVisualEndpoints(source, target, graphLink.relation);
+      const visualStartPoint = worldToScreen(visual.from);
+      const visualEndPoint = worldToScreen(visual.to);
+      const pathHighlighted =
+        pathEdgeKeys.has(`${source.id}:${target.id}`) ||
+        selectedEdgeId === graphLink.id ||
+        hoverEdgeId === graphLink.id ||
+        selectedId === source.id ||
+        selectedId === target.id;
+      const dimBySearch = query.trim() && fadeNonMatches && !searchMatches.has(source.id) && !searchMatches.has(target.id);
+      context.save();
+      context.globalAlpha = dimBySearch ? 0.12 : pathHighlighted ? 0.96 : darkCanvas ? 0.42 : 0.52;
+      context.strokeStyle = style.color;
+      context.lineWidth = pathHighlighted ? style.width + 1.2 : style.width;
+      context.setLineDash(style.dash ?? []);
+      context.beginPath();
+      context.moveTo(sourcePoint.x, sourcePoint.y);
+      context.lineTo(targetPoint.x, targetPoint.y);
+      context.stroke();
+      context.setLineDash([]);
+      if (showArrows && style.directional) {
+        const arrowTargetRadius = visual.to.radius * viewportRef.current.scale;
+        const angle = Math.atan2(visualEndPoint.y - visualStartPoint.y, visualEndPoint.x - visualStartPoint.x);
+        const arrowX = visualEndPoint.x - Math.cos(angle) * (arrowTargetRadius + 7);
+        const arrowY = visualEndPoint.y - Math.sin(angle) * (arrowTargetRadius + 7);
+        context.beginPath();
+        context.moveTo(arrowX, arrowY);
+        context.lineTo(arrowX - Math.cos(angle - 0.45) * 9, arrowY - Math.sin(angle - 0.45) * 9);
+        context.lineTo(arrowX - Math.cos(angle + 0.45) * 9, arrowY - Math.sin(angle + 0.45) * 9);
+        context.closePath();
+        context.fillStyle = style.color;
+        context.fill();
+      }
+      if (hoverEdgeId === graphLink.id || selectedEdgeId === graphLink.id) {
+        const labelX = (sourcePoint.x + targetPoint.x) / 2;
+        const labelY = (sourcePoint.y + targetPoint.y) / 2;
+        const label = style.label;
+        context.font = "600 11px ui-sans-serif, system-ui";
+        const width = context.measureText(label).width + 12;
+        context.fillStyle = darkCanvas ? "rgba(15, 23, 42, 0.9)" : "rgba(255, 255, 255, 0.94)";
+        context.beginPath();
+        context.roundRect(labelX - width / 2, labelY - 12, width, 20, 6);
+        context.fill();
+        context.fillStyle = darkCanvas ? "#f8fafc" : "#1a1c1c";
+        context.fillText(label, labelX - width / 2 + 6, labelY + 2);
+      }
+      context.restore();
+    }
+    for (const node of simNodes) {
+      const screen = worldToScreen(node);
+      const isSelected = node.id === selectedId;
+      const isHovered = node.id === hoverId;
+      const isPath = pathNodeIds.has(node.id);
+      const isSearch = searchMatches.has(node.id);
+      const directNeighbor =
+        selectedId &&
+        simLinks.some((link) =>
+          (link.sourceId === selectedId && link.targetId === node.id) ||
+          (link.targetId === selectedId && link.sourceId === node.id)
+        );
+      const localFade = mode === "local" && node.depth > 1 ? 0.62 : 1;
+      const searchFade = query.trim() && fadeNonMatches && !isSearch && !isSelected && !directNeighbor ? 0.18 : 1;
+      const radius = node.radius * (isSelected ? 1.75 : isHovered ? 1.35 : isPath ? 1.3 : 1) * viewportRef.current.scale;
+      context.save();
+      context.globalAlpha = localFade * searchFade;
+      if (isSelected || isHovered) {
+        context.shadowColor = noteColor(node.note, colorMode);
+        context.shadowBlur = isSelected ? 18 : 12;
+      }
+      context.fillStyle = noteColor(node.note, colorMode);
+      context.beginPath();
+      context.arc(screen.x, screen.y, radius, 0, Math.PI * 2);
+      context.fill();
+      context.shadowBlur = 0;
+      if (isSelected || isPath || directNeighbor || node.pinned) {
+        context.strokeStyle = node.pinned ? "#facc15" : darkCanvas ? "#f8fafc" : "#0f172a";
+        context.lineWidth = isSelected ? 2.2 : 1.4;
+        context.stroke();
+      }
+      if (node.pinned) {
+        context.fillStyle = "#facc15";
+        context.fillRect(screen.x + radius - 2, screen.y - radius - 2, 5, 5);
+      }
+      const showLabel =
+        isSelected ||
+        isHovered ||
+        (showLabels &&
+          (isPath ||
+            directNeighbor ||
+            (viewportRef.current.scale >= physics.labelThreshold && (node.degree >= 2 || simNodes.length < 35))));
+      if (showLabel) {
+        const title = node.note.title;
+        context.font = `${isSelected ? "700" : "600"} 12px ui-sans-serif, system-ui`;
+        const maxWidth = isSelected ? 240 : 170;
+        const text = context.measureText(title).width > maxWidth ? `${title.slice(0, Math.max(14, Math.floor(maxWidth / 7)))}...` : title;
+        const width = Math.min(maxWidth, context.measureText(text).width) + 12;
+        const labelX = screen.x + radius + 7;
+        const labelY = screen.y - 8;
+        context.fillStyle = darkCanvas ? "rgba(15, 23, 42, 0.84)" : "rgba(255, 255, 255, 0.9)";
+        context.beginPath();
+        context.roundRect(labelX - 4, labelY - 12, width, 22, 6);
+        context.fill();
+        context.fillStyle = darkCanvas ? "#f8fafc" : "#1a1c1c";
+        context.fillText(text, labelX + 2, labelY + 3, maxWidth);
+      }
+      context.restore();
+    }
+  }, [
+    canvasSize.height,
+    canvasSize.width,
+    clusters,
+    clusterMode,
+    colorMode,
+    darkCanvas,
+    fadeNonMatches,
+    hoverEdgeId,
+    hoverId,
+    layout,
+    mode,
+    pathEdgeKeys,
+    pathNodeIds,
+    physics.labelThreshold,
+    query,
+    searchMatches,
+    selectedEdgeId,
+    selectedId,
+    showArrows,
+    showLabels,
+    worldToScreen
+  ]);
+
+  useEffect(() => {
+    function frame() {
+      tickSimulation();
+      drawGraph();
+      animationRef.current = window.requestAnimationFrame(frame);
+    }
+    animationRef.current = window.requestAnimationFrame(frame);
+    return () => {
+      if (animationRef.current) window.cancelAnimationFrame(animationRef.current);
+    };
+  }, [drawGraph, tickSimulation]);
+
+  function hitNode(screenPoint: GraphVector) {
+    const candidates = [...nodesRef.current].reverse();
+    for (const node of candidates) {
+      const point = worldToScreen(node);
+      const radius = Math.max(10, node.radius * viewportRef.current.scale + 5);
+      if (Math.hypot(screenPoint.x - point.x, screenPoint.y - point.y) <= radius) return node;
+    }
+    return null;
+  }
+
+  function distanceToSegment(point: GraphVector, a: GraphVector, b: GraphVector) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const lengthSq = dx * dx + dy * dy;
+    if (!lengthSq) return Math.hypot(point.x - a.x, point.y - a.y);
+    const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSq));
+    return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
+  }
+
+  function hitEdge(screenPoint: GraphVector) {
+    const nodeMap = new Map(nodesRef.current.map((node) => [node.id, node]));
+    for (const edge of linksRef.current) {
+      const source = nodeMap.get(edge.sourceId);
+      const target = nodeMap.get(edge.targetId);
+      if (!source || !target) continue;
+      if (distanceToSegment(screenPoint, worldToScreen(source), worldToScreen(target)) < 7) return edge;
+    }
+    return null;
+  }
+
+  function canvasPoint(event: React.PointerEvent<HTMLCanvasElement> | React.MouseEvent<HTMLCanvasElement> | React.WheelEvent<HTMLCanvasElement>) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function selectNode(node: SimNode) {
+    setSelectedId(node.id);
+    setSelectedEdgeId("");
+    if (linkMode) {
+      if (!linkSourceId || (linkSourceId && linkTargetId)) {
+        setLinkSourceId(node.id);
+        setLinkTargetId("");
+      } else if (node.id !== linkSourceId) {
+        setLinkTargetId(node.id);
+      }
+    }
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLCanvasElement>) {
+    const point = canvasPoint(event);
+    const node = hitNode(point);
+    const edge = hitEdge(point);
+    setContextMenu(null);
+    if (node) {
+      selectNode(node);
+      if (!linkMode) {
+        mouseRef.current = { draggingId: node.id, panning: false, lastX: point.x, lastY: point.y };
+        node.pinned = true;
+        setPinnedIds((current) => new Set([...current, node.id]));
+      }
+      event.currentTarget.setPointerCapture(event.pointerId);
+      return;
+    }
+    if (edge) {
+      setSelectedEdgeId(edge.id);
+      setSelectedId("");
+      return;
+    }
+    setSelectedEdgeId("");
+    mouseRef.current = { draggingId: null, panning: true, lastX: point.x, lastY: point.y };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLCanvasElement>) {
+    const point = canvasPoint(event);
+    const mouse = mouseRef.current;
+    if (mouse.draggingId) {
+      const node = nodesRef.current.find((item) => item.id === mouse.draggingId);
+      if (node) {
+        const world = screenToWorld(point);
+        node.x = world.x;
+        node.y = world.y;
+        node.vx = 0;
+        node.vy = 0;
+      }
+      mouse.lastX = point.x;
+      mouse.lastY = point.y;
+      return;
+    }
+    if (mouse.panning) {
+      viewportRef.current.x += (point.x - mouse.lastX) / viewportRef.current.scale;
+      viewportRef.current.y += (point.y - mouse.lastY) / viewportRef.current.scale;
+      mouse.lastX = point.x;
+      mouse.lastY = point.y;
+      return;
+    }
+    const node = hitNode(point);
+    const edge = node ? null : hitEdge(point);
+    setHoverId(node?.id ?? "");
+    setHoverEdgeId(edge?.id ?? "");
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLCanvasElement>) {
+    mouseRef.current = { draggingId: null, panning: false, lastX: 0, lastY: 0 };
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // Pointer may already be released by the browser.
+    }
+  }
+
+  function handleWheel(event: React.WheelEvent<HTMLCanvasElement>) {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? 0.9 : 1.1;
+    viewportRef.current.scale = Math.max(0.28, Math.min(3.2, viewportRef.current.scale * delta));
+  }
+
+  function handleDoubleClick(event: React.MouseEvent<HTMLCanvasElement>) {
+    const node = hitNode(canvasPoint(event));
+    if (node) router.push(`/app/notes/${node.id}`);
+  }
+
+  function handleContextMenu(event: React.MouseEvent<HTMLCanvasElement>) {
+    event.preventDefault();
+    const node = hitNode(canvasPoint(event));
+    if (node) {
+      setSelectedId(node.id);
+      setContextMenu({ id: node.id, x: event.clientX, y: event.clientY });
+    }
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === "INPUT" || target?.tagName === "TEXTAREA" || target?.tagName === "SELECT") return;
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+        event.preventDefault();
+        document.getElementById("graph-search")?.focus();
+      }
+      if (event.key === "Escape") {
+        setSelectedEdgeId("");
+        setContextMenu(null);
+        setLinkMode(false);
+      }
+      if (event.key.toLowerCase() === "l") setLinkMode((current) => !current);
+      if (event.key.toLowerCase() === "g") fitView();
+      if (event.key.toLowerCase() === "r") resetLayout();
+      if (event.key === " ") {
+        event.preventDefault();
+        setPaused((current) => !current);
+      }
+      if (event.key === "Enter" && selectedId) router.push(`/app/notes/${selectedId}`);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
+  function fitView() {
+    const simNodes = nodesRef.current;
+    if (!simNodes.length) return;
+    const minX = Math.min(...simNodes.map((node) => node.x));
+    const maxX = Math.max(...simNodes.map((node) => node.x));
+    const minY = Math.min(...simNodes.map((node) => node.y));
+    const maxY = Math.max(...simNodes.map((node) => node.y));
+    const graphWidth = Math.max(1, maxX - minX + 120);
+    const graphHeight = Math.max(1, maxY - minY + 120);
+    viewportRef.current.scale = Math.max(0.3, Math.min(1.8, Math.min(canvasSize.width / graphWidth, canvasSize.height / graphHeight)));
+    viewportRef.current.x = -(minX + maxX) / 2;
+    viewportRef.current.y = -(minY + maxY) / 2;
+    setMessage("Graph fitted to view.");
+  }
+
+  function resetLayout() {
+    nodesRef.current = nodesRef.current.map((node, index) => {
+      const seed = initialPosition(node.note, index, nodesRef.current.length);
+      return { ...node, x: seed.x, y: seed.y, vx: 0, vy: 0, pinned: false };
+    });
+    setPinnedIds(new Set());
+    viewportRef.current = { scale: 1, x: 0, y: 0 };
+    setMessage("Layout reset and physics reheated.");
+  }
+
+  function centerSelected() {
+    const node = nodesRef.current.find((item) => item.id === selectedId);
+    if (!node) return;
+    viewportRef.current.x = -node.x;
+    viewportRef.current.y = -node.y;
+    viewportRef.current.scale = Math.max(viewportRef.current.scale, 1.15);
+  }
+
+  function saveLayout() {
+    window.localStorage.setItem(
+      GRAPH_LAYOUT_KEY,
+      JSON.stringify(nodesRef.current.map((node) => ({ id: node.id, x: node.x, y: node.y, pinned: node.pinned })))
+    );
+    setMessage("Current node layout saved locally.");
+  }
+
+  function loadLayout() {
+    const raw = window.localStorage.getItem(GRAPH_LAYOUT_KEY);
+    if (!raw) {
+      setMessage("No saved local layout found.");
+      return;
+    }
+    const saved = new Map((JSON.parse(raw) as Array<{ id: string; x: number; y: number; pinned?: boolean }>).map((item) => [item.id, item]));
+    nodesRef.current = nodesRef.current.map((node) => {
+      const next = saved.get(node.id);
+      return next ? { ...node, x: next.x, y: next.y, pinned: Boolean(next.pinned), vx: 0, vy: 0 } : node;
+    });
+    setPinnedIds(new Set([...saved.values()].filter((item) => item.pinned).map((item) => item.id)));
+    setMessage("Local graph layout loaded.");
+  }
+
+  function focusNode(noteId: string) {
+    setSelectedId(noteId);
+    setSelectedEdgeId("");
+    setMode("local");
+    setLayout("radial");
+    setLocalDepth(2);
+    setMessage("Focused local graph.");
+  }
 
   function clearFilters() {
     setTopic("");
@@ -648,12 +1213,14 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     setHasTriggersOnly(false);
     setHasFalseUsesOnly(false);
     setHasDiagramsOnly(false);
+    setHasRelatedOnly(false);
     setOrphanOnly(false);
     setRecentOnly(false);
     setQualityFilter("any");
     setHiddenIds(new Set());
-    setCollapsedTopics(new Set());
+    setCollapsedClusters(new Set());
     setQuery("");
+    setShowOnlyMatches(false);
     setMessage("Filters cleared.");
   }
 
@@ -663,34 +1230,13 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     if (preset === "prerequisite") setRelation("prerequisite");
     if (preset === "orphans") setOrphanOnly(true);
     if (preset === "confused") setRelation("commonly confused");
+    if (preset === "formula") setTopic("Formula Bank");
     if (preset === "current") {
       setMode("local");
       setLayout("radial");
       setLocalDepth(2);
     }
     setMessage(`${preset.replace(/^\w/, (letter) => letter.toUpperCase())} graph preset loaded.`);
-  }
-
-  function focusNode(noteId: string) {
-    setSelectedId(noteId);
-    setSelectedEdgeId("");
-    setMode("local");
-    setLayout("radial");
-    setLocalDepth(2);
-  }
-
-  function handleNodeClick(note: GraphNote) {
-    setContextMenu(null);
-    setSelectedId(note.id);
-    setSelectedEdgeId("");
-    if (linkMode) {
-      if (!linkSourceId || (linkSourceId && linkTargetId)) {
-        setLinkSourceId(note.id);
-        setLinkTargetId("");
-      } else if (note.id !== linkSourceId) {
-        setLinkTargetId(note.id);
-      }
-    }
   }
 
   async function saveGraphLink(sourceId = linkSourceId, targetId = linkTargetId, relationType = linkRelation) {
@@ -701,12 +1247,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     const source = notesById.get(sourceId);
     const target = notesById.get(targetId);
     if (!source || !target) return;
-    if (
-      relationType === "prerequisite" &&
-      !window.confirm(`${target.title} is a prerequisite of ${source.title}. Save this directional link?`)
-    ) {
-      return;
-    }
+    if (relationType === "prerequisite" && !window.confirm(`${target.title} is a prerequisite of ${source.title}. Save this directional link?`)) return;
     const existingPair = graphLinks.find((link) => link.source_note_id === sourceId && link.target_note_id === targetId);
     const supabase = createClient();
     const {
@@ -716,12 +1257,12 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
       setMessage("You must be logged in to edit graph links.");
       return;
     }
-
     if (existingPair) {
       if (existingPair.relation_type === relationType) {
         setMessage("That exact directional link already exists.");
         return;
       }
+      if (!window.confirm(`A ${existingPair.relation_type} link already exists between these notes. Update it to ${relationType}?`)) return;
       const { data, error } = await supabase
         .from("note_links")
         .update({ relation_type: relationType })
@@ -737,7 +1278,6 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
       setMessage("Existing directional link updated.");
       return;
     }
-
     const { data, error } = await supabase
       .from("note_links")
       .insert({ user_id: user.id, source_note_id: sourceId, target_note_id: targetId, relation_type: relationType })
@@ -795,42 +1335,60 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     setMessage(success);
   }
 
-  async function exportSvg() {
-    if (!svgRef.current) return;
-    const source = new XMLSerializer().serializeToString(svgRef.current);
-    downloadBlob(new Blob([source], { type: "image/svg+xml" }), "olympiad-codex-graph.svg");
+  function exportPng() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.toBlob((blob) => {
+      if (blob) downloadBlob(blob, "olympiad-codex-graph.png");
+    });
   }
 
-  async function exportPng() {
-    if (!svgRef.current) return;
-    const source = new XMLSerializer().serializeToString(svgRef.current);
-    const svgBlob = new Blob([source], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(svgBlob);
-    const image = new Image();
-    image.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = CANVAS_WIDTH;
-      canvas.height = CANVAS_HEIGHT;
-      const context = canvas.getContext("2d");
-      if (!context) return;
-      context.fillStyle = darkCanvas ? "#0f172a" : "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0);
-      URL.revokeObjectURL(url);
-      canvas.toBlob((blob) => {
-        if (blob) downloadBlob(blob, "olympiad-codex-graph.png");
-      });
-    };
-    image.src = url;
+  function exportSvg() {
+    const nodes = nodesRef.current;
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const width = 1600;
+    const height = 1000;
+    const parts = [
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="-800 -500 1600 1000">`,
+      `<rect x="-800" y="-500" width="1600" height="1000" fill="${darkCanvas ? "#0b1120" : "#ffffff"}"/>`
+    ];
+    for (const edge of linksRef.current) {
+      const source = nodeMap.get(edge.sourceId);
+      const target = nodeMap.get(edge.targetId);
+      if (!source || !target) continue;
+      const style = relationStyle(edge.relation);
+      parts.push(`<line x1="${source.x.toFixed(1)}" y1="${source.y.toFixed(1)}" x2="${target.x.toFixed(1)}" y2="${target.y.toFixed(1)}" stroke="${style.color}" stroke-width="${style.width}"/>`);
+    }
+    for (const node of nodes) {
+      parts.push(`<circle cx="${node.x.toFixed(1)}" cy="${node.y.toFixed(1)}" r="${node.radius.toFixed(1)}" fill="${noteColor(node.note, colorMode)}"/>`);
+      if (node.id === selectedId || node.degree >= 2) {
+        parts.push(`<text x="${(node.x + node.radius + 6).toFixed(1)}" y="${(node.y + 4).toFixed(1)}" font-size="12" fill="${darkCanvas ? "#f8fafc" : "#1a1c1c"}">${node.note.title.replace(/[&<>]/g, "")}</text>`);
+      }
+    }
+    parts.push("</svg>");
+    downloadBlob(new Blob([parts.join("")], { type: "image/svg+xml" }), "olympiad-codex-graph.svg");
   }
 
-  function exportJson(clusterTopic?: string) {
-    const selectedNotes = clusterTopic ? filteredNotes.filter((note) => primaryTopic(note.topic) === clusterTopic) : filteredNotes;
+  function notesForCluster(cluster?: string) {
+    if (!cluster) return filteredNotes;
+    return filteredNotes.filter((note) => {
+      if (clusterMode === "type") return note.note_type === cluster;
+      if (clusterMode === "component") {
+        const index = filteredComponents.findIndex((group) => group.includes(note.id));
+        return `Component ${index + 1}` === cluster;
+      }
+      return primaryTopic(note.topic) === cluster;
+    });
+  }
+
+  function exportJson(cluster?: string) {
+    const selectedNotes = notesForCluster(cluster);
     const selectedIds = new Set(selectedNotes.map((note) => note.id));
     const payload = {
       exported_at: new Date().toISOString(),
       mode,
       layout,
+      clusterMode,
       filters: { topic, noteType, tag, relation, levelMin, levelMax, orphanOnly, qualityFilter },
       notes: selectedNotes,
       links: visibleLinks.filter((link) => selectedIds.has(link.source_note_id) && selectedIds.has(link.target_note_id))
@@ -838,18 +1396,23 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" }), "olympiad-codex-graph.json");
   }
 
+  function visibleMarkdown(cluster?: string) {
+    const selectedNotes = notesForCluster(cluster);
+    return selectedNotes.map((note) => `- [${note.title}](/app/notes/${note.id})`).join("\n");
+  }
+
   function saveSnapshot() {
     const name = window.prompt("Graph snapshot name", "Current graph view");
     if (!name) return;
     window.localStorage.setItem(
-      "olympiad-codex:graph-snapshot",
-      JSON.stringify({ name, mode, layout, topic, noteType, tag, relation, levelMin, levelMax, selectedId, localDepth })
+      GRAPH_SNAPSHOT_KEY,
+      JSON.stringify({ name, mode, layout, clusterMode, topic, noteType, tag, relation, levelMin, levelMax, selectedId, localDepth, physics })
     );
     setMessage("Graph snapshot saved locally.");
   }
 
   function loadSnapshot() {
-    const raw = window.localStorage.getItem("olympiad-codex:graph-snapshot");
+    const raw = window.localStorage.getItem(GRAPH_SNAPSHOT_KEY);
     if (!raw) {
       setMessage("No local graph snapshot found.");
       return;
@@ -857,6 +1420,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     const snapshot = JSON.parse(raw) as Partial<{
       mode: GraphMode;
       layout: LayoutMode;
+      clusterMode: ClusterMode;
       topic: string;
       noteType: string;
       tag: string;
@@ -865,9 +1429,11 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
       levelMax: number;
       selectedId: string;
       localDepth: number;
+      physics: PhysicsSettings;
     }>;
     setMode(snapshot.mode ?? "global");
     setLayout(snapshot.layout ?? "force");
+    setClusterMode(snapshot.clusterMode ?? "topic");
     setTopic(snapshot.topic ?? "");
     setNoteType(snapshot.noteType ?? "");
     setTag(snapshot.tag ?? "");
@@ -876,6 +1442,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     setLevelMax(snapshot.levelMax ?? 12);
     setSelectedId(snapshot.selectedId ?? selectedId);
     setLocalDepth(snapshot.localDepth ?? 1);
+    if (snapshot.physics) setPhysics({ ...DEFAULT_PHYSICS, ...snapshot.physics });
     setMessage("Graph snapshot loaded.");
   }
 
@@ -902,7 +1469,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           mode: "suggest_related_notes",
-          instruction: "Graph assistant: return structured link suggestions only.",
+          instruction: "Graph assistant: return structured link suggestions only. Choose only from existing note IDs.",
           note: {
             id: source.id,
             title: source.title,
@@ -933,6 +1500,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
       if (!response.ok) throw new Error(payload.error ?? "AI request failed.");
       setAiSuggestions(
         (payload.link_suggestions ?? [])
+          .filter((item) => notesById.has(item.targetNoteId))
           .filter((item) => !graphLinks.some((link) => link.source_note_id === source.id && link.target_note_id === item.targetNoteId))
           .map((item) => ({
             ...item,
@@ -948,35 +1516,49 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
     }
   }
 
-  const selectedIncoming = selectedNote ? graphLinks.filter((link) => link.target_note_id === selectedNote.id) : [];
-  const selectedOutgoing = selectedNote ? graphLinks.filter((link) => link.source_note_id === selectedNote.id) : [];
+  function togglePathRelation(relationType: string) {
+    setPathRelations((current) => current.includes(relationType) ? current.filter((item) => item !== relationType) : [...current, relationType]);
+  }
+
+  const visibleCount = filteredNotes.length;
+  const hiddenCount = notes.length - visibleCount;
+  const tooltipNote = hoverId ? notesById.get(hoverId) : null;
+  const tooltipNode = hoverId ? nodesRef.current.find((node) => node.id === hoverId) : null;
+  const tooltipPoint = tooltipNode ? worldToScreen(tooltipNode) : null;
 
   return (
     <div className="min-h-screen bg-[#f9f9f9] text-[#1a1c1c]">
-      <div className="mx-auto max-w-[1800px] px-3 py-5 lg:px-6">
+      <div className="mx-auto max-w-[1900px] px-3 py-5 lg:px-6">
         <header className="flex flex-col gap-4 border-b border-[#c3c6d0] pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">Relationship map</p>
-            <h1 className="mt-2 text-3xl font-semibold text-[#1a1c1c]">Visual Note Graph</h1>
+            <h1 className="mt-2 text-3xl font-semibold text-[#1a1c1c]">Interactive Note Graph</h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#43474f]">
-              Explore prerequisites, generalizations, confused pairs, clusters, and weak spots in your Codex.
+              Drag, inspect, filter, link, and clean up your Olympiad knowledge network.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant={mode === "global" ? "primary" : "secondary"} onClick={() => setMode("global")}>
+            <Button type="button" size="sm" variant={mode === "global" ? "primary" : "secondary"} onClick={() => setMode("global")}>
               Global
             </Button>
-            <Button type="button" variant={mode === "local" ? "primary" : "secondary"} onClick={() => setMode("local")}>
+            <Button type="button" size="sm" variant={mode === "local" ? "primary" : "secondary"} onClick={() => setMode("local")}>
               Local
             </Button>
-            <Button type="button" variant={linkMode ? "primary" : "secondary"} onClick={() => setLinkMode((current) => !current)}>
+            <Button type="button" size="sm" variant={linkMode ? "primary" : "secondary"} onClick={() => setLinkMode((current) => !current)}>
               <GitBranch className="h-4 w-4" /> Link Mode
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setZoom(1)}>
-              <Maximize2 className="h-4 w-4" /> Fit View
+            <Button type="button" size="sm" variant="secondary" onClick={fitView}>
+              <Maximize2 className="h-4 w-4" /> Fit
             </Button>
-            <Button type="button" variant="secondary" onClick={() => void suggestLinksWithAI(false)} loading={aiBusy} loadingLabel="Asking AI..." disabled={!selectedNote}>
-              <Brain className="h-4 w-4" /> AI Suggest Links
+            <Button type="button" size="sm" variant="secondary" onClick={resetLayout}>
+              <RotateCcw className="h-4 w-4" /> Reset
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => setPaused((current) => !current)}>
+              {paused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+              {paused ? "Resume" : "Pause"}
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => void suggestLinksWithAI(false)} loading={aiBusy} loadingLabel="Asking AI..." disabled={!selectedNote}>
+              <Brain className="h-4 w-4" /> AI Links
             </Button>
           </div>
         </header>
@@ -986,35 +1568,49 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
         ) : null}
         {notes.length > 300 ? (
           <div className="mt-3 rounded border border-[#facc15] bg-[#fef9c3] px-4 py-2 text-sm text-[#854d0e]">
-            This graph has more than 300 notes. Start with a topic filter, local graph, or cluster preset for smoother exploration.
+            Large graph warning: start with a topic filter, local graph, or cluster preset for smoother exploration.
           </div>
         ) : null}
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[310px_minmax(0,1fr)_340px]">
+        <div className="mt-5 grid gap-4 xl:grid-cols-[310px_minmax(0,1fr)_350px]">
           <aside className="grid gap-3 xl:max-h-[calc(100vh-170px)] xl:overflow-y-auto">
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-[#0e3b69]" />
-                <input className={inputClassName()} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search titles, tags, triggers..." />
+                <input
+                  id="graph-search"
+                  className={inputClassName()}
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && visibleSearchResults[0]) {
+                      router.push(`/app/notes/${visibleSearchResults[0].id}`);
+                    }
+                  }}
+                  placeholder="Search titles, tags, triggers..."
+                />
+              </div>
+              <div className="mt-3 flex flex-wrap gap-3 text-xs text-[#43474f]">
+                <label className="flex items-center gap-1"><input type="checkbox" checked={showOnlyMatches} onChange={(event) => setShowOnlyMatches(event.target.checked)} /> Show only matches</label>
+                <label className="flex items-center gap-1"><input type="checkbox" checked={fadeNonMatches} onChange={(event) => setFadeNonMatches(event.target.checked)} /> Fade non-matches</label>
               </div>
               {query ? (
                 <div className="mt-3 max-h-40 overflow-auto rounded border border-[#e2e4ea] bg-[#f9f9f9] p-2">
-                  {filteredNotes.filter((note) => searchMatches.has(note.id)).slice(0, 10).map((note) => (
+                  {visibleSearchResults.slice(0, 10).map((note) => (
                     <button key={note.id} type="button" onClick={() => focusNode(note.id)} className="block w-full rounded px-2 py-1 text-left text-sm hover:bg-white">
                       {note.title}
                     </button>
                   ))}
-                  {!filteredNotes.some((note) => searchMatches.has(note.id)) ? <p className="text-sm text-[#43474f]">No visible matches.</p> : null}
+                  {!visibleSearchResults.length ? <p className="text-sm text-[#43474f]">No visible matches.</p> : null}
                 </div>
               ) : null}
             </section>
 
-            <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <div className="mb-3 flex items-center gap-2">
-                <Filter className="h-4 w-4 text-[#0e3b69]" />
-                <h2 className="font-semibold">Filters</h2>
-              </div>
-              <div className="grid gap-3">
+            <details className="rounded-lg border border-[#c3c6d0] bg-white p-4" open>
+              <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold">
+                <Filter className="h-4 w-4 text-[#0e3b69]" /> Filters
+              </summary>
+              <div className="mt-3 grid gap-3">
                 <select className={inputClassName()} value={topic} onChange={(event) => setTopic(event.target.value)}>
                   <option value="">All topics</option>
                   {MATH_TOPICS.map((item) => <option key={item}>{item}</option>)}
@@ -1049,22 +1645,31 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 </select>
                 <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasTriggersOnly} onChange={(event) => setHasTriggersOnly(event.target.checked)} /> Has recognition triggers</label>
                 <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasFalseUsesOnly} onChange={(event) => setHasFalseUsesOnly(event.target.checked)} /> Has common false uses</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasDiagramsOnly} onChange={(event) => setHasDiagramsOnly(event.target.checked)} /> Has diagrams</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasDiagramsOnly} onChange={(event) => setHasDiagramsOnly(event.target.checked)} /> Has diagrams/media</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={hasRelatedOnly} onChange={(event) => setHasRelatedOnly(event.target.checked)} /> Has related notes</label>
                 <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={orphanOnly} onChange={(event) => setOrphanOnly(event.target.checked)} /> Orphan notes only</label>
                 <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={recentOnly} onChange={(event) => setRecentOnly(event.target.checked)} /> Recently updated</label>
-                <Button type="button" variant="secondary" onClick={clearFilters}>Clear filters</Button>
+                <Button type="button" size="sm" variant="secondary" onClick={clearFilters}>Clear filters</Button>
               </div>
-            </section>
+            </details>
 
-            <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="font-semibold">Layout & Visuals</h2>
+            <details className="rounded-lg border border-[#c3c6d0] bg-white p-4" open>
+              <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold">
+                <SlidersHorizontal className="h-4 w-4 text-[#0e3b69]" /> Physics & Visuals
+              </summary>
               <div className="mt-3 grid gap-3">
                 <select className={inputClassName()} value={layout} onChange={(event) => setLayout(event.target.value as LayoutMode)}>
-                  <option value="force">Force-directed</option>
-                  <option value="topic">Topic clusters</option>
-                  <option value="hierarchy">Hierarchical prerequisites</option>
-                  <option value="radial">Radial local graph</option>
-                  <option value="grid">Compact grid</option>
+                  <option value="force">Force Layout</option>
+                  <option value="topic">Topic Cluster Layout</option>
+                  <option value="hierarchy">Prerequisite Hierarchy Layout</option>
+                  <option value="radial">Local Radial Layout</option>
+                  <option value="grid">Compact Grid Layout</option>
+                </select>
+                <select className={inputClassName()} value={clusterMode} onChange={(event) => setClusterMode(event.target.value as ClusterMode)}>
+                  <option value="topic">Cluster by topic</option>
+                  <option value="type">Cluster by note type</option>
+                  <option value="component">Cluster by connected component</option>
+                  <option value="none">No clustering</option>
                 </select>
                 {mode === "local" ? (
                   <label className="text-sm text-[#43474f]">
@@ -1073,27 +1678,47 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                   </label>
                 ) : null}
                 <select className={inputClassName()} value={colorMode} onChange={(event) => setColorMode(event.target.value as ColorMode)}>
-                  <option value="topic">Color by topic</option>
-                  <option value="type">Color by note type</option>
+                  <option value="topic">Node color by topic</option>
+                  <option value="type">Node color by note type</option>
                 </select>
                 <select className={inputClassName()} value={sizeMode} onChange={(event) => setSizeMode(event.target.value as SizeMode)}>
-                  <option value="connections">Size by connection count</option>
-                  <option value="level">Size by note/problem level</option>
+                  <option value="connections">Node size by connection count</option>
+                  <option value="level">Node size by concept/problem level</option>
                 </select>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={showLabels} onChange={(event) => setShowLabels(event.target.checked)} /> Show labels</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={showArrows} onChange={(event) => setShowArrows(event.target.checked)} /> Show arrows</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={detailedNodes} onChange={(event) => setDetailedNodes(event.target.checked)} /> Detailed nodes</label>
-                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={darkCanvas} onChange={(event) => setDarkCanvas(event.target.checked)} /> Dark graph background</label>
-                <div className="flex gap-2">
-                  <Button type="button" variant="secondary" onClick={() => setZoom((value) => Math.max(0.55, value - 0.15))}>-</Button>
-                  <Button type="button" variant="secondary" onClick={() => setZoom((value) => Math.min(1.8, value + 0.15))}>+</Button>
-                  <Button type="button" variant="secondary" onClick={() => setLayout((value) => value)}>Reset layout</Button>
+                {([
+                  ["repulsion", "Repulsion strength", 160, 1250, 10],
+                  ["linkDistance", "Link distance", 70, 260, 5],
+                  ["collisionRadius", "Node collision radius", 8, 52, 1],
+                  ["centering", "Centering strength", 0, 0.09, 0.005],
+                  ["labelThreshold", "Label visibility threshold", 0.55, 2.2, 0.05]
+                ] as const).map(([key, label, min, max, step]) => (
+                  <label key={key} className="text-xs text-[#43474f]">
+                    {label}: {physics[key]}
+                    <input
+                      className="mt-1 w-full"
+                      type="range"
+                      min={min}
+                      max={max}
+                      step={step}
+                      value={physics[key]}
+                      onChange={(event) => setPhysics((current) => ({ ...current, [key]: Number(event.target.value) }))}
+                    />
+                  </label>
+                ))}
+                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={showArrows} onChange={(event) => setShowArrows(event.target.checked)} /> Show directional arrows</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={showLabels} onChange={(event) => setShowLabels(event.target.checked)} /> Show contextual labels</label>
+                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={darkCanvas} onChange={(event) => setDarkCanvas(event.target.checked)} /> Dark canvas</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={() => { viewportRef.current.scale *= 1.15; }}><ZoomIn className="h-4 w-4" /> Zoom in</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => { viewportRef.current.scale *= 0.85; }}><ZoomOut className="h-4 w-4" /> Zoom out</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={saveLayout}><Save className="h-4 w-4" /> Save layout</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={loadLayout}><LocateFixed className="h-4 w-4" /> Load layout</Button>
                 </div>
               </div>
-            </section>
+            </details>
 
-            <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="font-semibold">Path Finder</h2>
+            <details className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+              <summary className="cursor-pointer list-none font-semibold">Path Finder</summary>
               <div className="mt-3 grid gap-2">
                 <select className={inputClassName()} value={pathStartId} onChange={(event) => setPathStartId(event.target.value)}>
                   <option value="">Start note</option>
@@ -1103,6 +1728,18 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                   <option value="">End note</option>
                   {filteredNotes.map((note) => <option key={note.id} value={note.id}>{note.title}</option>)}
                 </select>
+                <label className="flex items-center gap-2 text-sm text-[#43474f]"><input type="checkbox" checked={pathRespectDirection} onChange={(event) => setPathRespectDirection(event.target.checked)} /> Respect direction</label>
+                <details className="rounded border border-[#e2e4ea] p-2">
+                  <summary className="cursor-pointer text-sm font-medium">Relation types for path</summary>
+                  <div className="mt-2 grid gap-1">
+                    {NOTE_LINK_RELATIONS.map((item) => (
+                      <label key={item} className="flex items-center gap-2 text-xs text-[#43474f]">
+                        <input type="checkbox" checked={pathRelations.includes(item)} onChange={() => togglePathRelation(item)} />
+                        {item}
+                      </label>
+                    ))}
+                  </div>
+                </details>
                 {pathStartId && pathEndId ? (
                   pathIds.length > 1 ? (
                     <p className="text-sm leading-6 text-[#0e3b69]">{pathIds.map((id) => notesById.get(id)?.title ?? id).join(" -> ")}</p>
@@ -1111,18 +1748,18 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                   )
                 ) : null}
               </div>
-            </section>
+            </details>
           </aside>
 
           <main className="min-h-[720px] overflow-hidden rounded-lg border border-[#c3c6d0] bg-white">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e2e4ea] px-4 py-3 text-sm">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="font-semibold text-[#1a1c1c]">{filteredNotes.length} visible nodes</span>
+                <span className="font-semibold text-[#1a1c1c]">{visibleCount} visible nodes</span>
                 <span className="text-[#43474f]">{visibleLinks.length} visible edges</span>
-                <span className="text-[#43474f]">{hiddenCount} hidden by filters</span>
+                <span className="text-[#43474f]">{hiddenCount} hidden</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {["full", "geometry", "prerequisite", "orphans", "confused", "current"].map((preset) => (
+                {["full", "geometry", "prerequisite", "orphans", "confused", "formula", "current"].map((preset) => (
                   <button key={preset} type="button" className="rounded border border-[#d5d7de] px-2 py-1 text-xs text-[#43474f] hover:bg-[#f9f9f9]" onClick={() => applyPreset(preset)}>
                     {preset === "full" ? "Full Graph" : preset === "confused" ? "Commonly Confused" : preset === "current" ? "Current Neighborhood" : preset}
                   </button>
@@ -1138,206 +1775,140 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                   <p className="mt-2 text-sm text-[#43474f]">Create notes first, then the graph becomes your navigation map.</p>
                 </div>
               </div>
-            ) : filteredNotes.length ? (
-              <div className="relative">
-                <svg
-                  ref={svgRef}
-                  viewBox={viewBox}
-                  className={cn("h-[690px] w-full touch-pan-x touch-pan-y", darkCanvas ? "bg-[#0f172a]" : "bg-[#fbfbfb]")}
-                  role="img"
-                  aria-label="Interactive Olympiad Codex note graph"
-                  onClick={() => setContextMenu(null)}
-                >
-                  <defs>
-                    <marker id="graph-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-                      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155" />
-                    </marker>
-                  </defs>
-                  {topicClusters.map(([clusterTopic, group]) => {
-                    const groupPositions = group.map((note) => positions.get(note.id)).filter((position): position is GraphPosition => Boolean(position));
-                    if (!groupPositions.length || layout !== "topic") return null;
-                    const minX = Math.min(...groupPositions.map((position) => position.x)) - 82;
-                    const minY = Math.min(...groupPositions.map((position) => position.y)) - 70;
-                    const maxX = Math.max(...groupPositions.map((position) => position.x)) + 82;
-                    const maxY = Math.max(...groupPositions.map((position) => position.y)) + 70;
-                    return (
-                      <g key={clusterTopic} opacity="0.18">
-                        <rect x={minX} y={minY} width={maxX - minX} height={maxY - minY} rx="28" fill={TOPIC_COLORS[clusterTopic] ?? TOPIC_COLORS.Mixed} />
-                        <text x={minX + 18} y={minY + 28} className="fill-[#0f172a] text-[18px] font-semibold">{clusterTopic}</text>
-                      </g>
-                    );
-                  })}
-                  {visibleLinks.map((link) => {
-                    const source = positions.get(link.source_note_id);
-                    const target = positions.get(link.target_note_id);
-                    if (!source || !target) return null;
-                    const style = relationStyle(link.relation_type);
-                    const inPath = pathEdgeKeys.has(`${link.source_note_id}:${link.target_note_id}`);
-                    const searchDimmed = query && !searchMatches.has(link.source_note_id) && !searchMatches.has(link.target_note_id);
-                    return (
-                      <g key={link.id} onClick={(event) => { event.stopPropagation(); setSelectedEdgeId(link.id); setSelectedId(""); }}>
-                        <line
-                          x1={source.x}
-                          y1={source.y}
-                          x2={target.x}
-                          y2={target.y}
-                          stroke={inPath ? "#16a34a" : style.color}
-                          strokeWidth={inPath ? style.width + 2 : style.width}
-                          strokeDasharray={style.dash}
-                          markerEnd={showArrows && style.directional ? "url(#graph-arrow)" : undefined}
-                          opacity={searchDimmed ? 0.15 : 0.82}
-                          className="cursor-pointer"
-                        />
-                        {detailedNodes ? (
-                          <text x={(source.x + target.x) / 2} y={(source.y + target.y) / 2 - 8} textAnchor="middle" className={cn("pointer-events-none text-[12px]", darkCanvas ? "fill-slate-200" : "fill-[#43474f]")}>
-                            {link.relation_type}
-                          </text>
-                        ) : null}
-                      </g>
-                    );
-                  })}
-                  {filteredNotes.map((note) => {
-                    const position = positions.get(note.id);
-                    if (!position) return null;
-                    const degree = visibleDegree.get(note.id)?.total ?? allDegree.get(note.id)?.total ?? 0;
-                    const radius = sizeMode === "connections" ? 18 + Math.min(22, degree * 4) : 18 + Math.min(22, (note.difficulty ?? 3) * 2);
-                    const selected = note.id === selectedId;
-                    const matched = !query || searchMatches.has(note.id);
-                    const inPath = pathNodeIds.has(note.id);
-                    const pinned = pinnedIds.has(note.id);
-                    return (
-                      <g
-                        key={note.id}
-                        className="cursor-pointer"
-                        opacity={matched || inPath ? 1 : 0.18}
-                        onClick={(event) => { event.stopPropagation(); handleNodeClick(note); }}
-                        onDoubleClick={(event) => { event.stopPropagation(); router.push(noteUrl(note.id)); }}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setSelectedId(note.id);
-                          setSelectedEdgeId("");
-                          setContextMenu({ id: note.id, x: event.clientX, y: event.clientY });
-                        }}
-                      >
-                        <title>{`${note.title} · ${note.topic} · ${note.note_type} · ${degree} relations`}</title>
-                        <circle
-                          cx={position.x}
-                          cy={position.y}
-                          r={radius + (selected ? 5 : 0)}
-                          fill={inPath ? "#dcfce7" : matched && query ? "#fef3c7" : darkCanvas ? "#1e293b" : "#ffffff"}
-                          stroke={inPath ? "#16a34a" : noteColor(note, colorMode)}
-                          strokeWidth={selected || pinned ? 5 : matched && query ? 4 : 2.5}
-                        />
-                        <circle cx={position.x} cy={position.y} r={Math.max(8, radius * 0.45)} fill={noteColor(note, colorMode)} opacity="0.88" />
-                        {showLabels ? (
-                          <text x={position.x} y={position.y + radius + 18} textAnchor="middle" className={cn("pointer-events-none text-[12px] font-semibold", darkCanvas ? "fill-slate-100" : "fill-[#1a1c1c]")}>
-                            {note.title.length > 24 ? `${note.title.slice(0, 23)}...` : note.title}
-                          </text>
-                        ) : null}
-                        {detailedNodes ? (
-                          <text x={position.x} y={position.y + radius + 34} textAnchor="middle" className={cn("pointer-events-none text-[10px]", darkCanvas ? "fill-slate-300" : "fill-[#43474f]")}>
-                            {note.note_type} · {degree}
-                          </text>
-                        ) : null}
-                      </g>
-                    );
-                  })}
-                </svg>
-                {contextMenu ? (
-                  <div className="fixed z-50 grid w-56 gap-1 rounded-lg border border-[#c3c6d0] bg-white p-2 text-sm shadow-lg" style={{ left: contextMenu.x, top: contextMenu.y }}>
-                    <Link className="rounded px-2 py-1 hover:bg-[#f9f9f9]" href={noteUrl(contextMenu.id)}>Open note</Link>
-                    <Link className="rounded px-2 py-1 hover:bg-[#f9f9f9]" href={`/app/workspace?note=${contextMenu.id}`}>Open in workspace</Link>
-                    <button className="rounded px-2 py-1 text-left hover:bg-[#f9f9f9]" type="button" onClick={() => { void copyText(`${window.location.origin}${noteUrl(contextMenu.id)}`, "Note link copied."); setContextMenu(null); }}>Copy note link</button>
-                    <button className="rounded px-2 py-1 text-left hover:bg-[#f9f9f9]" type="button" onClick={() => { setLinkMode(true); setLinkSourceId(contextMenu.id); setLinkTargetId(""); setContextMenu(null); }}>Create link from this note</button>
-                    <button className="rounded px-2 py-1 text-left hover:bg-[#f9f9f9]" type="button" onClick={() => { setHiddenIds((current) => new Set([...current, contextMenu.id])); setContextMenu(null); }}>Hide node</button>
-                    <button className="rounded px-2 py-1 text-left hover:bg-[#f9f9f9]" type="button" onClick={() => { setPinnedIds((current) => { const next = new Set(current); next.has(contextMenu.id) ? next.delete(contextMenu.id) : next.add(contextMenu.id); return next; }); setContextMenu(null); }}>Pin/unpin node</button>
-                    <button className="rounded px-2 py-1 text-left hover:bg-[#f9f9f9]" type="button" onClick={() => { focusNode(contextMenu.id); setContextMenu(null); }}>Focus local graph</button>
-                  </div>
-                ) : null}
-              </div>
-            ) : (
+            ) : !filteredNotes.length ? (
               <div className="grid min-h-[680px] place-items-center p-8 text-center">
                 <div>
                   <Filter className="mx-auto h-10 w-10 text-[#0e3b69]" />
                   <h2 className="mt-4 text-xl font-semibold">Filters hide all notes</h2>
-                  <p className="mt-2 text-sm text-[#43474f]">Clear filters or load the Full Graph preset.</p>
-                  <Button type="button" className="mt-4" onClick={clearFilters}>Clear filters</Button>
+                  <p className="mt-2 text-sm text-[#43474f]">Clear filters or switch back to Global Graph.</p>
+                  <Button type="button" className="mt-4" variant="secondary" onClick={clearFilters}>Clear filters</Button>
                 </div>
+              </div>
+            ) : (
+              <div ref={wrapRef} className={cn("relative h-[calc(100vh-240px)] min-h-[680px]", darkCanvas ? "bg-[#0b1120]" : "bg-white")}>
+                <canvas
+                  ref={canvasRef}
+                  className="h-full w-full touch-none"
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerLeave={() => {
+                    setHoverId("");
+                    setHoverEdgeId("");
+                    mouseRef.current = { draggingId: null, panning: false, lastX: 0, lastY: 0 };
+                  }}
+                  onWheel={handleWheel}
+                  onDoubleClick={handleDoubleClick}
+                  onContextMenu={handleContextMenu}
+                  aria-label="Interactive force-directed note graph canvas"
+                />
+                <div className={cn("pointer-events-none absolute left-3 top-3 rounded px-3 py-2 text-xs", darkCanvas ? "bg-[#0f172a]/80 text-slate-200" : "bg-white/85 text-[#43474f]")}>
+                  Drag nodes to pin · drag background to pan · wheel to zoom · double-click to open
+                </div>
+                {tooltipNote && tooltipPoint ? (
+                  <div
+                    className="pointer-events-none absolute z-10 max-w-72 rounded border border-[#c3c6d0] bg-white px-3 py-2 text-xs shadow-[0_16px_40px_rgba(26,32,44,0.16)]"
+                    style={{ left: Math.min(canvasSize.width - 290, tooltipPoint.x + 14), top: Math.max(12, tooltipPoint.y + 12) }}
+                  >
+                    <p className="font-semibold text-[#1a1c1c]">{tooltipNote.title}</p>
+                    <p className="mt-1 text-[#43474f]">{tooltipNote.topic} · {tooltipNote.note_type} · {allDegree.get(tooltipNote.id)?.total ?? 0} links</p>
+                  </div>
+                ) : null}
+                {contextMenu ? (
+                  <div className="fixed z-50 grid w-56 gap-1 rounded border border-[#c3c6d0] bg-white p-2 text-sm shadow-[0_16px_40px_rgba(26,32,44,0.16)]" style={{ left: contextMenu.x, top: contextMenu.y }}>
+                    <button type="button" className="rounded px-2 py-1 text-left hover:bg-[#eef4ff]" onClick={() => router.push(`/app/notes/${contextMenu.id}`)}>Open note</button>
+                    <button type="button" className="rounded px-2 py-1 text-left hover:bg-[#eef4ff]" onClick={() => router.push(`/app/workspace?note=${contextMenu.id}`)}>Open in workspace</button>
+                    <button type="button" className="rounded px-2 py-1 text-left hover:bg-[#eef4ff]" onClick={() => void copyText(`${window.location.origin}/app/notes/${contextMenu.id}`, "Note link copied.")}>Copy note link</button>
+                    <button type="button" className="rounded px-2 py-1 text-left hover:bg-[#eef4ff]" onClick={() => focusNode(contextMenu.id)}>Focus local graph</button>
+                    <button type="button" className="rounded px-2 py-1 text-left hover:bg-[#eef4ff]" onClick={() => { setPinnedIds((current) => new Set([...current, contextMenu.id])); const node = nodesRef.current.find((item) => item.id === contextMenu.id); if (node) node.pinned = true; setContextMenu(null); }}>Pin node</button>
+                    <button type="button" className="rounded px-2 py-1 text-left hover:bg-[#eef4ff]" onClick={() => { setLinkMode(true); setLinkSourceId(contextMenu.id); setContextMenu(null); }}>Create link from this note</button>
+                    <button type="button" className="rounded px-2 py-1 text-left text-[#8f1d15] hover:bg-[#fff4f2]" onClick={() => setHiddenIds((current) => new Set([...current, contextMenu.id]))}>Hide node</button>
+                  </div>
+                ) : null}
               </div>
             )}
           </main>
 
-          <aside className="grid gap-3 xl:max-h-[calc(100vh-170px)] xl:overflow-y-auto">
+          <aside className="grid content-start gap-3 xl:max-h-[calc(100vh-170px)] xl:overflow-y-auto">
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="text-lg font-semibold">Inspector</h2>
-              {selectedEdge ? (
-                <div className="mt-4 grid gap-3 text-sm">
-                  <p className="font-semibold text-[#0e3b69]">Edge: {selectedEdge.relation_type}</p>
-                  <p>{relationMeaning(selectedEdge, selectedEdgeSource ?? undefined, selectedEdgeTarget ?? undefined)}</p>
-                  <p className="text-[#43474f]">Source: {selectedEdgeSource?.title ?? "Unknown"}</p>
-                  <p className="text-[#43474f]">Target: {selectedEdgeTarget?.title ?? "Unknown"}</p>
-                  <p className="text-[#43474f]">Created: {selectedEdge.created_at?.slice(0, 10) ?? "Unknown"}</p>
-                  <select className={inputClassName()} value={selectedEdge.relation_type} onChange={(event) => void updateEdge(selectedEdge, event.target.value)}>
-                    {NOTE_LINK_RELATIONS.map((item) => <option key={item}>{item}</option>)}
-                  </select>
-                  <Button type="button" variant="danger" onClick={() => void deleteEdge(selectedEdge)}>
-                    <Trash2 className="h-4 w-4" /> Delete relation
-                  </Button>
+              <h2 className="text-base font-semibold text-[#1a1c1c]">Inspector</h2>
+              {!selectedNote && !selectedEdge ? (
+                <div className="mt-3 grid gap-3 text-sm text-[#43474f]">
+                  <p>{visibleCount} nodes, {visibleLinks.length} edges, {clusters.length} clusters, {orphanIds.size} orphan notes.</p>
+                  <p>Current mode: {mode}. Layout: {layout}. Cluster mode: {clusterMode}.</p>
                 </div>
-              ) : selectedNote ? (
-                <div className="mt-4 grid gap-4 text-sm">
+              ) : null}
+              {selectedNote ? (
+                <div className="mt-3 grid gap-3">
                   <div>
-                    <h3 className="text-xl font-semibold text-[#1a1c1c]">{selectedNote.title}</h3>
-                    <p className="mt-1 text-[#43474f]">{selectedNote.topic} · {selectedNote.note_type}</p>
-                    {difficultyLabel(selectedNote) ? <p className="mt-1 text-[#43474f]">{difficultyLabel(selectedNote)}</p> : null}
+                    <h3 className="text-lg font-semibold text-[#1a1c1c]">{selectedNote.title}</h3>
+                    <p className="mt-1 text-sm text-[#43474f]">{selectedNote.topic} · {selectedNote.note_type}</p>
+                    {difficultyLabel(selectedNote) ? <p className="mt-1 text-xs text-[#0e3b69]">{difficultyLabel(selectedNote)}</p> : null}
                   </div>
-                  {selectedNote.description ? <p className="leading-6 text-[#43474f]">{selectedNote.description}</p> : null}
+                  {selectedNote.description ? <p className="text-sm leading-6 text-[#43474f]">{selectedNote.description}</p> : null}
                   <div className="flex flex-wrap gap-2">
                     {selectedNote.tags.slice(0, 8).map((item) => <span key={item} className="rounded border border-[#d5d7de] px-2 py-1 text-xs text-[#43474f]">{item}</span>)}
                   </div>
                   {selectedNote.recognition_triggers.length ? (
                     <div>
-                      <p className="font-semibold">Recognition triggers</p>
-                      <ul className="mt-1 list-disc pl-5 text-[#43474f]">
-                        {selectedNote.recognition_triggers.slice(0, 3).map((item) => <li key={item}>{item}</li>)}
-                      </ul>
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">Recognition</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-[#43474f]">{selectedNote.recognition_triggers.slice(0, 2).join("; ")}</p>
                     </div>
                   ) : null}
                   {selectedNote.false_uses.length ? (
                     <div>
-                      <p className="font-semibold">Common false uses</p>
-                      <ul className="mt-1 list-disc pl-5 text-[#43474f]">
-                        {selectedNote.false_uses.slice(0, 3).map((item) => <li key={item}>{item}</li>)}
-                      </ul>
+                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#8f1d15]">False uses</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-[#43474f]">{selectedNote.false_uses.slice(0, 2).join("; ")}</p>
                     </div>
                   ) : null}
-                  <div className="grid grid-cols-2 gap-2 text-xs text-[#43474f]">
-                    <div className="rounded border border-[#e2e4ea] p-2">Outgoing: {selectedOutgoing.length}</div>
-                    <div className="rounded border border-[#e2e4ea] p-2">Incoming: {selectedIncoming.length}</div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="rounded border border-[#d5d7de] p-2"><b>{selectedOutgoing.length}</b><br />outgoing</div>
+                    <div className="rounded border border-[#d5d7de] p-2"><b>{selectedIncoming.length}</b><br />incoming</div>
+                    <div className="rounded border border-[#d5d7de] p-2"><b>{selectedNote.diagram_urls.length}</b><br />media</div>
+                    <div className="rounded border border-[#d5d7de] p-2"><b>{selectedNote.recognition_triggers.length}</b><br />triggers</div>
                   </div>
-                  <div className="grid gap-2">
-                    <Link href={noteUrl(selectedNote.id)} className="inline-flex min-h-9 items-center justify-center gap-2 rounded border border-[#2c5282] bg-[#2c5282] px-3 py-2 text-sm font-medium text-white">
-                      <ExternalLink className="h-4 w-4" /> Open Note
-                    </Link>
-                    <Link href={`/app/notes/${selectedNote.id}/edit`} className="inline-flex min-h-9 items-center justify-center gap-2 rounded border border-[#c3c6d0] px-3 py-2 text-sm font-medium text-[#0e3b69]">
-                      <Edit3 className="h-4 w-4" /> Edit Note
-                    </Link>
-                    <Button type="button" variant="secondary" onClick={() => focusNode(selectedNote.id)}>
-                      <Focus className="h-4 w-4" /> Focus Graph Here
-                    </Button>
-                    <Button type="button" variant="secondary" onClick={() => setPinnedIds((current) => new Set([...current, selectedNote.id]))}>
-                      <Pin className="h-4 w-4" /> Pin Node
-                    </Button>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    <Button type="button" size="sm" onClick={() => router.push(`/app/notes/${selectedNote.id}`)}><ExternalLink className="h-4 w-4" /> Open</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => router.push(`/app/notes/${selectedNote.id}/edit`)}><Edit3 className="h-4 w-4" /> Edit</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => router.push(`/app/workspace?note=${selectedNote.id}`)}>Workspace</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => focusNode(selectedNote.id)}><Focus className="h-4 w-4" /> Focus</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => { setPinnedIds((current) => new Set([...current, selectedNote.id])); const node = nodesRef.current.find((item) => item.id === selectedNote.id); if (node) node.pinned = true; }}><Pin className="h-4 w-4" /> Pin</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => setHiddenIds((current) => new Set([...current, selectedNote.id]))}>Hide</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => { setLinkMode(true); setLinkSourceId(selectedNote.id); setLinkTargetId(""); }}>Link from</Button>
+                    <Button type="button" size="sm" variant="secondary" onClick={() => void suggestLinksWithAI(false)} loading={aiBusy}>AI suggest</Button>
                   </div>
                 </div>
-              ) : (
-                <p className="mt-4 text-sm text-[#43474f]">Click a node or edge to inspect it.</p>
-              )}
+              ) : null}
+              {selectedEdge ? (
+                <div className="mt-3 grid gap-3">
+                  <p className="text-sm text-[#43474f]">{relationMeaning(selectedEdge, selectedEdgeSource ?? undefined, selectedEdgeTarget ?? undefined)}</p>
+                  <p className="text-sm"><b>Source:</b> {selectedEdgeSource?.title ?? selectedEdge.source_note_id}</p>
+                  <p className="text-sm"><b>Target:</b> {selectedEdgeTarget?.title ?? selectedEdge.target_note_id}</p>
+                  <select className={inputClassName()} value={selectedEdge.relation_type} onChange={(event) => void updateEdge(selectedEdge, event.target.value)}>
+                    {NOTE_LINK_RELATIONS.map((item) => <option key={item}>{item}</option>)}
+                  </select>
+                  <Button type="button" size="sm" variant="danger" onClick={() => void deleteEdge(selectedEdge)}><Trash2 className="h-4 w-4" /> Delete relation</Button>
+                </div>
+              ) : null}
             </section>
 
+            {mode === "local" ? (
+              <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
+                <h2 className="font-semibold text-[#1a1c1c]">Local Graph</h2>
+                <p className="mt-2 text-sm text-[#43474f]">{selectedNote ? `Centered on ${selectedNote.title}` : "Select a note to center the graph."}</p>
+                <select className={`${inputClassName()} mt-3`} value={selectedId} onChange={(event) => setSelectedId(event.target.value)}>
+                  <option value="">Choose center note</option>
+                  {notes.map((note) => <option key={note.id} value={note.id}>{note.title}</option>)}
+                </select>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={centerSelected}>Center selected</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setMode("global")}>Switch to Global Graph</Button>
+                </div>
+              </section>
+            ) : null}
+
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="font-semibold">Link Mode</h2>
-              <p className="mt-1 text-sm leading-6 text-[#43474f]">Select a source note, then a target note. Only one directional database edge is stored.</p>
+              <h2 className="font-semibold text-[#1a1c1c]">Link Mode</h2>
               <div className="mt-3 grid gap-2">
                 <select className={inputClassName()} value={linkSourceId} onChange={(event) => setLinkSourceId(event.target.value)}>
                   <option value="">Source note</option>
@@ -1345,120 +1916,134 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 </select>
                 <select className={inputClassName()} value={linkTargetId} onChange={(event) => setLinkTargetId(event.target.value)}>
                   <option value="">Target note</option>
-                  {notes.filter((note) => note.id !== linkSourceId).map((note) => <option key={note.id} value={note.id}>{note.title}</option>)}
+                  {notes.map((note) => <option key={note.id} value={note.id}>{note.title}</option>)}
                 </select>
                 <select className={inputClassName()} value={linkRelation} onChange={(event) => setLinkRelation(event.target.value)}>
                   {NOTE_LINK_RELATIONS.map((item) => <option key={item}>{item}</option>)}
                 </select>
-                {linkSourceId && linkTargetId && linkRelation === "prerequisite" ? (
-                  <p className="rounded border border-[#d5d7de] bg-[#f9f9f9] p-2 text-xs text-[#43474f]">
+                {linkRelation === "prerequisite" && linkSourceId && linkTargetId ? (
+                  <p className="rounded border border-[#f4c26b] bg-[#fff8e6] p-2 text-xs text-[#6b4a00]">
                     {notesById.get(linkTargetId)?.title} is a prerequisite of {notesById.get(linkSourceId)?.title}.
                   </p>
                 ) : null}
-                <Button type="button" onClick={() => void saveGraphLink()}>
-                  Save directional link
-                </Button>
+                <Button type="button" size="sm" onClick={() => void saveGraphLink()}>Save directional link</Button>
               </div>
             </section>
 
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="font-semibold">Graph Health</h2>
+              <h2 className="font-semibold text-[#1a1c1c]">Graph Health</h2>
               <div className="mt-3 grid gap-3 text-sm text-[#43474f]">
-                <p>Orphan notes: {orphanIds.size}</p>
-                <p>Connected clusters: {components.length}</p>
-                <p>Missing prerequisites: {health.missingPrerequisites.length}</p>
-                <p>Possible duplicates: {health.duplicates.length}</p>
-                {health.relationImbalance ? <p className="text-[#8a5a00]">Many links are generic “related”; consider stronger relation types.</p> : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" onClick={() => { setOrphanOnly(true); setMode("global"); }}>View orphan notes</Button>
-                  <Link href="/app/manage" className="inline-flex min-h-9 items-center justify-center rounded border border-[#c3c6d0] px-3 py-2 text-sm text-[#0e3b69]">Open in Manage</Link>
-                  <Button type="button" variant="secondary" onClick={() => void suggestLinksWithAI(true)} loading={aiBusy} loadingLabel="Asking AI...">
-                    <Brain className="h-4 w-4" /> Ask AI
-                  </Button>
-                </div>
+                <p>{orphanIds.size} orphan notes · {filteredComponents.length} visible clusters.</p>
+                {health.relationImbalance ? <p className="text-[#8a5a00]">Many links are generic related links. Consider more specific relations.</p> : null}
                 <details>
-                  <summary className="cursor-pointer font-semibold text-[#1a1c1c]">Hubs and clusters</summary>
-                  <div className="mt-2 grid gap-2">
-                    {health.incoming.slice(0, 3).map((note) => <button key={note.id} type="button" onClick={() => focusNode(note.id)} className="text-left hover:text-[#0e3b69]">Incoming hub: {note.title}</button>)}
-                    {components.slice(0, 4).map((component, index) => <p key={component.join(":")}>Cluster {index + 1}: {component.length} notes</p>)}
+                  <summary className="cursor-pointer font-medium text-[#0e3b69]">Orphan notes</summary>
+                  <div className="mt-2 grid gap-1">
+                    {notes.filter((note) => orphanIds.has(note.id)).slice(0, 8).map((note) => (
+                      <button key={note.id} type="button" className="text-left hover:text-[#0e3b69]" onClick={() => focusNode(note.id)}>{note.title}</button>
+                    ))}
+                    {!orphanIds.size ? <span>No orphan notes.</span> : null}
                   </div>
                 </details>
+                <details>
+                  <summary className="cursor-pointer font-medium text-[#0e3b69]">Possible duplicates</summary>
+                  <div className="mt-2 grid gap-1">
+                    {health.duplicates.map(([a, b]) => <span key={`${a.id}-${b.id}`}>{a.title} / {b.title}</span>)}
+                    {!health.duplicates.length ? <span>No obvious duplicates.</span> : null}
+                  </div>
+                </details>
+                <details>
+                  <summary className="cursor-pointer font-medium text-[#0e3b69]">Missing prerequisites</summary>
+                  <div className="mt-2 grid gap-1">
+                    {health.missingPrerequisites.slice(0, 8).map((note) => (
+                      <button key={note.id} type="button" className="text-left hover:text-[#0e3b69]" onClick={() => focusNode(note.id)}>{note.title}</button>
+                    ))}
+                  </div>
+                </details>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setOrphanOnly(true)}>Focus orphan notes</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => router.push("/app/manage")}>Open in Manage</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => void suggestLinksWithAI(true)} loading={aiBusy}>AI for orphans</Button>
+                </div>
               </div>
             </section>
 
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="font-semibold">Clusters</h2>
-              <div className="mt-3 grid gap-2">
-                {topicClusters.map(([clusterTopic, group]) => (
-                  <div key={clusterTopic} className="rounded border border-[#e2e4ea] p-2 text-sm">
+              <h2 className="font-semibold text-[#1a1c1c]">Clusters</h2>
+              <div className="mt-3 grid gap-2 text-sm">
+                {clusters.map(([label, clusterNotes]) => (
+                  <div key={label} className="rounded border border-[#e2e4ea] p-2">
                     <div className="flex items-center justify-between gap-2">
-                      <button type="button" onClick={() => setTopic(clusterTopic)} className="font-semibold text-[#0e3b69]">{clusterTopic}</button>
-                      <span className="text-[#43474f]">{group.length}</span>
+                      <button type="button" className="font-medium text-[#0e3b69]" onClick={() => { setTopic(MATH_TOPICS.includes(label as never) ? label : ""); setMessage(`Focused cluster: ${label}`); }}>{label}</button>
+                      <span className="text-[#43474f]">{clusterNotes.length}</span>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      <button type="button" className="text-xs text-[#43474f] hover:text-[#0e3b69]" onClick={() => setCollapsedTopics((current) => { const next = new Set(current); next.has(clusterTopic) ? next.delete(clusterTopic) : next.add(clusterTopic); return next; })}>
-                        {collapsedTopics.has(clusterTopic) ? "Expand" : "Collapse"}
-                      </button>
-                      <button type="button" className="text-xs text-[#43474f] hover:text-[#0e3b69]" onClick={() => exportJson(clusterTopic)}>Export cluster JSON</button>
+                      <button type="button" className="text-xs text-[#43474f] hover:text-[#0e3b69]" onClick={() => setCollapsedClusters((current) => new Set([...current, label]))}>Collapse</button>
+                      <button type="button" className="text-xs text-[#43474f] hover:text-[#0e3b69]" onClick={() => exportJson(label)}>Export JSON</button>
+                      <button type="button" className="text-xs text-[#43474f] hover:text-[#0e3b69]" onClick={() => void copyText(visibleMarkdown(label), "Cluster note list copied.")}>Copy Markdown</button>
                     </div>
                   </div>
                 ))}
-                {!topicClusters.length ? <p className="text-sm text-[#43474f]">No clusters in the current graph.</p> : null}
               </div>
             </section>
 
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="font-semibold">Export & Snapshots</h2>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button type="button" variant="secondary" onClick={() => void exportSvg()}><Download className="h-4 w-4" /> SVG</Button>
-                <Button type="button" variant="secondary" onClick={() => void exportPng()}><Download className="h-4 w-4" /> PNG</Button>
-                <Button type="button" variant="secondary" onClick={() => exportJson()}><Download className="h-4 w-4" /> JSON</Button>
-                <Button type="button" variant="secondary" onClick={() => void copyText(filteredNotes.map((note) => note.title).join("\n"), "Visible note list copied.")}><Copy className="h-4 w-4" /> List</Button>
-                <Button type="button" variant="secondary" onClick={() => void copyText(filteredNotes.map((note) => `- [${note.title}](${noteUrl(note.id)})`).join("\n"), "Markdown note list copied.")}>Markdown</Button>
-                <Button type="button" variant="secondary" onClick={saveSnapshot}>Save snapshot</Button>
-                <Button type="button" variant="secondary" onClick={loadSnapshot}>Load snapshot</Button>
+              <h2 className="font-semibold text-[#1a1c1c]">Legend & Export</h2>
+              <div className="mt-3 grid gap-3 text-sm">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#43474f]">Relation type legend</p>
+                  <div className="mt-2 grid gap-1">
+                    {NOTE_LINK_RELATIONS.map((item) => {
+                      const style = relationStyle(item);
+                      return (
+                        <div key={item} className="flex items-center gap-2">
+                          <span className="h-0.5 w-8" style={{ background: style.color, borderTop: style.dash ? `1px dashed ${style.color}` : undefined }} />
+                          <span>{formatRelationLabel(item)}{style.directional ? " ->" : ""}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#43474f]">Topic color legend</p>
+                  <div className="mt-2 grid grid-cols-2 gap-1">
+                    {Object.entries(TOPIC_COLORS).slice(0, 8).map(([label, color]) => (
+                      <span key={label} className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />{label}</span>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-[#43474f]">Node size means {sizeMode === "connections" ? "connection count" : "concept/problem level"}.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={exportPng}><Download className="h-4 w-4" /> PNG</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={exportSvg}><Download className="h-4 w-4" /> SVG</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => exportJson()}><Download className="h-4 w-4" /> JSON</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => void copyText(visibleMarkdown(), "Visible note list copied as Markdown.")}><Copy className="h-4 w-4" /> Markdown</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={saveSnapshot}><Save className="h-4 w-4" /> Snapshot</Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={loadSnapshot}><LocateFixed className="h-4 w-4" /> Load</Button>
+                </div>
               </div>
             </section>
 
-            {(aiSuggestions.length || possibleNewNotes.length || aiBusy) ? (
+            {aiSuggestions.length || possibleNewNotes.length ? (
               <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-                <h2 className="font-semibold">AI Graph Suggestions</h2>
-                {aiBusy ? <p className="mt-2 text-sm text-[#43474f]">Generating structured link suggestions...</p> : null}
-                <div className="mt-3 grid gap-3">
-                  {aiSuggestions.map((suggestion) => (
-                    <article key={`${suggestion.sourceNoteId}:${suggestion.targetNoteId}:${suggestion.relationType}`} className="rounded border border-[#e2e4ea] p-3 text-sm">
-                      <p className="font-semibold">{suggestion.sourceTitle} &rarr; {suggestion.targetTitle}</p>
-                      <p className="mt-1 text-[#0e3b69]">{suggestion.relationType} · {Math.round(suggestion.confidence * 100)}%</p>
-                      <p className="mt-1 text-[#43474f]">{suggestion.reason}</p>
-                      <Button type="button" className="mt-2" variant="secondary" onClick={() => void saveGraphLink(suggestion.sourceNoteId, suggestion.targetNoteId, suggestion.relationType)}>
-                        Add link
-                      </Button>
+                <h2 className="font-semibold text-[#1a1c1c]">AI Graph Suggestions</h2>
+                <div className="mt-3 grid gap-2">
+                  {aiSuggestions.map((item) => (
+                    <article key={`${item.sourceNoteId}-${item.targetNoteId}-${item.relationType}`} className="rounded border border-[#d5d7de] p-3">
+                      <p className="text-sm font-semibold text-[#0e3b69]">{item.sourceTitle}{" -> "}{item.targetTitle}</p>
+                      <p className="mt-1 text-xs uppercase tracking-[0.08em] text-[#43474f]">{item.relationType} · {Math.round(item.confidence * 100)}%</p>
+                      <p className="mt-2 text-sm leading-6 text-[#43474f]">{item.reason}</p>
+                      <Button type="button" size="sm" className="mt-2" variant="secondary" onClick={() => void saveGraphLink(item.sourceNoteId, item.targetNoteId, item.relationType)}>Add link</Button>
                     </article>
                   ))}
                   {possibleNewNotes.map((item) => (
-                    <article key={item.title} className="rounded border border-dashed border-[#c3c6d0] p-3 text-sm">
-                      <p className="font-semibold">Possible new note: {item.title}</p>
-                      {item.reason ? <p className="mt-1 text-[#43474f]">{item.reason}</p> : null}
+                    <article key={item.title} className="rounded border border-dashed border-[#d5d7de] p-3">
+                      <p className="text-sm font-semibold">Possible new note: {item.title}</p>
+                      {item.reason ? <p className="mt-1 text-sm text-[#43474f]">{item.reason}</p> : null}
                     </article>
                   ))}
                 </div>
               </section>
             ) : null}
-
-            <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
-              <h2 className="font-semibold">Edge Legend</h2>
-              <div className="mt-3 grid gap-2 text-sm">
-                {NOTE_LINK_RELATIONS.map((item) => {
-                  const style = relationStyle(item);
-                  return (
-                    <div key={item} className="flex items-center gap-2">
-                      <span className="h-0.5 w-8" style={{ backgroundColor: style.color, borderTop: style.dash ? `2px dashed ${style.color}` : undefined }} />
-                      <span className="text-[#43474f]">{style.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
           </aside>
         </div>
       </div>
