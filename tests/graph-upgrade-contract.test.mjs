@@ -57,6 +57,21 @@ test("graph supports search, filters, path finder, health, clusters, and exports
   assert.match(graph, /Snapshot/);
 });
 
+test("graph page uses bounded panels and guarded resize observer", () => {
+  const graph = read("../components/graph/NoteGraphClient.tsx");
+  const shell = read("../components/layout/AppShell.tsx");
+
+  assert.match(shell, /min-w-0 overflow-x-hidden/);
+  assert.match(graph, /graph-page/);
+  assert.match(graph, /graph-control-panel/);
+  assert.match(graph, /graph-canvas-panel/);
+  assert.match(graph, /graph-inspector/);
+  assert.match(graph, /min-w-0 flex-1 flex-col overflow-hidden/);
+  assert.match(graph, /current\.width === width && current\.height === height/);
+  assert.match(graph, /requestAnimationFrame/);
+  assert.match(graph, /cancelAnimationFrame/);
+});
+
 test("graph link mode stores one directional edge and AI returns structured suggestions only", () => {
   const graph = read("../components/graph/NoteGraphClient.tsx");
 

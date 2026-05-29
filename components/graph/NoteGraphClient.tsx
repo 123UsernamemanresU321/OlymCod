@@ -639,14 +639,28 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
   useEffect(() => {
     const wrapper = wrapRef.current;
     if (!wrapper) return;
+    let animationFrame = 0;
     const observer = new ResizeObserver(([entry]) => {
-      setCanvasSize({
-        width: Math.max(360, entry.contentRect.width),
-        height: Math.max(560, entry.contentRect.height)
+      const width = Math.floor(Math.max(320, entry.contentRect.width));
+      const height = Math.floor(Math.max(360, entry.contentRect.height));
+      if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Graph canvas skipped invalid dimensions", { width, height });
+        }
+        return;
+      }
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      animationFrame = window.requestAnimationFrame(() => {
+        setCanvasSize((current) => (
+          current.width === width && current.height === height ? current : { width, height }
+        ));
       });
     });
     observer.observe(wrapper);
-    return () => observer.disconnect();
+    return () => {
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+      observer.disconnect();
+    };
   }, []);
 
   useEffect(() => {
@@ -1527,9 +1541,9 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
   const tooltipPoint = tooltipNode ? worldToScreen(tooltipNode) : null;
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9] text-[#1a1c1c]">
-      <div className="mx-auto max-w-[1900px] px-3 py-5 lg:px-6">
-        <header className="flex flex-col gap-4 border-b border-[#c3c6d0] pb-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="graph-page flex h-[calc(100vh-8rem)] min-h-[680px] flex-col overflow-hidden bg-[#f9f9f9] text-[#1a1c1c] lg:h-screen lg:min-h-0">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-3 py-4 lg:px-6">
+        <header className="flex shrink-0 flex-col gap-4 border-b border-[#c3c6d0] pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[#0e3b69]">Relationship map</p>
             <h1 className="mt-2 text-3xl font-semibold text-[#1a1c1c]">Interactive Note Graph</h1>
@@ -1564,16 +1578,16 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
         </header>
 
         {message ? (
-          <div className="mt-3 rounded border border-[#c3c6d0] bg-white px-4 py-2 text-sm text-[#43474f]">{message}</div>
+          <div className="mt-3 shrink-0 rounded border border-[#c3c6d0] bg-white px-4 py-2 text-sm text-[#43474f]">{message}</div>
         ) : null}
         {notes.length > 300 ? (
-          <div className="mt-3 rounded border border-[#facc15] bg-[#fef9c3] px-4 py-2 text-sm text-[#854d0e]">
+          <div className="mt-3 shrink-0 rounded border border-[#facc15] bg-[#fef9c3] px-4 py-2 text-sm text-[#854d0e]">
             Large graph warning: start with a topic filter, local graph, or cluster preset for smoother exploration.
           </div>
         ) : null}
 
-        <div className="mt-5 grid gap-4 xl:grid-cols-[310px_minmax(0,1fr)_350px]">
-          <aside className="grid gap-3 xl:max-h-[calc(100vh-170px)] xl:overflow-y-auto">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col gap-3 overflow-hidden xl:flex-row">
+          <aside className="graph-control-panel grid max-h-[34vh] min-h-0 shrink-0 gap-3 overflow-y-auto pr-1 xl:h-full xl:max-h-none xl:w-[300px] xl:flex-none">
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
               <div className="flex items-center gap-2">
                 <Search className="h-4 w-4 text-[#0e3b69]" />
@@ -1751,8 +1765,8 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
             </details>
           </aside>
 
-          <main className="min-h-[720px] overflow-hidden rounded-lg border border-[#c3c6d0] bg-white">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e2e4ea] px-4 py-3 text-sm">
+          <main className="graph-canvas-panel flex min-h-[420px] min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#c3c6d0] bg-white xl:h-full xl:min-h-0">
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#e2e4ea] px-4 py-3 text-sm">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="font-semibold text-[#1a1c1c]">{visibleCount} visible nodes</span>
                 <span className="text-[#43474f]">{visibleLinks.length} visible edges</span>
@@ -1768,7 +1782,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
             </div>
 
             {!notes.length ? (
-              <div className="grid min-h-[680px] place-items-center p-8 text-center">
+              <div className="grid min-h-0 flex-1 place-items-center p-8 text-center">
                 <div>
                   <Network className="mx-auto h-10 w-10 text-[#0e3b69]" />
                   <h2 className="mt-4 text-xl font-semibold">No notes yet</h2>
@@ -1776,7 +1790,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 </div>
               </div>
             ) : !filteredNotes.length ? (
-              <div className="grid min-h-[680px] place-items-center p-8 text-center">
+              <div className="grid min-h-0 flex-1 place-items-center p-8 text-center">
                 <div>
                   <Filter className="mx-auto h-10 w-10 text-[#0e3b69]" />
                   <h2 className="mt-4 text-xl font-semibold">Filters hide all notes</h2>
@@ -1785,7 +1799,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
                 </div>
               </div>
             ) : (
-              <div ref={wrapRef} className={cn("relative h-[calc(100vh-240px)] min-h-[680px]", darkCanvas ? "bg-[#0b1120]" : "bg-white")}>
+              <div ref={wrapRef} className={cn("graph-canvas relative min-h-0 flex-1 overflow-hidden", darkCanvas ? "bg-[#0b1120]" : "bg-white")}>
                 <canvas
                   ref={canvasRef}
                   className="h-full w-full touch-none"
@@ -1829,7 +1843,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
             )}
           </main>
 
-          <aside className="grid content-start gap-3 xl:max-h-[calc(100vh-170px)] xl:overflow-y-auto">
+          <aside className="graph-inspector grid max-h-[38vh] min-h-0 shrink-0 content-start gap-3 overflow-y-auto pr-1 xl:h-full xl:max-h-none xl:w-[360px] xl:flex-none">
             <section className="rounded-lg border border-[#c3c6d0] bg-white p-4">
               <h2 className="text-base font-semibold text-[#1a1c1c]">Inspector</h2>
               {!selectedNote && !selectedEdge ? (
