@@ -77,6 +77,7 @@ test("public polish adds route states, footer, and avoids obvious vibe-coded red
     "../app/app/loading.tsx",
     "../app/app/error.tsx",
     "../components/public/PublicFooter.tsx",
+    "../components/public/PublicNoteReader.tsx",
   ]) {
     assert.ok(exists(path), `${path} should exist`);
   }
@@ -86,7 +87,9 @@ test("public polish adds route states, footer, and avoids obvious vibe-coded red
     read("../app/login/page.tsx"),
     read("../app/contribute/page.tsx"),
     read("../app/notes/page.tsx"),
+    read("../app/notes/[slug]/page.tsx"),
     read("../components/public/PublicNotesClient.tsx"),
+    read("../components/public/PublicNoteReader.tsx"),
   ].join("\n");
   const ui = [
     read("../components/notes/AIWritingAssistant.tsx"),
@@ -99,4 +102,19 @@ test("public polish adds route states, footer, and avoids obvious vibe-coded red
   assert.doesNotMatch(publicFiles, /testimonial/i);
   assert.doesNotMatch(ui, /Sparkles/);
   assert.doesNotMatch(ui, /✨|🚀|🔥/);
+});
+
+test("public note reader is wider and user-customizable", () => {
+  const publicNote = read("../app/notes/[slug]/page.tsx");
+  const reader = read("../components/public/PublicNoteReader.tsx");
+  const globals = read("../app/globals.css");
+
+  assert.match(publicNote, /PublicNoteReader/);
+  assert.match(reader, /max-w-\[1480px\]/);
+  assert.match(reader, /max-w-\[1760px\]/);
+  assert.match(reader, /SegmentedControl/);
+  assert.match(reader, /Hide side panel|Show side panel/);
+  assert.match(reader, /localStorage/);
+  assert.match(reader, /parseMarkdownHeadings/);
+  assert.match(globals, /public-note-prose-large/);
 });

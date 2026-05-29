@@ -347,6 +347,39 @@ summary {
   background: white;
 }
 
+.public-note-prose {
+  max-width: none;
+}
+
+.public-note-prose-compact {
+  font-size: 0.98rem;
+  line-height: 1.68;
+}
+
+.public-note-prose-standard {
+  font-size: 1.0625rem;
+  line-height: 1.82;
+}
+
+.public-note-prose-large {
+  font-size: 1.15rem;
+  line-height: 1.9;
+}
+
+.public-note-prose .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.25rem 0;
+}
+
+.public-note-prose img {
+  display: block;
+  width: min(100%, 56rem);
+  max-height: min(72vh, 44rem);
+  margin: 1rem auto;
+  object-fit: contain;
+}
+
 .codex-scrollbar {
   scrollbar-color: #c3c6d0 transparent;
   scrollbar-width: thin;

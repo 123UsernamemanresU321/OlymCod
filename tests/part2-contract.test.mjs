@@ -159,6 +159,7 @@ test("note titles and descriptions render inline LaTeX on main note surfaces", (
   const noteCard = read("../components/notes/NoteCard.tsx");
   const privateNote = read("../app/app/notes/[id]/page.tsx");
   const publicNote = read("../app/notes/[slug]/page.tsx");
+  const publicReader = read("../components/public/PublicNoteReader.tsx");
   const publicList = read("../components/public/PublicNotesClient.tsx");
   const formulaBank = read("../components/notes/FormulaBankClient.tsx");
 
@@ -167,7 +168,8 @@ test("note titles and descriptions render inline LaTeX on main note surfaces", (
   assert.match(inlineMarkdown, /inline/);
   assert.match(noteCard, /InlineMarkdown/);
   assert.match(privateNote, /InlineMarkdown/);
-  assert.match(publicNote, /InlineMarkdown/);
+  assert.match(publicNote, /PublicNoteReader/);
+  assert.match(publicReader, /InlineMarkdown/);
   assert.match(publicList, /InlineMarkdown/);
   assert.match(formulaBank, /InlineMarkdown/);
 });
