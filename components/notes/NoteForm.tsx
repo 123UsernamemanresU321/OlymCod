@@ -90,6 +90,29 @@ function parseLearningList(value: string) {
     .filter(Boolean);
 }
 
+function EditorToolDisclosure({
+  title,
+  description,
+  children
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="rounded-lg border border-[#c3c6d0] bg-[#f9f9f9]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-4 py-3">
+        <span>
+          <span className="block text-sm font-semibold text-[#1a1c1c]">{title}</span>
+          <span className="mt-0.5 block text-xs leading-5 text-[#5d6470]">{description}</span>
+        </span>
+        <span className="rounded border border-[#c3c6d0] bg-white px-2 py-1 text-xs font-medium text-[#0e3b69]">Open</span>
+      </summary>
+      <div className="border-t border-[#d5d7de] bg-white p-4">{children}</div>
+    </details>
+  );
+}
+
 export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -519,9 +542,9 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9]">
+    <div className="note-editor-page min-h-[100dvh] bg-[#f9f9f9] pb-8">
       <div className="sticky top-16 z-20 border-b border-[#c3c6d0] bg-[#f9f9f9]/95 px-4 py-3 backdrop-blur lg:top-0">
-        <div className="mx-auto flex max-w-[1800px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="mx-auto flex max-w-[1900px] flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <p className="text-[13px] font-medium tracking-[0.04em] text-[#43474f]">
               {dirty ? `Unsaved changes · ${localDraftStatus}` : mode === "create" ? "New note" : localDraftStatus}
@@ -580,13 +603,13 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
 
       <div
         className={cn(
-          "mx-auto grid max-w-[1800px] gap-0 lg:h-[calc(100vh-120px)] lg:overflow-hidden",
+          "mx-auto grid max-w-[1900px] gap-4 pb-8 lg:gap-0",
           showPreviewPane
-            ? "lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]"
+            ? "lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)] 2xl:grid-cols-[minmax(0,1.1fr)_minmax(560px,0.9fr)]"
             : "lg:grid-cols-1"
         )}
       >
-        <section className="border-[#c3c6d0] codex-scrollbar p-4 lg:h-full lg:overflow-y-auto lg:border-r lg:p-10 pb-20">
+        <section className="border-[#c3c6d0] p-4 pb-20 lg:border-r lg:p-6 xl:p-8">
           <div className="mb-6 flex border-b border-[#c3c6d0] lg:hidden">
             {(["edit", "preview", "metadata"] as const).map((tab) => (
               <button
@@ -844,27 +867,42 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
             <summary className="cursor-pointer list-none text-sm font-semibold text-[#1a1c1c]">
               Assistant, links, media, and safety tools
             </summary>
-            <div className="mt-4 grid gap-6">
-              <AIWritingAssistant
-                draft={draft}
-                noteId={savedId}
-                getSelectedText={getSelectedMarkdown}
-                onInsertMarkdown={insertGeneratedMarkdown}
-                onAppendMarkdown={appendGeneratedMarkdown}
-                onReplaceMarkdown={replaceGeneratedMarkdown}
-                onApplyMetadata={applyAIMetadata}
-              />
+            <div className="mt-4 grid gap-3">
+              <EditorToolDisclosure
+                title="AI Writing Assistant"
+                description="Draft text or metadata only when you need it; output stays in preview."
+              >
+                <AIWritingAssistant
+                  draft={draft}
+                  noteId={savedId}
+                  getSelectedText={getSelectedMarkdown}
+                  onInsertMarkdown={insertGeneratedMarkdown}
+                  onAppendMarkdown={appendGeneratedMarkdown}
+                  onReplaceMarkdown={replaceGeneratedMarkdown}
+                  onApplyMetadata={applyAIMetadata}
+                />
+              </EditorToolDisclosure>
 
-              <DiagramUpload
-                noteId={savedId}
-                paths={draft.diagram_urls}
-                onInsertMarkdown={insertDiagramMarkdown}
-                onChange={(diagram_urls) =>
-                  setDraft((current) => ({ ...current, diagram_urls }))
-                }
-              />
+              <EditorToolDisclosure
+                title="Geometry diagrams"
+                description={`${draft.diagram_urls.length} attached. Upload or insert diagrams without leaving the editor.`}
+              >
+                <DiagramUpload
+                  noteId={savedId}
+                  paths={draft.diagram_urls}
+                  onInsertMarkdown={insertDiagramMarkdown}
+                  onChange={(diagram_urls) =>
+                    setDraft((current) => ({ ...current, diagram_urls }))
+                  }
+                />
+              </EditorToolDisclosure>
 
-              <LinkedNotesManager noteId={savedId} draft={draft} />
+              <EditorToolDisclosure
+                title="Linked Notes"
+                description="Search and attach prerequisites, related notes, confused pairs, and special cases."
+              >
+                <LinkedNotesManager noteId={savedId} draft={draft} />
+              </EditorToolDisclosure>
               <NoteQualityPanel draft={draft} onAppendMarkdown={appendGeneratedMarkdown} />
               <VersionHistory
                 noteId={savedId}
@@ -891,7 +929,7 @@ export function NoteForm({ initialNote = null, mode }: NoteFormProps) {
         {showPreviewPane ? (
           <section
             className={cn(
-              "p-4 lg:block lg:h-full lg:overflow-y-auto codex-scrollbar lg:p-10 pb-20",
+              "p-4 pb-24 lg:block lg:p-6 xl:p-8",
               mobileTab !== "preview" && "hidden lg:block"
             )}
           >

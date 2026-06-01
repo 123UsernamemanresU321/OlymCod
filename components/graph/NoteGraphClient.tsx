@@ -1550,7 +1550,7 @@ export function NoteGraphClient({ notes, links, initialNoteId = null }: NoteGrap
   const tooltipPoint = tooltipNode ? worldToScreen(tooltipNode) : null;
 
   return (
-    <div className="graph-page flex h-auto min-h-screen flex-col bg-[#f9f9f9] text-[#1a1c1c] xl:h-screen xl:min-h-0 xl:overflow-hidden">
+    <div className="graph-page flex h-auto min-h-[100dvh] flex-col bg-[#f9f9f9] text-[#1a1c1c] xl:h-[100dvh] xl:min-h-0 xl:overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col px-3 py-4 lg:px-6 xl:overflow-hidden">
         <header className="flex shrink-0 flex-col gap-4 border-b border-[#c3c6d0] pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>

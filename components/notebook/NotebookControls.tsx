@@ -67,7 +67,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
     return value.split(",").map((item) => item.trim()).filter(Boolean);
   }
 
-  const filterVerb = config.selectionMode === "blacklist" ? "Exclude selected" : "Include selected";
+  const filterVerb = config.selectionMode === "blacklist" ? "Include everything except" : "Include only";
   const selectedSources = NOTEBOOK_CONTENT_SOURCES.filter((source) => config.contentSources[source.key]).length;
   const filterCount =
     config.topics.length +
@@ -119,7 +119,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                   config.selectionMode === "whitelist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
                 )}
               >
-                Include selected
+                Include only
               </button>
               <button
                 type="button"
@@ -129,7 +129,7 @@ export function NotebookControls({ config, availableTopics, availableTags, onCha
                   config.selectionMode === "blacklist" ? "bg-white shadow text-[#0e3b69] border-none" : "hover:bg-white/50"
                 )}
               >
-                Exclude selected
+                Include everything except
               </button>
             </div>
             <p className="mt-2 text-xs leading-5 text-[#43474f]">

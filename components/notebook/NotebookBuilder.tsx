@@ -138,7 +138,7 @@ export function NotebookBuilder({ presets: initialPresets, availableTopics, avai
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#f9f9f9] lg:h-screen lg:max-h-screen lg:overflow-hidden">
+    <div className="flex min-h-[100dvh] flex-col bg-[#f9f9f9] lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden">
       <div className="notebook-print-hidden sticky top-16 z-20 flex-none border-b border-[#c3c6d0] bg-white px-4 py-4 lg:top-0 lg:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>

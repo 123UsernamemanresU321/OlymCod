@@ -65,9 +65,28 @@ test("major app surfaces use compact disclosures instead of long exposed control
   assert.match(noteForm, /Split Preview/);
   assert.match(noteForm, /Editor Focus/);
   assert.match(noteForm, /Assistant, links, media, and safety tools/);
+  assert.match(noteForm, /EditorToolDisclosure/);
   assert.match(noteQuality, /defaultOpen/);
   assert.match(noteQuality, /<details/);
   assert.match(noteQuality, /ChevronDown/);
+});
+
+test("app editing surfaces avoid viewport clipping and nested scroll traps", () => {
+  const globals = read("../app/globals.css");
+  const shell = read("../components/layout/AppShell.tsx");
+  const noteForm = read("../components/notes/NoteForm.tsx");
+  const notebook = read("../components/notebook/NotebookBuilder.tsx");
+  const graph = read("../components/graph/NoteGraphClient.tsx");
+  const workspace = read("../components/workspace/WorkspaceClient.tsx");
+
+  assert.match(globals, /min-height: 100dvh/);
+  assert.match(shell, /\[min-height:100dvh\]/);
+  assert.match(noteForm, /note-editor-page min-h-\[100dvh\]/);
+  assert.doesNotMatch(noteForm, /lg:h-\[calc\(100vh-120px\)\]/);
+  assert.doesNotMatch(noteForm, /lg:overflow-hidden",\s*showPreviewPane/);
+  assert.match(notebook, /lg:h-\[100dvh\]/);
+  assert.match(graph, /min-h-\[100dvh\]/);
+  assert.match(workspace, /lg:h-\[100dvh\]/);
 });
 
 test("public polish adds route states, footer, and avoids obvious vibe-coded red flags", () => {

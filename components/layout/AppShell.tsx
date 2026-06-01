@@ -100,7 +100,7 @@ export function AppShell({ children, email, role }: AppShellProps) {
   }
 
   return (
-    <div className="app-shell-root min-h-screen overflow-x-hidden bg-[#f9f9f9] text-[#1a1c1c]">
+    <div className="app-shell-root min-h-screen [min-height:100dvh] overflow-x-hidden bg-[#f9f9f9] text-[#1a1c1c]">
       <aside
         className={cn(
           "app-shell-sidebar fixed inset-y-0 left-0 hidden flex-col border-r border-[#c3c6d0] bg-[#f9f9f9] py-6 transition-[width] lg:flex",
@@ -266,6 +266,7 @@ export function AppShell({ children, email, role }: AppShellProps) {
       <main
         className={cn(
           "app-shell-main min-h-screen pb-24 pt-16 transition-[margin] lg:pb-0 lg:pt-0",
+          "[min-height:100dvh]",
           "min-w-0 overflow-x-hidden",
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
         )}

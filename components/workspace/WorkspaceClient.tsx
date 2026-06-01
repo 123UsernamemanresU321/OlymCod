@@ -67,7 +67,7 @@ export function WorkspaceClient({ notes, links }: WorkspaceClientProps) {
   return (
     <div
       className={cn(
-        "grid min-h-screen lg:h-screen lg:max-h-screen lg:overflow-hidden gap-0 bg-[#f9f9f9]",
+        "grid min-h-[100dvh] lg:h-[100dvh] lg:max-h-[100dvh] lg:overflow-hidden gap-0 bg-[#f9f9f9]",
         showLibrary && showReference && "lg:grid-cols-[280px_minmax(0,1fr)_320px]",
         showLibrary && !showReference && "lg:grid-cols-[280px_minmax(0,1fr)]",
         !showLibrary && showReference && "lg:grid-cols-[minmax(0,1fr)_320px]",

@@ -30,12 +30,15 @@
 }
 
 html {
+  min-height: 100vh;
+  min-height: 100dvh;
   background: var(--background);
   scroll-behavior: smooth;
 }
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   background: var(--background);
   color: var(--foreground);
@@ -174,6 +177,23 @@ summary {
   border-color: #f4c26b;
   background: var(--codex-warning-bg);
   color: var(--codex-warning);
+}
+
+.app-shell-root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-shell-main {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-bottom: max(6rem, env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .app-shell-main {
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  }
 }
 
 .codex-skeleton {
