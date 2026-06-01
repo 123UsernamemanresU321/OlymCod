@@ -19,6 +19,10 @@ test("Part 3 extension renders learning metadata through the safe math pipeline"
 
   assert.match(list, /MarkdownPreview/);
   assert.match(list, /codex-metadata-markdown/);
+  assert.match(list, /<details/);
+  assert.match(list, /<summary/);
+  assert.match(list, /defaultOpen = !compact/);
+  assert.match(list, /cleanItems\.length/);
   assert.match(noteView, /LearningMetadataList/);
   assert.match(noteForm, /LearningMetadataList/);
   assert.match(revision, /LearningMetadataList/);
