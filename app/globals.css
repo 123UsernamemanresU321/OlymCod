@@ -300,13 +300,17 @@ summary {
 }
 
 .note-view-focus > div:last-child {
-  max-width: 780px;
+  max-width: 1320px;
   grid-template-columns: minmax(0, 1fr);
+  padding-left: clamp(1rem, 3vw, 3rem);
+  padding-right: clamp(1rem, 3vw, 3rem);
+  padding-top: clamp(1.5rem, 3vw, 3rem);
 }
 
 .note-view-focus article {
   border: 0;
   box-shadow: none;
+  padding: clamp(1.75rem, 4vw, 4rem);
 }
 
 .note-view-split > div:last-child {

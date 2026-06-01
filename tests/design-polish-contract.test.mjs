@@ -137,3 +137,15 @@ test("public note reader is wider and user-customizable", () => {
   assert.match(reader, /parseMarkdownHeadings/);
   assert.match(globals, /public-note-prose-large/);
 });
+
+test("private note focus reading mode uses a wide uncluttered canvas", () => {
+  const noteViewShell = read("../components/notes/NoteViewModeShell.tsx");
+  const globals = read("../app/globals.css");
+
+  assert.match(noteViewShell, /label: "Focus"/);
+  assert.match(globals, /\.note-view-focus aside\s*\{\s*display: none;/);
+  assert.match(globals, /\.note-view-focus > div:last-child/);
+  assert.match(globals, /max-width: 1320px/);
+  assert.doesNotMatch(globals, /max-width: 780px/);
+  assert.match(globals, /padding: clamp\(1\.75rem, 4vw, 4rem\)/);
+});
