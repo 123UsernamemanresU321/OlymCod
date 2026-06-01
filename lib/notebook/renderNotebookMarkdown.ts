@@ -1,6 +1,6 @@
 import { diagramRenderUrl } from "@/lib/utils/diagrams";
 import { notebookSectionEnabled } from "@/lib/notebook/defaultNotebookConfig";
-import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS } from "@/lib/constants/notes";
+import { CONCEPT_LEVEL_LABELS, PROBLEM_DIFFICULTY_LABELS, topicIncludes } from "@/lib/constants/notes";
 import { noteTypeDifficultyMeta } from "@/lib/constants/note-formats";
 import type {
   NotebookConfig,
@@ -41,7 +41,41 @@ const SECTION_LABELS: Record<NotebookSectionKey, string> = {
 };
 
 function firstPresent(item: NotebookItem, keys: NotebookSectionKey[]) {
-  return keys.find((key) => item.extractedSections[key]?.trim());
+  const candidates = keys.filter((key) => item.extractedSections[key]?.trim());
+  return candidates.find((key) => !sectionOnlyRepeatsTitle(item, key)) ?? candidates[0];
+}
+
+function normalizedSectionText(value: string) {
+  return value
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/[*_`[\]]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function sectionOnlyRepeatsTitle(item: NotebookItem, key: NotebookSectionKey) {
+  const body = item.extractedSections[key]?.trim();
+  return Boolean(body && normalizedSectionText(body) === normalizedSectionText(item.title));
+}
+
+function itemIsFormulaLike(item: NotebookItem) {
+  return (
+    item.sourceType === "note" &&
+    (item.noteType === "Formula" || item.noteType === "Formula Log" || topicIncludes(item.topic ?? "", "Formula Bank"))
+  );
+}
+
+function primarySectionKeys(item: NotebookItem): NotebookSectionKey[] {
+  const general: NotebookSectionKey[] = ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"];
+  return itemIsFormulaLike(item)
+    ? ["formula", "statement", "core_idea", "key_relation", "configuration", "first_paragraph"]
+    : general;
+}
+
+function compactPrimarySectionKeys(item: NotebookItem): NotebookSectionKey[] {
+  const general: NotebookSectionKey[] = ["statement", "formula", "core_idea", "key_relation", "first_paragraph"];
+  return itemIsFormulaLike(item) ? ["formula", "statement", "core_idea", "key_relation", "first_paragraph"] : general;
 }
 
 function addSection(
@@ -122,12 +156,12 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
     if (show("showWhenToUse")) addSection(item, sections, "when_to_use", "Use Case");
   } else if (config.detailLevel === "Statement Mode") {
     if (show("showStatements")) {
-      const key = firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]);
+      const key = firstPresent(item, primarySectionKeys(item));
       addSection(item, sections, key, primarySectionLabel(item, key));
     }
   } else if (config.detailLevel === "Compact Revision Mode") {
     if (show("showStatements")) {
-      const key = firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "first_paragraph"]);
+      const key = firstPresent(item, compactPrimarySectionKeys(item));
       addSection(item, sections, key, primarySectionLabel(item, key));
     }
     if (show("showWhenToUse")) addSection(item, sections, "when_to_use");
@@ -136,7 +170,7 @@ export function getNotebookEntrySections(item: NotebookItem, config: NotebookCon
     if (show("showConditions")) addSection(item, sections, "conditions");
   } else {
     if (show("showStatements")) {
-      const key = firstPresent(item, ["statement", "formula", "core_idea", "key_relation", "configuration", "first_paragraph"]);
+      const key = firstPresent(item, primarySectionKeys(item));
       addSection(item, sections, key, primarySectionLabel(item, key));
     }
     if (show("showWhenToUse")) addSection(item, sections, "when_to_use");

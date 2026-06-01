@@ -19,6 +19,9 @@ test("notebook section extraction keeps full multi-line sections until same-or-h
   assert.match(extraction, /definition: "statement"/);
   assert.match(extraction, /"problem statement": "statement"/);
   assert.match(extraction, /"example problem": "statement"/);
+  assert.match(extraction, /formulae: "formula"/);
+  assert.match(extraction, /formulas: "formula"/);
+  assert.match(extraction, /"important formulae": "formula"/);
   assert.match(extraction, /sections\[currentKey\] \? `\$\{sections\[currentKey\]\}\\n\\n\$\{body\}` : body/);
   assert.match(extraction, /current\.join\("\\n"\)/);
   assert.doesNotMatch(extraction, /split\("\\n"\)\[0\]/);

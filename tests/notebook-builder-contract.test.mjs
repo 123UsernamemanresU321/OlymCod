@@ -71,6 +71,10 @@ test("notebook utilities normalize items and render exports", () => {
   assert.match(build, /sourceType: "mistake"/);
   assert.match(sort, /sortNotebookItems/);
   assert.match(markdown, /renderNotebookMarkdown/);
+  assert.match(markdown, /itemIsFormulaLike/);
+  assert.match(markdown, /sectionOnlyRepeatsTitle/);
+  assert.match(markdown, /primarySectionKeys/);
+  assert.match(markdown, /\["formula", "statement"/);
   assert.match(json, /exportNotebookJson/);
 });
 
