@@ -145,6 +145,8 @@ test("private note focus reading mode uses a wide uncluttered canvas", () => {
   assert.match(noteViewShell, /label: "Focus"/);
   assert.match(globals, /\.note-view-focus aside\s*\{\s*display: none;/);
   assert.match(globals, /\.note-view-focus > div:last-child/);
+  assert.match(globals, /\.note-view-focus > div:last-child > article\s*\{/);
+  assert.doesNotMatch(globals, /\.note-view-focus article\s*\{/);
   assert.match(globals, /max-width: 1320px/);
   assert.doesNotMatch(globals, /max-width: 780px/);
   assert.match(globals, /padding: clamp\(1\.75rem, 4vw, 4rem\)/);
