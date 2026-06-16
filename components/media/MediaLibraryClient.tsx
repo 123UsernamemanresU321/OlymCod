@@ -185,7 +185,7 @@ export function MediaLibraryClient({ assets, notes }: MediaLibraryClientProps) {
       <section className="mt-6 rounded-lg border border-[#c3c6d0] bg-white p-5">
         <div className="grid gap-4 lg:grid-cols-[1fr_0.8fr_0.8fr_0.8fr_0.8fr_auto] lg:items-end">
           <Field label="Upload media">
-            <input className={inputClassName()} type="file" accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+            <input className={inputClassName()} type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
           </Field>
           <Field label="Title"><input className={inputClassName()} value={title} onChange={(event) => setTitle(event.target.value)} /></Field>
           <Field label="Caption"><input className={inputClassName()} value={caption} onChange={(event) => setCaption(event.target.value)} /></Field>

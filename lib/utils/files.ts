@@ -1,12 +1,10 @@
 const ACCEPTED_MIME_TYPES = new Set([
-  "image/svg+xml",
   "image/png",
   "image/jpeg",
-  "image/jpg",
-  "image/webp"
+  "image/jpg"
 ]);
 
-const ACCEPTED_EXTENSIONS = new Set(["svg", "png", "jpg", "jpeg", "webp"]);
+const ACCEPTED_EXTENSIONS = new Set(["png", "jpg", "jpeg"]);
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export function validateDiagramFile(file: File): string | null {
@@ -14,7 +12,7 @@ export function validateDiagramFile(file: File): string | null {
   const mimeAllowed = file.type ? ACCEPTED_MIME_TYPES.has(file.type) : true;
 
   if (!ACCEPTED_EXTENSIONS.has(extension) || !mimeAllowed) {
-    return "Upload SVG, PNG, JPG, JPEG, or WEBP image files only.";
+    return "Upload PNG, JPG, or JPEG image files only.";
   }
 
   if (file.size > MAX_FILE_SIZE) {

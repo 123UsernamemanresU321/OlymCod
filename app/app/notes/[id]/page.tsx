@@ -17,6 +17,7 @@ import { noteTypeLearningFields } from "@/lib/constants/note-formats";
 import { normalizeNoteRelations } from "@/lib/notes/normalizeNoteRelations";
 import { createClient } from "@/lib/supabase/server";
 import type { MistakeLog, Note, NoteLink, NoteReview, ProblemLog } from "@/lib/types";
+import { isNoteDiagramStoragePath } from "@/lib/utils/diagrams";
 import { formatUpdatedAt } from "@/lib/utils/notes";
 
 export const dynamic = "force-dynamic";
@@ -59,8 +60,9 @@ export default async function NoteViewPage({ params }: { params: Promise<{ id: s
     supabase.from("note_reviews").select("*").eq("user_id", user.id).eq("note_id", note.id).maybeSingle()
   ]);
 
-  const { data: signedData } = note.diagram_urls.length
-    ? await supabase.storage.from("note-diagrams").createSignedUrls(note.diagram_urls, 60 * 60)
+  const safeDiagramUrls = note.diagram_urls.filter(isNoteDiagramStoragePath);
+  const { data: signedData } = safeDiagramUrls.length
+    ? await supabase.storage.from("note-diagrams").createSignedUrls(safeDiagramUrls, 60 * 60)
     : { data: [] };
 
   const diagrams =

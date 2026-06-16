@@ -64,22 +64,21 @@ export function LoginForm() {
     setError(null);
     setNotice(null);
 
-    const supabase = createClient();
-    const { error: magicError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/app`
-      }
+    const response = await fetch("/api/auth/magic-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email })
     });
+    const result = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
 
     setBusy(false);
 
-    if (magicError) {
-      setError(magicError.message);
+    if (!response.ok) {
+      setError(result?.error ?? "Could not send magic link.");
       return;
     }
 
-    setNotice("Magic link sent. Check your email to continue.");
+    setNotice(result?.message ?? "If this email can sign in, a magic link will be sent shortly.");
   }
 
   return (

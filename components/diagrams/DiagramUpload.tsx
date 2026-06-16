@@ -172,14 +172,14 @@ export function DiagramUpload({ noteId, paths, onChange, onInsertMarkdown }: Dia
             Geometry diagrams
           </h3>
           <p className="mt-1 text-sm text-[#43474f]">
-            Upload SVG, PNG, JPG, or JPEG files. Use Insert in Markdown to place a diagram at your cursor.
+            Upload PNG, JPG, or JPEG files. Use Insert in Markdown to place a diagram at your cursor.
           </p>
         </div>
         <label className="inline-flex">
           <input
             className="sr-only"
             type="file"
-            accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
+            accept=".png,.jpg,.jpeg,image/png,image/jpeg"
             disabled={uploading || !noteId}
             onChange={(event) => {
               const file = event.target.files?.[0];

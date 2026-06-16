@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUserProfile } from "@/lib/auth/server";
 import { normalizeNotebookConfig } from "@/lib/notebook/defaultNotebookConfig";
 import { buildNotebookForUser } from "@/lib/notebook/server";
+import { enforceRateLimit, exportRateLimitRules, rateLimitResponse } from "@/lib/security/rateLimit";
 
 export async function POST(request: Request) {
   const { supabase, user, profile } = await getCurrentUserProfile();
@@ -9,6 +10,9 @@ export async function POST(request: Request) {
   if (profile?.role !== "owner" || profile?.is_banned) {
     return NextResponse.json({ error: "Owner access required." }, { status: 403 });
   }
+
+  const limit = await enforceRateLimit(supabase, exportRateLimitRules(user.id, request));
+  if (!limit.allowed) return rateLimitResponse(limit);
 
   const body = await request.json().catch(() => ({}));
   const config = normalizeNotebookConfig((body as { config?: unknown }).config);

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCurrentUserProfile } from "@/lib/auth/server";
 import { normalizeNotebookConfig } from "@/lib/notebook/defaultNotebookConfig";
 import { buildNotebookForUser } from "@/lib/notebook/server";
+import { aiRateLimitRules, enforceRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
 const notebookAssistSchema = z.object({
   mode: z.enum(["suggest_preset", "missing_sections", "cover_summary"]),
@@ -48,6 +49,9 @@ export async function POST(request: Request) {
   if (profile?.role !== "owner" || profile?.is_banned) {
     return NextResponse.json({ error: "Owner access required." }, { status: 403 });
   }
+
+  const limit = await enforceRateLimit(supabase, aiRateLimitRules(user.id, request));
+  if (!limit.allowed) return rateLimitResponse(limit);
 
   const body = await request.json().catch(() => null);
   const parsed = notebookAssistSchema.safeParse(body);
