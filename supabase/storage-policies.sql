@@ -5,14 +5,14 @@ values
     'note-diagrams',
     false,
     5242880,
-    array['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg']
+    array['image/png', 'image/jpeg', 'image/jpg']
   ),
   (
     'suggestion-diagrams',
     'suggestion-diagrams',
     false,
     5242880,
-    array['image/svg+xml', 'image/png', 'image/jpeg', 'image/jpg']
+    array['image/png', 'image/jpeg', 'image/jpg']
   )
 on conflict (id) do update
 set

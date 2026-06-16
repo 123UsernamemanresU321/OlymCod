@@ -1,6 +1,7 @@
 import { DiagramManagerClient } from "@/components/diagrams/DiagramManagerClient";
 import { requireOwner } from "@/lib/auth/server";
 import type { Diagram, Note } from "@/lib/types";
+import { isNoteDiagramStoragePath } from "@/lib/utils/diagrams";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,9 @@ export default async function DiagramsPage() {
   const diagrams = (diagramsData ?? []) as Diagram[];
   const signed = await Promise.all(
     diagrams.map(async (diagram) => {
+      if (!isNoteDiagramStoragePath(diagram.storage_path)) {
+        return { ...diagram, signed_url: null };
+      }
       const { data } = await supabase.storage
         .from("note-diagrams")
         .createSignedUrl(diagram.storage_path, 60 * 60);

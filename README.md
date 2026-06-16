@@ -199,7 +199,7 @@ In `/app/settings`, the owner can:
 
 Use the sidebar **Quick Capture** button, the mobile floating `+`, or `Cmd/Ctrl + J`.
 
-Only the raw idea is required. Optional fields are capture type, topic guess, comma-separated tags, and one SVG/PNG/JPG/JPEG attachment. Captures are stored in `quick_captures` under the logged-in user.
+Only the raw idea is required. Optional fields are capture type, topic guess, comma-separated tags, and one PNG/JPG/JPEG attachment. Captures are stored in `quick_captures` under the logged-in user.
 
 ### Inbox-To-Note Conversion
 
@@ -374,7 +374,7 @@ Open `/app/manage` for a table view of notes. Select filtered notes and bulk edi
 
 ### Media Library
 
-Open `/app/media` for reusable diagrams and media assets. The media library uses the existing `diagrams` table with additional title, alt text, and tag metadata. It supports grid/list views, search by filename/title/caption/alt/tags, SVG/PNG/JPG/JPEG/WEBP upload, attach/detach from notes, caption and alt text edits, Markdown copy, and safe deletion. `/app/diagrams` remains as a compatibility diagram manager entry.
+Open `/app/media` for reusable diagrams and media assets. The media library uses the existing `diagrams` table with additional title, alt text, and tag metadata. It supports grid/list views, search by filename/title/caption/alt/tags, PNG/JPG/JPEG upload, attach/detach from notes, caption and alt text edits, Markdown copy, and safe deletion. `/app/diagrams` remains as a compatibility diagram manager entry.
 
 ### Light Review
 
@@ -398,12 +398,14 @@ Use `Cmd/Ctrl + K` or the mobile command button. It searches notes, problem logs
 
 ### Diagram Manager
 
-Open `/app/diagrams` or `/app/media`. Upload SVG/PNG/JPG/JPEG/WEBP diagrams, attach them to notes, copy Markdown image syntax, remove diagrams from notes, or delete unused diagrams. Files stay in the private `note-diagrams` bucket and previews use signed URLs.
+Open `/app/diagrams` or `/app/media`. Upload PNG/JPG/JPEG diagrams, attach them to notes, copy Markdown image syntax, remove diagrams from notes, or delete unused diagrams. Files stay in the private `note-diagrams` bucket and previews use signed URLs.
+
+SVG and WebP uploads are intentionally blocked for launch safety. Convert existing SVG geometry diagrams to PNG/JPEG and remove old SVG objects from `note-diagrams` and `suggestion-diagrams`; app render routes and public signed URL generation now ignore those paths.
 
 In the note editor, save the note once, upload a diagram in the Geometry diagrams panel, then click **Insert in Markdown** on the uploaded diagram card. The app inserts Markdown like:
 
 ```md
-![diagram-name.svg](/api/diagrams/render?path=...)
+![diagram-name.png](/api/diagrams/render?path=...)
 ```
 
 You do not need to manually find the Supabase storage path. The `/api/diagrams/render` route verifies that the current user can read a note containing that diagram, then creates a short-lived signed preview URL. The editor preview renders the image immediately, and the saved Markdown remains stable because it does not contain an expiring Supabase signed URL.
@@ -605,14 +607,12 @@ Current official note types:
 
 Accepted diagram types:
 
-- SVG
 - PNG
 - JPG/JPEG
-- WEBP
 
 File size limit: 5 MB.
 
-The client validates extension, MIME type, filename, and file size. Storage policies restrict contributors to `suggestion-diagrams/{user_id}/...`; official note diagrams and quick-capture attachments are owner-managed in `note-diagrams`.
+The client and server validate extension, MIME type, filename, and file size. Storage policies restrict contributors to `suggestion-diagrams/{user_id}/...`; official note diagrams and quick-capture attachments are owner-managed in `note-diagrams`. Public contribution uploads go through `POST /api/contributions`, which applies authenticated user/IP rate limits before inserting a suggestion.
 
 ## Markdown And LaTeX Safety
 
@@ -662,7 +662,9 @@ Set Vercel environment variables:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_SITE_URL`
 - `OWNER_EMAIL`
+- `RATE_LIMIT_SALT`
 - `DEEPSEEK_API_KEY`
 - `DEEPSEEK_MODEL`
 - `DEEPSEEK_BASE_URL`
@@ -698,6 +700,7 @@ If no profile exists yet, log in once with the owner email, then run the update 
 - Do not allow direct public editing of official notes.
 - Keep RLS enabled on all public tables.
 - Keep Storage buckets private.
+- Apply `supabase/migrations/20260615161427_security_remediation.sql` and `supabase/storage-policies.sql` in staging and production before opening broad contributions.
 - Every daily-use table has `user_id` and RLS policies that restrict rows to the owner of the row or the owner role.
 - `revision_packs` and Notebook presets are user-owned rows with RLS.
 - Media-library rows are stored in `diagrams`, scoped by `user_id`, and the Part 3 extension migration only adds safe metadata columns.
@@ -705,8 +708,10 @@ If no profile exists yet, log in once with the owner email, then run the update 
 - AI output is draft-only; it does not overwrite notes unless the owner clicks an apply action.
 - AI related-note suggestions are filtered to existing current-user notes before they become addable links.
 - Raw HTML is not enabled in Markdown rendering.
-- Diagram uploads reject unknown file types and files over 5 MB.
-- Add production rate limiting or CAPTCHA before opening contribution mode broadly.
+- Diagram uploads reject SVG, WebP, unknown file types, and files over 5 MB.
+- Public contribution submission, magic-link sends, AI routes, and notebook export routes use server-side rate limits backed by `security_rate_limits`.
+- Configure Supabase Auth email/magic-link rate limits, redirect URL allowlists, email provider spend limits, and DeepSeek/Vercel/Supabase budget alerts in provider dashboards.
+- HSTS is enabled in app headers; validate HTTPS/preload readiness for the production domain before submitting it to the preload list.
 
 ## Troubleshooting
 

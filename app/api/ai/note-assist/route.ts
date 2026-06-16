@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUserProfile } from "@/lib/auth/server";
@@ -7,6 +8,7 @@ import {
   noteTypeDifficultyMeta,
   noteTypeLearningFields
 } from "@/lib/constants/note-formats";
+import { aiRateLimitRules, enforceRateLimit, rateLimitResponse } from "@/lib/security/rateLimit";
 
 const assistModes = [
   "starter_draft",
@@ -228,6 +230,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Owner access required." }, { status: 403 });
   }
 
+  const limit = await enforceRateLimit(supabase, aiRateLimitRules(user.id, request));
+  if (!limit.allowed) return rateLimitResponse(limit);
+
   const rawBody = await request.json().catch(() => null);
   if (rawBody && typeof rawBody === "object" && "userInstruction" in rawBody && !("instruction" in rawBody)) {
     (rawBody as { instruction?: unknown; userInstruction?: unknown }).instruction = (
@@ -298,9 +303,11 @@ export async function POST(request: Request) {
   });
 
   if (!response.ok) {
-    const detail = await response.text().catch(() => "");
+    await response.text().catch(() => "");
+    const correlationId = randomUUID();
+    console.warn("DeepSeek request failed", { correlationId, status: response.status });
     return NextResponse.json(
-      { error: "DeepSeek request failed.", detail: detail.slice(0, 500) },
+      { error: "DeepSeek request failed.", correlationId },
       { status: 502 }
     );
   }

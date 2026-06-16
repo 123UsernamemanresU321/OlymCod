@@ -3,6 +3,7 @@ import { PublicFooter } from "@/components/public/PublicFooter";
 import { PublicNoteReader } from "@/components/public/PublicNoteReader";
 import { createClient } from "@/lib/supabase/server";
 import type { Note } from "@/lib/types";
+import { isNoteDiagramStoragePath } from "@/lib/utils/diagrams";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,9 @@ export default async function PublicNotePage({ params }: { params: Promise<{ slu
   if (!data) notFound();
   const note = data as Note;
 
-  const { data: signedData } = note.diagram_urls.length
-    ? await supabase.storage.from("note-diagrams").createSignedUrls(note.diagram_urls, 60 * 60)
+  const safeDiagramUrls = note.diagram_urls.filter(isNoteDiagramStoragePath);
+  const { data: signedData } = safeDiagramUrls.length
+    ? await supabase.storage.from("note-diagrams").createSignedUrls(safeDiagramUrls, 60 * 60)
     : { data: [] };
   const diagrams =
     signedData?.flatMap((item) =>

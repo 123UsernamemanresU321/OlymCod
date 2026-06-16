@@ -1,6 +1,7 @@
 import { MediaLibraryClient } from "@/components/media/MediaLibraryClient";
 import { requireOwner } from "@/lib/auth/server";
 import type { Diagram, Note } from "@/lib/types";
+import { isNoteDiagramStoragePath } from "@/lib/utils/diagrams";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ export default async function MediaPage() {
 
   const signed = await Promise.all(
     ((diagramsData ?? []) as Diagram[]).map(async (diagram) => {
+      if (!isNoteDiagramStoragePath(diagram.storage_path)) {
+        return { ...diagram, signed_url: null };
+      }
       const { data } = await supabase.storage.from("note-diagrams").createSignedUrl(diagram.storage_path, 60 * 60);
       return { ...diagram, signed_url: data?.signedUrl ?? null };
     })

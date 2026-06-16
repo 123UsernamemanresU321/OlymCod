@@ -129,7 +129,7 @@ export function DiagramManagerClient({ diagrams, notes }: DiagramManagerClientPr
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-[#1a1c1c]">Diagrams</h1>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[#43474f]">
-          Manage SVG, PNG, JPG, and WEBP diagrams stored in the private Supabase bucket.
+          Manage PNG, JPG, and JPEG diagrams stored in the private Supabase bucket.
         </p>
       </div>
 
@@ -139,7 +139,7 @@ export function DiagramManagerClient({ diagrams, notes }: DiagramManagerClientPr
             <input
               className={inputClassName()}
               type="file"
-              accept=".svg,.png,.jpg,.jpeg,.webp,image/svg+xml,image/png,image/jpeg,image/webp"
+              accept=".png,.jpg,.jpeg,image/png,image/jpeg"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
           </Field>

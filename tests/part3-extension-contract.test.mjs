@@ -123,7 +123,8 @@ test("creation and organization routes are present without extra graph dependenc
   assert.match(manage, /published_at/);
   assert.match(manage, /DELETE/);
   assert.match(media, /Media Library/);
-  assert.match(media, /image\/webp/);
+  assert.match(media, /image\/png/);
+  assert.doesNotMatch(media, /image\/webp/);
 });
 
 test("media migration and docs cover the Part 3 extension", () => {

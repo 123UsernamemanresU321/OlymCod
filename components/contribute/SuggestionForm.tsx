@@ -9,9 +9,8 @@ import { Button } from "@/components/ui/Button";
 import { Field, inputClassName } from "@/components/ui/Field";
 import { buildNoteTemplate, getNoteFormat } from "@/lib/constants/note-formats";
 import { NOTE_TYPES, SUGGESTION_TYPES } from "@/lib/constants/notes";
-import { createClient } from "@/lib/supabase/client";
 import type { Note, SuggestionType } from "@/lib/types";
-import { safeFilename, validateDiagramFile } from "@/lib/utils/files";
+import { validateDiagramFile } from "@/lib/utils/files";
 
 interface SuggestionFormProps {
   targetNote?: Note | null;
@@ -64,12 +63,6 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
     setError(null);
 
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-        error: userError
-      } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error(userError?.message ?? "You must be logged in.");
       if (!title.trim()) throw new Error("Suggestion title is required.");
       if (!body.trim()) throw new Error("Suggestion body is required.");
       if (file) {
@@ -77,49 +70,26 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
         if (validation) throw new Error(validation);
       }
 
-      const { data, error: insertError } = await supabase
-        .from("suggestions")
-        .insert({
-          contributor_id: user.id,
-          target_note_id: targetNote?.id ?? null,
-          title: title.trim(),
-          suggestion_type: suggestionType,
-          topic,
-          note_type: noteType,
-          difficulty: format.usesDifficulty ? difficulty : null,
-          tags,
-          body_markdown: body.trim(),
-          reason: reason.trim() || null,
-          source_reference: sourceReference.trim() || null,
-          diagram_urls: [],
-          status: "pending"
-        })
-        .select("id")
-        .single();
+      const formData = new FormData();
+      formData.set("target_note_id", targetNote?.id ?? "");
+      formData.set("title", title.trim());
+      formData.set("suggestion_type", suggestionType);
+      formData.set("topic", topic);
+      formData.set("note_type", noteType);
+      formData.set("difficulty", format.usesDifficulty && difficulty ? String(difficulty) : "");
+      formData.set("tags", JSON.stringify(tags));
+      formData.set("body_markdown", body.trim());
+      formData.set("reason", reason.trim());
+      formData.set("source_reference", sourceReference.trim());
+      if (file) formData.set("diagram", file);
 
-      if (insertError) throw insertError;
+      const response = await fetch("/api/contributions", {
+        method: "POST",
+        body: formData
+      });
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
 
-      if (file && data?.id) {
-        const storagePath = `${user.id}/${data.id}/${safeFilename(file.name)}`;
-        const { error: uploadError } = await supabase.storage
-          .from("suggestion-diagrams")
-          .upload(storagePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type || undefined
-          });
-        if (uploadError) throw uploadError;
-
-        const { error: updateError } = await supabase
-          .from("suggestions")
-          .update({ diagram_urls: [storagePath] })
-          .eq("id", data.id)
-          .eq("contributor_id", user.id);
-        if (updateError) {
-          await supabase.storage.from("suggestion-diagrams").remove([storagePath]);
-          throw updateError;
-        }
-      }
+      if (!response.ok) throw new Error(result?.error ?? "Could not submit suggestion.");
 
       router.push("/contribution-status");
       router.refresh();
@@ -201,7 +171,7 @@ export function SuggestionForm({ targetNote = null, defaultType = "new_note" }: 
             <input
               className="mt-3 block w-full text-sm"
               type="file"
-              accept=".svg,.png,.jpg,.jpeg,image/svg+xml,image/png,image/jpeg"
+              accept=".png,.jpg,.jpeg,image/png,image/jpeg"
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
             />
           </label>

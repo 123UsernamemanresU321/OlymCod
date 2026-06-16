@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SuggestionReviewClient } from "@/components/review/SuggestionReviewClient";
 import { requireOwner } from "@/lib/auth/server";
 import type { Note, Profile, Suggestion } from "@/lib/types";
+import { isNoteDiagramStoragePath } from "@/lib/utils/diagrams";
 
 export const dynamic = "force-dynamic";
 
@@ -21,8 +22,9 @@ export default async function ReviewDetailPage({ params }: { params: Promise<{ i
       : Promise.resolve({ data: null })
   ]);
 
-  const { data: signedData } = suggestion.diagram_urls.length
-    ? await supabase.storage.from("suggestion-diagrams").createSignedUrls(suggestion.diagram_urls, 60 * 60)
+  const safeDiagramUrls = suggestion.diagram_urls.filter(isNoteDiagramStoragePath);
+  const { data: signedData } = safeDiagramUrls.length
+    ? await supabase.storage.from("suggestion-diagrams").createSignedUrls(safeDiagramUrls, 60 * 60)
     : { data: [] };
   const diagrams =
     signedData?.flatMap((item) =>
