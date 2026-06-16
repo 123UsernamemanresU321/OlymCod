@@ -17,7 +17,7 @@ Part 3 adds recognition triggers, common false uses, stronger problem/mistake pa
 - Supabase Postgres with Row Level Security
 - Supabase Storage
 - React Markdown, remark-gfm, remark-math, rehype-sanitize, rehype-katex, KaTeX
-- DeepSeek V4 for owner-only AI writing assistance
+- DeepSeek V4 for owner-only AI writing assistance.
 
 ## Roles
 
